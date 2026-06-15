@@ -2,7 +2,9 @@
 As Spake by Jake, the elder
 
 ## Setup
- * Shuffle a standard 52 card poker deck with jokers removed. For each player, deal 3 cards face down and 3 cards face up directly on top in in a 3x1 grid. Deal one card per player in a counter clockwise fashion
+ * Shuffle a standard 52 card poker deck with jokers removed.
+ * **When dealing, deal one card per person in a clockwise fashion**
+ * For each player, deal 3 cards face down and 3 cards face up directly on top in in a 3x1 grid. Deal one card per player in a counter clockwise fashion
  * Deal 3 additional cards to each player as their starting hand.
 
 Note: Before the game begins, players may swap any of their end-game cards (the face-up cards) with cards from their hand.
