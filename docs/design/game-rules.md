@@ -11,20 +11,20 @@ As spake by Jake, the elder
  * Before the game begins, players may swap any of their mid game cards (the face-up cards) with cards from their hand to build their deck. This is optional and helps with strategy.
 
 ## Power Cards
-Power cards are determined by number only, suit doesn't matter:
+Power cards are determined by number only, suit doesn't matter.
 
 ### High Tier Power Cards
 
-#### 2
+**2**
  * Resets the deck back to 2, which is the lowest possible card
  * Allows for 3’s or any other card to be played on the following turn
  * 2’s can always be played.
 
-#### 8
+**8**
 
 ### Low Tier Power Cards
 
-#### 7
+**7**
  * The next card played must be a 7 or lower.
  * A 7 cannot be played on anything that is higher than a 7
  *  Is a weaker power card due to lack of versatility, but can be strategic when played correctly.
