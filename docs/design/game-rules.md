@@ -3,11 +3,11 @@ As Spake by Jake, the elder
 
 ## Setup
  * Shuffle a standard 52 card poker deck with jokers removed and extra cards removed.
- * **When dealing, deal one card at a time, per person in a clockwise fashion**
+ * **When dealing, deal one card at a time, per person, in a clockwise fashion**
  * For each player, deal 3 cards face down in a 3x1 grid. _The players may not look at these cards_. This is called the "late game".
- * Once everyone has 3 cards face down, deal 3 cards face up directly on top of the 3x1 grid. 
- * Deal 3 additional cards to each player as their starting hand.
- * Each player should have 9 cards total
+ * Once everyone has 3 cards face down, deal 3 cards face up directly on top of the 3x1 grid. This is called the "mid game"
+ * After everyone has 3 cards facing up, deal 3 additional cards to each player, face down, in a separate pile. This is called the "early game" and will be their starting hand.
+ * After dealing, each player should have 9 cards total
 
 Note: Before the game begins, players may swap any of their end-game cards (the face-up cards) with cards from their hand.
 
