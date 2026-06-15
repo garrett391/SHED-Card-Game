@@ -8,15 +8,15 @@ As Spake by Jake, the elder
  * Once everyone has 3 cards face down, deal 3 cards face up directly on top of the 3x1 grid. This is called the "mid game"
  * After everyone has 3 cards facing up, deal 3 additional cards to each player, face down, in a separate pile. This is called the "early game" and will be their starting hand.
  * After dealing, each player should have 9 cards total: 3 face down, 3 face up, and 3 in hand
- * note
+ * Before the game begins, players may swap any of their mid game cards (the face-up cards) with cards from their hand to build their deck. This is optional and helps with strategy.
 
-Note: Before the game begins, players may swap any of their end-game cards (the face-up cards) with cards from their hand.
+## Important Cards/Power Cards
+Power cards are determined by number only, suit doesn't matter:
 
-Important Cards/Power Cards:
-
-2: Resets the top card to the lowest possible card. 
-    •    Allows for 3’s to be played on the following turn.
-    •    2’s can always be played.
+### 2
+ * Resets the deck back to 2, which is the lowest possible card
+ * Allows for 3’s or any other card to be played on the following turn
+ * 2’s can always be played.
 
 7: The next card played must be a 7 or lower.
     •    A 7 cannot be played on anything that is higher than a 7.
