@@ -1,5 +1,5 @@
 # SHED Rules
-As Spake by Jake, the elder
+As spake by Jake, the elder
 
 ## Setup
  * Shuffle a standard 52 card poker deck with jokers removed and extra cards removed.
@@ -10,15 +10,21 @@ As Spake by Jake, the elder
  * After dealing, each player should have 9 cards total: 3 face down, 3 face up, and 3 in hand
  * Before the game begins, players may swap any of their mid game cards (the face-up cards) with cards from their hand to build their deck. This is optional and helps with strategy.
 
-## Important Cards/Power Cards
+## Power Cards
 Power cards are determined by number only, suit doesn't matter:
 
-### 2
+### High Tier Power Cards
+
+#### 2
  * Resets the deck back to 2, which is the lowest possible card
  * Allows for 3’s or any other card to be played on the following turn
  * 2’s can always be played.
 
-### 7
+#### 8
+
+### Low Tier Power Cards
+
+#### 7
  * The next card played must be a 7 or lower.
  * A 7 cannot be played on anything that is higher than a 7
  *  Is a weaker power card due to lack of versatility, but can be strategic when played correctly.
