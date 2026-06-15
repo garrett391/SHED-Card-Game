@@ -24,7 +24,9 @@ Power cards are determined by number only, suit doesn't matter.
 **8**
 
 AKA - Glasses, Goggles, or Window Card.
- * An 8 is an invisible card. The next player plays off the card beneath the 8, not the 8 itself.
+ * An 8 is an invisible card. Applying it counts as a turn, but the value of the pile doesn't change 
+ * The next player plays off the card beneath the 8, not the 8 itself.
+ * 8's can always be played
  * Important: See “Long Live Cousin Jake!” below for clarification on playing 8s on 7s.
     
 ### Low Tier Power Cards
