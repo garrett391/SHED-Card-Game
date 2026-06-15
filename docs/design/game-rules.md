@@ -18,9 +18,11 @@ Power cards are determined by number only, suit doesn't matter:
  * Allows for 3’s or any other card to be played on the following turn
  * 2’s can always be played.
 
-7: The next card played must be a 7 or lower.
-    •    A 7 cannot be played on anything that is higher than a 7.
-    •    It is a weaker power card due to lack of versatility.
+### 7
+ * The next card played must be a 7 or lower.
+ * A 7 cannot be played on anything that is higher than a 7
+ *  Is a weaker power card due to lack of versatility, but can be strategic when played correctly.
+    * Ex: If you know the next player only has high cards, play a 7 (if possible) and force them to pick up
 
 8: AKA - Glasses, Goggles, or Window Card.
     •    An 8 is essentially an invisible card. The next player plays off the card beneath the 8, not the 8 itself.
