@@ -23,11 +23,11 @@ Power cards are determined by number only, suit doesn't matter.
 
 **8**
 
-AKA - Glasses, Goggles, or Window Card.
- * An 8 is an invisible card. Applying it counts as a turn, but the value of the pile doesn't change 
- * The next player plays off the card beneath the 8, not the 8 itself.
+AKA - Glasses, Goggles, or Window Card. 
+ * Once played, the next player in rotation plays off the card beneath the 8, not the 8 itself
+ * An 8 can be thought of as an invisible card. Applying it counts as a turn, but the value of the pile doesn't change
  * 8's can always be played
- * Important: See “Long Live Cousin Jake!” below for clarification on playing 8s on 7s.
+ * _Important:_ See “Long Live Cousin Jake!” below for clarification on playing 8s on 7s.
     
 ### Low Tier Power Cards
 
@@ -37,20 +37,20 @@ AKA - Glasses, Goggles, or Window Card.
  *  Is a weaker power card due to lack of versatility, but can be strategic when played correctly.
     * Ex: If you know the next player only has high cards, play a 7 (if possible) and force them to pick up
 
-10: burns the pile, removing the entire pile from play. 
-    •    The player who burns the pile immediately takes another turn and starts a new pile.
-    •    Cannot be played on a 7. 
+**10**
+ * Burns the pile, removing the entire pile from play
+ * The player who burns the pile immediately takes another turn and starts a new pile
+ * Cannot be played on a 7
 
-Four of a Kind:
-    •    Four cards of the same number will also burn the pile, just like a 10.
-    •    An 8 does not break a four-of-a-kind sequence. If four matching cards appear consecutively with an 8 in between, the pile still burns.
-    ⁃    Example:
-    1.    Player 1 plays three 5s.
-    2.    Player 2 plays an 8.
-    3.    Player 3 plays a 5.
-    4.    The pile burns, and Player 3 takes another turn.
+**Four of a Kind**
+ * Four cards of the same number will also burn the pile, just like a 10
+ * An 8 does not break a four-of-a-kind sequence. If four matching cards appear consecutively with an 8 in between, the pile still burns. Example:
+    1. Player 1 plays three 5s.
+    2. Player 2 plays an 8.
+    3. Player 3 plays a 5.
+    4. The pile burns, and Player 3 takes another turn.
 
-Rules:
+## Rules
     1.    After the dealer deals all cards and players have made any desired swaps between their hand and their face-up “end-game” cards, the dealer flips the top card of the draw pile to begin the game. Play starts with the player to the dealer’s left and proceeds clockwise (or counterclockwise if house rules apply it).
     2.    On each turn, a player must play a card equal to or higher than the current top card of the playing pile.
     •    Example: If Player 1 plays a 4, Player 2 must play a 4 or higher.
