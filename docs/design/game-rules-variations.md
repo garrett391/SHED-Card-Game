@@ -32,3 +32,6 @@ Jokers can only take on _visible_ values eg the players hand, any players late g
 
 ## Chaos Shed
 If you have a card that can be played, play it. Order be damned
+
+## Unforced Play
+Generally, if you have a card to play, you must play it ie _forced_ play. During unforced play, players may choose to not play any card(s) and end their turn whenever they like by drawing a card (invented by Christian the Davis?)
