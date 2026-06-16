@@ -52,13 +52,14 @@ AKA - Glasses, Goggles, or Window Card.
 
 ## Rules
  1. After the dealer deals all cards and players have made any desired swaps between their hand and their face-up “mid-game” cards, the dealer flips the top card of the draw pile to begin the game. Play starts with the player to the dealer’s left and proceeds clockwise (or counterclockwise if house rules apply it).
- 2. On each turn, a player must play a card equal to or higher than the current top card of the playing pile.
-   * Example: If Player 1 plays a 4, Player 2 must play a 4 or higher.
+ 2. On each turn, a player must place a card equal to or higher than the current top card of the playing pile on top of the pile. Card value is determined by its place in the sequence: 2, 3, 4, 5, 6, 7, 8, 9, 10, Jack, Queen, King, Ace. 
+    * Example: If Player 1 plays a 4, Player 2 must play a 4 or higher.
 3. If a player cannot play a valid card, they must pick up the entire playing pile, and their turn ends.
-    •    A player may choose to pick up the pile at any time, even if they have a playable card. If they choose to do so, their turn still ends immediately.
-    4.    Players must maintain at least 3 cards in their hand by drawing from the draw pile whenever possible.
-    •    This rule no longer applies once the draw pile is empty.
-    5.    The winner is the first player to get rid of all their cards.
+    * _Important:_ A player may choose to pick up the pile at any time, even if they have a playable card. If they choose to do so, their turn still ends immediately.
+4. Players must maintain at least 3 cards in their hand by drawing from the draw pile whenever possible
+    * This rule no longer applies once the draw pile is empty
+5. Once the draw pile is empty, and the player has no more cards in their hand, they may play their face up mid game cards
+5. The winner is the first player to get rid of all their cards.
 
 End-Game Rules:
     1.    Once both the draw pile and a player’s hand are empty, that player enters the “end game”. 
