@@ -1,7 +1,7 @@
 # SHED Rules
 Original rules as spake by Jake, the elder
 
-For alternate game versions, see [game variations](game-rules-variants.md).
+For alternate game versions, see [game variations](game-rules-variations.md).
 
 ## Setup
  * Shuffle a standard 52 card poker deck with jokers removed and extra cards removed
