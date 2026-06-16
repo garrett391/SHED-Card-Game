@@ -2,9 +2,9 @@
 As spake by Jake, the elder
 
 ## Setup
- * Shuffle a standard 52 card poker deck with jokers removed and extra cards removed.
+ * Shuffle a standard 52 card poker deck with jokers removed and extra cards removed
  * **When dealing, deal one card at a time, per person, in a clockwise fashion**
- * For each player, deal 3 cards face down in a 3x1 grid. _The players may not look at these cards_. This is called the "late game".
+ * For each player, deal 3 cards face down in a 3x1 grid. _The players may not look at these cards_. This is called the "late game"
  * Once everyone has 3 cards face down, deal 3 cards face up directly on top of the 3x1 grid. This is called the "mid game"
  * After everyone has 3 cards facing up, deal 3 additional cards to each player, face down, in a separate pile. This is called the "early game" and will be their starting hand.
  * After dealing, each player should have 9 cards total: 3 face down, 3 face up, and 3 in hand
@@ -25,15 +25,15 @@ Power cards are determined by number only, suit doesn't matter.
 
 AKA - Glasses, Goggles, or Window Card. 
  * Once played, the next player in rotation plays off the card beneath the 8, not the 8 itself
- * An 8 can be thought of as an invisible card. Applying it counts as a turn, but the value of the pile doesn't change
+ * An 8 can be thought of as an invisible card. Applying it counts as a turn, but the value of the top card in the pile doesn't change
  * 8's can always be played
- * _Important:_ See “Long Live Cousin Jake!” below for clarification on playing 8s on 7s.
     
 ### Low Tier Power Cards
 
 **7**
- * The next card played must be a 7 or lower.
- * A 7 cannot be played on anything that is higher than a 7
+ * The next card played must be a 7 or lower (exception being an 8)
+   * _Important:_ See “Long Live Cousin Jake!” below for explanation on playing 8s on 7s
+ * A 7 cannot be played on anything that is higher than a 7 (exception being an 8, since its invisible)
  *  Is a weaker power card due to lack of versatility, but can be strategic when played correctly.
     * Ex: If you know the next player only has high cards, play a 7 (if possible) and force them to pick up
 
@@ -46,9 +46,9 @@ AKA - Glasses, Goggles, or Window Card.
  * Four cards of the same number will also burn the pile, just like a 10
  * An 8 does not break a four-of-a-kind sequence. If four matching cards appear consecutively with an 8 in between, the pile still burns. Example:
     1. Player 1 plays three 5s.
-    2. Player 2 plays an 8.
-    3. Player 3 plays a 5.
-    4. The pile burns, and Player 3 takes another turn.
+    2. Player 2 plays an 8.
+    3. Player 3 plays a 5.
+    4. The pile burns, and Player 3 takes another turn.
 
 ## Rules
  1. After the dealer deals all cards and players have made any desired swaps between their hand and their face-up “mid-game” cards, the dealer flips the top card of the draw pile to begin the game. Play starts with the player to the dealer’s left and proceeds clockwise (or counterclockwise if house rules apply it).
