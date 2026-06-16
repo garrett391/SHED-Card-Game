@@ -4,7 +4,7 @@ Original rules as spake by Jake, the elder
 For alternate game versions, see [game variations](game-rules-variations.md).
 
 ## Setup
- * Shuffle a standard 52 card poker deck with jokers removed and extra cards removed
+ * Shuffle a standard 52 card poker deck (4 suits of 13 ascending cards Ace through King) with jokers removed and extra cards removed 
  * **When dealing, deal one card at a time, per person, in a clockwise fashion**
  * For each player, deal 3 cards face down in a 3x1 grid. _The players may not look at these cards_. This is called the "late game"
  * Once everyone has 3 cards face down, deal 3 cards face up directly on top of the 3x1 grid. This is called the "mid-game"
@@ -16,18 +16,17 @@ For alternate game versions, see [game variations](game-rules-variations.md).
 Power cards are determined by number only, suit doesn't matter.
 
 ### High Tier Power Cards
+High Tier Power Cards may be played at **any** time on any card
 
 **2**
  * Resets the deck back to 2, which is the lowest possible card
  * Allows for 3’s or any other card to be played on the following turn
  * 2’s can always be played.
 
-
-**8**
-
-AKA - Glasses, Goggles, or Window Card. 
+**8** AKA - Glasses, Goggles, or Window Card. 
  * Once played, the next player in rotation plays off the card beneath the 8, not the 8 itself
  * An 8 can be thought of as an invisible card. Applying it counts as a turn, but the value of the top card in the pile doesn't change
+ * effectievly a "SKIP TURN"
  * 8's can always be played
     
 ### Low Tier Power Cards
@@ -53,13 +52,16 @@ AKA - Glasses, Goggles, or Window Card.
     4. The pile burns, and Player 3 takes another turn.
 
 ## Rules
+The game consists of 3 phases: early, mid, and late game. 
 ### Early game rules
- 1. After the dealer deals all cards and players have made any desired swaps between their hand and their face-up “mid-game” cards, the dealer flips the top card of the draw pile to begin the game. Play starts with the player to the dealer’s left and proceeds clockwise (or counterclockwise if house rules apply it).
- 2. On each turn, a player must place a card equal to or higher than the current top card of the playing pile on top of the pile. Card value is determined by its place in the sequence: 2, 3, 4, 5, 6, 7, 8, 9, 10, Jack, Queen, King, Ace. 
+ 1. After the dealer deals all cards and players have made any desired swaps between their hand and their face-up “mid-game” cards, ~~the dealer flips the top card of the draw pile to begin the game.~~ the first person to the left of the dealer with the lowest non-power card(s) begins play by playing said lowest non-power card(s).  Play starts with the player to the dealer’s left and proceeds clockwise (or counterclockwise if house rules apply it).
+    *Example 1: If Player one has a 4,5,6, Player 2 has 3,7,K, and Player 3 has 2, 8, 10, Players 2 begins play because 3 is the lowest valued non-power card available
+    *Example 2: If Player one has a 4,5,6, Player 2 has 4,7,K, and Player 3 has 2, 8, 10, Players 1 begins play because 4 is the lowest valued non-power card available
+ 3. On each turn, a player **must** place a card equal to or higher than the current top card of the playing pile on top of the pile ("Meets or Beats" Rule). Card value is determined by its place in the sequence: 2, 3, 4, 5, 6, 7, 8, 9, 10, Jack, Queen, King, Ace. 
     * Example: If Player 1 plays a 4, Player 2 must play a 4 or higher.
-3. If a player cannot play a valid card, they must pick up the entire playing pile, and their turn ends.
+4. If a player cannot play a valid card, they must pick up the entire playing pile, and their turn ends.
     * _Important:_ A player may choose to pick up the pile at any time, even if they have a playable card. If they choose to do so, their turn still ends immediately.
-4. Players must maintain at least 3 cards in their hand by drawing from the draw pile whenever possible
+5. Players must maintain at least 3 cards in their hand by drawing from the draw pile whenever possible
     * This rule no longer applies once the draw pile is empty
 
 ### Mid-Game Rules
@@ -73,7 +75,7 @@ Once both the draw pile and a player’s hand are empty, that player enters the 
 After all 3 face-up cards have been successfully played:
 1. The player randomly selects and reveals one of their 3 face-down cards to play.
 2. If the randomly drawn card does not beat the card on the top of the pile, they must pick up the pile, and they must play all the cards they picked up before continuing their end game
-3. The first player to place all face-down cards wins the game
+3. The first player to play all their ~~place all face-down~~ cards wins the game 
 
 ## Long Live Elder Jake! (SHED Grandmaster):
 As stated by Erich (Bauer), “I’ve reached out to Cousin Jake, the official creator of SHED, for his perspective on this sensitive matter.”.
