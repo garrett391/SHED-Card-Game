@@ -1,6 +1,8 @@
 # SHED Rules
 Original rules as spake by Jake, the elder
 
+For alternate game versions, see [game variations](game-rules-variants.md).
+
 ## Setup
  * Shuffle a standard 52 card poker deck with jokers removed and extra cards removed
  * **When dealing, deal one card at a time, per person, in a clockwise fashion**
