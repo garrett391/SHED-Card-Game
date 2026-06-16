@@ -5,10 +5,10 @@ Original rules as spake by Jake, the elder
  * Shuffle a standard 52 card poker deck with jokers removed and extra cards removed
  * **When dealing, deal one card at a time, per person, in a clockwise fashion**
  * For each player, deal 3 cards face down in a 3x1 grid. _The players may not look at these cards_. This is called the "late game"
- * Once everyone has 3 cards face down, deal 3 cards face up directly on top of the 3x1 grid. This is called the "mid game"
+ * Once everyone has 3 cards face down, deal 3 cards face up directly on top of the 3x1 grid. This is called the "mid-game"
  * After everyone has 3 cards facing up, deal 3 additional cards to each player, face down, in a separate pile. This is called the "early game" and will be their starting hand.
  * After dealing, each player should have 9 cards total: 3 face down, 3 face up, and 3 in hand
- * Before the game begins, players may swap any of their mid game cards (the face-up cards) with cards from their hand to build their deck. This is optional and helps with strategy.
+ * Before the game begins, players may swap any of their mid-game cards (the face-up cards) with cards from their hand to build their deck. This is optional and helps with strategy.
 
 ## Power Cards
 Power cards are determined by number only, suit doesn't matter.
@@ -32,7 +32,7 @@ AKA - Glasses, Goggles, or Window Card.
 
 **7**
  * The next card played must be a 7 or lower (exception being an 8)
-   * _Important:_ See “Long Live Cousin Jake!” below for explanation on playing 8s on 7s
+   * _Important:_ See “Long Live Elder Jake!” below for explanation on playing 8s on 7s
  * A 7 cannot be played on anything that is higher than a 7 (exception being an 8, since its invisible)
  *  Is a weaker power card due to lack of versatility, but can be strategic when played correctly.
     * Ex: If you know the next player only has high cards, play a 7 (if possible) and force them to pick up
@@ -67,13 +67,13 @@ Once both the draw pile and a player’s hand are empty, that player enters the 
  3. This continues until all 3 face-up cards have been played or the player cannot make a legal play.
  4. If a player cannot legally play one of their face-up cards, they must pick up the entire playing pile and use it as their new hand.
 
-### End Game Rules
+### Late Game Rules
 After all 3 face-up cards have been successfully played:
 1. The player randomly selects and reveals one of their 3 face-down cards to play.
 2. If the randomly drawn card does not beat the card on the top of the pile, they must pick up the pile, and they must play all the cards they picked up before continuing their end game
 3. The first player to place all face-down cards wins the game
 
-## Long Live Cousin Jake! (SHED Grandmaster):
+## Long Live Elder Jake! (SHED Grandmaster):
 As stated by Erich (Bauer), “I’ve reached out to Cousin Jake, the official creator of SHED, for his perspective on this sensitive matter.”.
 
     ⁃    “8 is definitely playable on 7. It’s invisible. Plus, it lets you pass the 7 to the next person, which is potentially a huge tactical move for both you and the person before you.”.
