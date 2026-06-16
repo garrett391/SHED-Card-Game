@@ -1,5 +1,5 @@
 # SHED Rules
-As spake by Jake, the elder
+Original rules as spake by Jake, the elder
 
 ## Setup
  * Shuffle a standard 52 card poker deck with jokers removed and extra cards removed
@@ -51,6 +51,7 @@ AKA - Glasses, Goggles, or Window Card.
     4. The pile burns, and Player 3 takes another turn.
 
 ## Rules
+### Early game rules
  1. After the dealer deals all cards and players have made any desired swaps between their hand and their face-up “mid-game” cards, the dealer flips the top card of the draw pile to begin the game. Play starts with the player to the dealer’s left and proceeds clockwise (or counterclockwise if house rules apply it).
  2. On each turn, a player must place a card equal to or higher than the current top card of the playing pile on top of the pile. Card value is determined by its place in the sequence: 2, 3, 4, 5, 6, 7, 8, 9, 10, Jack, Queen, King, Ace. 
     * Example: If Player 1 plays a 4, Player 2 must play a 4 or higher.
@@ -58,20 +59,21 @@ AKA - Glasses, Goggles, or Window Card.
     * _Important:_ A player may choose to pick up the pile at any time, even if they have a playable card. If they choose to do so, their turn still ends immediately.
 4. Players must maintain at least 3 cards in their hand by drawing from the draw pile whenever possible
     * This rule no longer applies once the draw pile is empty
-5. Once the draw pile is empty, and the player has no more cards in their hand, they may play their face up mid game cards
-5. The winner is the first player to get rid of all their cards.
 
-End-Game Rules:
-    1.    Once both the draw pile and a player’s hand are empty, that player enters the “end game”. 
-    •    The player must now play from their 3 face-up cards.
-    •    They may choose any of the face-up cards to play.
-    •    This continues until all 3 face-up cards have been played or the player cannot make a legal play.
-    2.    If a player cannot legally play one of their face-up cards, they must pick up the entire playing pile and use it as their new hand.
-    3.    After all 3 face-up cards have been successfully played, the player randomly selects and reveals one of their 3 face-down cards to play.
-    •    Continue until all face-down cards have been played.
+### Mid-Game Rules
+Once both the draw pile and a player’s hand are empty, that player enters the “mid game”. 
+ 1. The player must now play from their 3 face-up cards.
+ 2. They may choose any of the face-up cards to play.
+ 3. This continues until all 3 face-up cards have been played or the player cannot make a legal play.
+ 4. If a player cannot legally play one of their face-up cards, they must pick up the entire playing pile and use it as their new hand.
 
-Long Live Cousin Jake! (SHED Grandmaster):
+### End Game Rules
+After all 3 face-up cards have been successfully played:
+1. The player randomly selects and reveals one of their 3 face-down cards to play.
+2. If the randomly drawn card does not beat the card on the top of the pile, they must pick up the pile, and they must play all the cards they picked up before continuing their end game
+3. The first player to place all face-down cards wins the game
 
+## Long Live Cousin Jake! (SHED Grandmaster):
 As stated by Erich (Bauer), “I’ve reached out to Cousin Jake, the official creator of SHED, for his perspective on this sensitive matter.”.
 
     ⁃    “8 is definitely playable on 7. It’s invisible. Plus, it lets you pass the 7 to the next person, which is potentially a huge tactical move for both you and the person before you.”.
