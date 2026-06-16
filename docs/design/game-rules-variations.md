@@ -15,3 +15,20 @@ graph TD;
     B-->D;
     C-->D;
 ```
+
+## Super 10s
+10s _may_ be played on a 7
+## 69 (2for1 special)
+if a player has both a 6 and a 9 in their hand, they may play both (hence 2for1 special) whenever either can be played [e.g 69 can be played on a 7 and can be played on another 9]
+
+## 69 (reverse rotation)
+if at anytime a 9 is played on a 6, the flow of play is reversed between clockwise (CW) & counter-clockwise (CCW)
+
+## Wild Jokers
+Jokers may take on any value the player desires
+
+## Tame Jokers
+Jokers can only take on _visible_ values eg the players hand, any players late game, or the discard pile
+
+## Chaos Shed
+If you have a card that can be played, play it. Order be damned
