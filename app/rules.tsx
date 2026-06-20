@@ -9,7 +9,7 @@ export default function RulesScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.h1}>SHED</Text>
-      <Text style={styles.subtitle}>Original rules as spake by Jake</Text>
+      <Text style={styles.subtitle}>Original rules as spake by Jake the Elder</Text>
 
       <Section title="Setup">
         <P>
@@ -25,7 +25,7 @@ export default function RulesScreen() {
       <Section title="Goal">
         <P>
           Get rid of all 9 of your cards. First player to clear hand + face-up +
-          face-down wins. The last player still holding cards is the SHITHEAD.
+          face-down wins. Any remaining players are SHITHEADS.
         </P>
       </Section>
 
@@ -89,9 +89,9 @@ export default function RulesScreen() {
         </P>
       </Section>
 
-      <Section title="Long live Elder Jake">
+      <Section title="Long live Jake the Elder">
         <P>
-          From Cousin Jake, the official creator of SHED (01/05/2025):{'\n'}
+          From Jake the Elder, the herald of SHED:{'\n'}
           {'\n'}
           <Italic>
             "8 is definitely playable on 7. It's invisible. Plus, it lets you

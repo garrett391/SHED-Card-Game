@@ -33,7 +33,7 @@ High Tier Power Cards may be played at **any** time on any card
 
 **7**
  * The next card played must be a 7 or lower (exception being an 8)
-   * _Important:_ See “Long Live Elder Jake!” below for explanation on playing 8s on 7s
+   * _Important:_ See “Long Live Jake the Elder!” below for explanation on playing 8s on 7s
  * A 7 cannot be played on anything that is higher than a 7 (exception being an 8, since its invisible)
  *  Is a weaker power card due to lack of versatility, but can be strategic when played correctly.
     * Ex: If you know the next player only has high cards, play a 7 (if possible) and force them to pick up
@@ -77,7 +77,7 @@ After all 3 face-up cards have been successfully played:
 2. If the randomly drawn card does not beat the card on the top of the pile, they must pick up the pile, and they must play all the cards they picked up before continuing their end game
 3. The first player to play all their ~~place all face-down~~ cards wins the game 
 
-## Long Live Elder Jake! (SHED Grandmaster):
+## Long Live Jake the Elder! (SHED Grandmaster):
 As stated by Erich (Bauer), “I’ve reached out to Cousin Jake, the official creator of SHED, for his perspective on this sensitive matter.”.
 
     ⁃    “8 is definitely playable on 7. It’s invisible. Plus, it lets you pass the 7 to the next person, which is potentially a huge tactical move for both you and the person before you.”.

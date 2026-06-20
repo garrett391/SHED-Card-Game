@@ -3,7 +3,7 @@
 A cross-platform (iOS / Android / Web) mobile app for the card game
 **Shithead / Shed**, built with React Native + Expo + TypeScript.
 
-> Original rules as spake by Cousin Jake. Long live Elder Jake.
+> Original rules as spake by Jake the Elder. Long live Jake.
 
 ## What's in v1
 
