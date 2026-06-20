@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "Shed",
+    "slug": "shed",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "shed",
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.yourname.shed" },
+    "android": { "package": "com.yourname.shed", "adaptiveIcon": { "backgroundColor": "#0f3a2d" } },
+    "web": { "bundler": "metro", "output": "single" },
+    "plugins": ["expo-router"]
+  }
+}
