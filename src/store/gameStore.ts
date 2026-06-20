@@ -10,7 +10,7 @@ interface GameStore {
   handRevealed: boolean;
 
   // lifecycle
-  startGame: (configs: PlayerConfig[]) => void;
+  startGame: (configs: PlayerConfig[], lastManStanding?: boolean) => void;
   reset: () => void;
 
   // swap phase
@@ -35,13 +35,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
   selectedCardIds: [],
   handRevealed: false,
 
-  startGame: (configs) =>
+  startGame: (configs, lastManStanding) => {
+    const game = engine.createGame(configs);
     set({
-      game: engine.createGame(configs),
+      game: { ...game, lastManStanding: lastManStanding ?? false },
       recentEvents: [],
       selectedCardIds: [],
       handRevealed: false,
-    }),
+    });
+  },
 
   reset: () => set({ game: null, recentEvents: [], selectedCardIds: [], handRevealed: false }),
 

@@ -73,6 +73,7 @@ export function createGame(playerConfigs: PlayerConfig[]): GameState {
     log: [entry('Dealt. Swap any hand cards with face-up cards before play.')],
     winnerId: null,
     shitheadId: null,
+    lastManStanding: false,
   };
 }
 
@@ -319,17 +320,28 @@ export function playCards(
     winnerId = playerIdx;
   }
 
-  // Game ends when only 0 or 1 active players remain.
   const remaining = players.filter(p => !p.isFinished);
-  if (remaining.length <= 1) {
-    phase = 'gameOver';
-    shitheadId = remaining[0]?.id ?? null;
-    events.push({ type: 'gameOver', winnerId: winnerId!, shitheadId });
-    log.push(entry(
-      remaining[0]
-        ? `Game over — ${remaining[0].name} is the Shithead.`
-        : 'Game over.',
-    ));
+
+  if (state.lastManStanding) {
+    // Last-man-standing: game ends when only 0 or 1 active players remain.
+    if (remaining.length <= 1) {
+      phase = 'gameOver';
+      shitheadId = remaining[0]?.id ?? null;
+      events.push({ type: 'gameOver', winnerId: winnerId!, shitheadId });
+      log.push(entry(
+        remaining[0]
+          ? `Game over — ${remaining[0].name} is the Shithead.`
+          : 'Game over.',
+      ));
+    }
+  } else {
+    // Default: first winner takes all — game ends immediately.
+    if (winnerId !== null && events.some(e => e.type === 'playerFinished' && e.playerId === winnerId)) {
+      phase = 'gameOver';
+      shitheadId = null;
+      events.push({ type: 'gameOver', winnerId, shitheadId });
+      log.push(entry(`Game over — ${players[winnerId].name} wins!`));
+    }
   }
 
   const next: GameState = {

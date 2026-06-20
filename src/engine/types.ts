@@ -51,6 +51,7 @@ export interface GameState {
   startingPlayerIndex: number;
   pendingExtraTurn: boolean;     // after burn (10 or 4-of-a-kind)
   log: LogEntry[];
+  lastManStanding: boolean;       // true = play until one remains; false = first winner ends it
   winnerId: number | null;       // first to empty all piles
   shitheadId: number | null;     // last player remaining (set on gameOver)
 }
