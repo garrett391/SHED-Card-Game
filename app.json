@@ -6,7 +6,13 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "scheme": "shed",
-    "ios": { "supportsTablet": true, "bundleIdentifier": "com.yourname.shed" },
+    "ios": {
+            "supportsTablet": true,
+            "bundleIdentifier": "com.yourname.shed",
+            "infoPlist": {
+              "UIBackgroundModes": ["audio"]
+            }
+          },
     "android": { "package": "com.yourname.shed", "adaptiveIcon": { "backgroundColor": "#0f3a2d" } },
     "web": { "bundler": "metro", "output": "single" },
     "plugins": ["expo-router"]

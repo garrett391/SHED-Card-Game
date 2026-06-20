@@ -75,6 +75,7 @@ shed-app/
 │   │   └── bot.ts              Heuristic bot — easily swappable
 │   ├── store/
 │   │   └── gameStore.ts        Zustand store wrapping the engine
+│   │   └── radioStore.ts       Zustand store wrapping the jazz radio
 │   └── components/
 │       ├── theme.ts            Colors + spacing tokens
 │       ├── Button.tsx
