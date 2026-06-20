@@ -93,6 +93,21 @@ describe('rules', () => {
     expect(canPlayCardOnTop(card(10), seven)).toBe(false);
   });
 
+  test('10 is playable on anything except a 7', () => {
+    const ten = card(10);
+    
+    // Playable on lower cards
+    expect(canPlayCardOnTop(ten, card(4))).toBe(true);
+    
+    // BUG FIX: Playable on higher face cards
+    expect(canPlayCardOnTop(ten, card(12))).toBe(true); // Queen
+    expect(canPlayCardOnTop(ten, card(13))).toBe(true); // King
+    expect(canPlayCardOnTop(ten, card(14))).toBe(true); // Ace
+    
+    // Still respects the 7 rule (blocked)
+    expect(canPlayCardOnTop(ten, card(7))).toBe(false);
+    });
+
   test('meets-or-beats', () => {
     expect(canPlayCardOnTop(card(5), card(5))).toBe(true);
     expect(canPlayCardOnTop(card(6), card(5))).toBe(true);

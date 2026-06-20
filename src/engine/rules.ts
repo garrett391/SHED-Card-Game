@@ -29,14 +29,15 @@ export function getEffectiveTopCard(playPile: readonly Card[]): Card | null {
  *
  *   - 2 and 8 are always playable.
  *   - On an empty effective top, anything is playable.
- *   - On a 7: next card must be ≤ 7 (the 8 case is covered by the always-playable
- *     rule above; 10 cannot be played on a 7 because 10 > 7).
+ *   - On a 7: next card must be <= 7 (blocks the 10, as 10 > 7).
+ *   - 10 is playable on any other non-7 card.
  *   - Otherwise: meets-or-beats — card.rank >= top.rank.
  */
 export function canPlayCardOnTop(card: Card, top: Card | null): boolean {
   if (card.rank === 2 || card.rank === 8) return true;
   if (top === null) return true;
   if (top.rank === 7) return card.rank <= 7;
+  if (card.rank === 10) return true;
   return card.rank >= top.rank;
 }
 
