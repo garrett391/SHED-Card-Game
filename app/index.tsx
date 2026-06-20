@@ -1,5 +1,6 @@
 import { Link, useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
+import Constants from 'expo-constants';
 import { Button } from '../src/components/Button';
 import { theme } from '../src/components/theme';
 import { useGameStore } from '../src/store/gameStore';
@@ -7,6 +8,7 @@ import { useGameStore } from '../src/store/gameStore';
 export default function HomeScreen() {
   const router = useRouter();
   const reset = useGameStore((s) => s.reset);
+  const appVersion = Constants.expoConfig?.version ?? '0.0.0';
 
   return (
     <View style={styles.container}>
@@ -28,9 +30,14 @@ export default function HomeScreen() {
         </Link>
       </View>
 
-      <Text style={styles.footer}>
-        Long live Elder Jake.
-      </Text>
+      <View style={styles.footerContainer}>
+        <Text style={styles.footer}>
+          Long live Elder Jake.
+        </Text>
+        <Text style={styles.version}>
+          v{appVersion}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -56,10 +63,20 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   actions: { marginBottom: 40 },
+  footerContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   footer: {
     color: theme.color.textMuted,
     textAlign: 'center',
     fontSize: 12,
-    marginBottom: 16,
+  },
+  version: {
+    color: theme.color.textMuted,
+    textAlign: 'center',
+    fontSize: 10,
+    marginTop: 4,
+    opacity: 0.5, // Dimmed slightly so it doesn't distract from the quote
   },
 });
