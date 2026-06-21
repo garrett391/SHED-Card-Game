@@ -71,6 +71,13 @@ export const STATIONS: Station[] = [
     urls: ['https://icecast.radiofrance.fr/francemusiquelajazz-hifi.aac'],
   },
   {
+    // Classic piano and acoustic bass — gives that smoky, high-stakes backroom vibe.
+    id: 'radio-swiss-jazz',
+    name: 'Classic Lounge',
+    emoji: '🃏',
+    urls: ['https://stream.srg-ssr.ch/m/rsj/mp3_128'],
+  },
+  {
     // Jazz Radio (infomaniak.ch) — Classic jazz.
     id: 'jazz-radio-classic',
     name: 'Classic Jazz',
