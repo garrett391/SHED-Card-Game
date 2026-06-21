@@ -35,7 +35,9 @@ export function Button({
       <Text
         style={[
           styles.text,
-          (variant === 'secondary' || variant === 'ghost') && styles.textDark,
+          variant === 'secondary' && styles.textSecondary,
+          variant === 'ghost' && styles.textGhost,
+          variant === 'danger' && styles.textDanger,
         ]}
       >
         {title}
@@ -55,9 +57,21 @@ const styles = StyleSheet.create({
   compact: { paddingVertical: 8, paddingHorizontal: 14 },
   primary: { backgroundColor: theme.color.primary },
   secondary: { backgroundColor: '#ecf0f1' },
-  ghost: { backgroundColor: 'transparent', borderWidth: 1, borderColor: theme.color.textMuted },
+  // Ghost variant: Transparent background with a clean, low-opacity white border 
+  // so it clearly framing the button without distracting from primary actions.
+  ghost: { 
+    backgroundColor: 'transparent', 
+    borderWidth: 1, 
+    borderColor: 'rgba(255, 255, 255, 0.25)' 
+  },
   danger: { backgroundColor: theme.color.danger },
   disabled: { opacity: 0.4 },
+  
+  // Text Styles
   text: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  textDark: { color: theme.color.secondary },
+  textSecondary: { color: theme.color.secondary },
+  // Crisp, bright off-white text for high readability on dark green felt
+  textGhost: { color: '#E0E6ED', fontWeight: '600' }, 
+  // Bold white text to make sure the red "Pick up Pile" danger block pops perfectly
+  textDanger: { color: '#ffffff', fontWeight: '700' },
 });
