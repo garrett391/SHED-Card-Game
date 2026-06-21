@@ -38,7 +38,7 @@ export function createGame(playerConfigs: PlayerConfig[]): GameState {
     throw new Error('SHED supports 2–6 players');
   }
 
-  // Use 2 standard decks (104 cards) for 5 or 6 players so the cards don't run dry
+  // Explicitly calculate the deck configuration based on num players, i.e. 2 standard decks (104 cards) for 5 or 6 players
   const deckCount = playerConfigs.length > 4 ? 2 : 1;
   const deck = shuffle(createDeck(deckCount));
   
@@ -52,7 +52,7 @@ export function createGame(playerConfigs: PlayerConfig[]): GameState {
     isFinished: false,
   }));
 
-  // Deal one card at a time, clockwise, per the rules.
+  // Deal cards sequentially around the table
   for (let r = 0; r < FACE_DOWN_SIZE; r++) {
     for (const p of players) p.faceDown.push(deck.pop()!);
   }
@@ -65,6 +65,7 @@ export function createGame(playerConfigs: PlayerConfig[]): GameState {
 
   return {
     players,
+    deckCount,
     drawPile: deck,
     playPile: [],
     burnedPile: [],

@@ -44,6 +44,7 @@ function setupGame(opts: {
 }): GameState {
   return {
     players: opts.players.map((p, i) => ({ ...p, id: i })),
+    deckCount: opts.players.length > 4 ? 2 : 1,
     drawPile: opts.draw ?? [],
     playPile: opts.pile ?? [],
     burnedPile: [],
@@ -107,7 +108,7 @@ describe('rules', () => {
     
     // Still respects the 7 rule (blocked)
     expect(canPlayCardOnTop(ten, card(7))).toBe(false);
-    });
+  });
 
   test('meets-or-beats', () => {
     expect(canPlayCardOnTop(card(5), card(5))).toBe(true);
@@ -186,33 +187,6 @@ describe('engine', () => {
     // 52 − (9 × 3) = 25 cards left in draw pile
     expect(g.drawPile).toHaveLength(52 - 9 * 3);
   });
-
-  test('createGame handles 6 players by using 2 decks (104 cards) and finishes swap without crashing', () => {
-      let g = createGame([
-        { name: 'P1', isBot: false },
-        { name: 'P2', isBot: false },
-        { name: 'P3', isBot: false },
-        { name: 'P4', isBot: false },
-        { name: 'P5', isBot: false },
-        { name: 'P6', isBot: false },
-      ]);
-      
-      expect(g.phase).toBe('swap');
-      // Each of the 6 players must have fully loaded 3/3/3 piles
-      for (const p of g.players) {
-        expect(p.hand).toHaveLength(3);
-        expect(p.faceUp).toHaveLength(3);
-        expect(p.faceDown).toHaveLength(3);
-      }
-      // 104 - (6 players * 9 cards) = 50 cards left in draw pile
-      expect(g.drawPile).toHaveLength(104 - 6 * 9);
-
-      // Simulate everyone finishing swap to verify findStartingPlayer runs smoothly
-      for (let i = 0; i < 6; i++) {
-        g = finishSwap(g, i);
-      }
-      expect(g.phase).toBe('playing');
-    });
 
   test('finishing swap for all players starts play', () => {
     let g = createGame([
@@ -424,5 +398,34 @@ describe('engine', () => {
       pile: [card(13)],
     });
     expect(hasPlayableMove(g, 0)).toBe(false);
+  });
+
+  test('createGame handles 6 players by using 2 decks (104 cards) and finishes swap without crashing', () => {
+    let g = createGame([
+      { name: 'P1', isBot: false },
+      { name: 'P2', isBot: false },
+      { name: 'P3', isBot: false },
+      { name: 'P4', isBot: false },
+      { name: 'P5', isBot: false },
+      { name: 'P6', isBot: false },
+    ]);
+    
+    expect(g.phase).toBe('swap');
+    expect(g.deckCount).toBe(2);
+    
+    // Each of the 6 players must have fully loaded 3/3/3 piles
+    for (const p of g.players) {
+      expect(p.hand).toHaveLength(3);
+      expect(p.faceUp).toHaveLength(3);
+      expect(p.faceDown).toHaveLength(3);
+    }
+    // 104 total cards - (6 players * 9 cards each) = 50 remaining in draw pile
+    expect(g.drawPile).toHaveLength(104 - 6 * 9);
+
+    // Verify everything works cleanly when finishing swaps and finding starting player
+    for (let i = 0; i < 6; i++) {
+      g = finishSwap(g, i);
+    }
+    expect(g.phase).toBe('playing');
   });
 });

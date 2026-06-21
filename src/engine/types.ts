@@ -41,6 +41,7 @@ export interface LogEntry {
 
 export interface GameState {
   players: Player[];
+  deckCount: number;             // Explicitly tracks how many decks this game uses
   drawPile: Card[];              // pop from end
   playPile: Card[];              // index 0 = top of pile
   burnedPile: Card[];            // out of play (debug / future stats)
