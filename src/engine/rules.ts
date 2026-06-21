@@ -67,8 +67,23 @@ export function canPlayMultiple(
  *
  * Per Cousin Jake: "An 8 does not break a four-of-a-kind sequence."
  * Example pile (top→bottom): [5, 8, 5, 5, 5] → burns.
+ *
+ * Special case: four 8s at the top also burn. Because 8s are invisible they
+ * are skipped by the main loop and would otherwise never be counted, so we
+ * count leading 8s first before falling through to the general logic.
+ * Example: [8, 8, 8, 8] → burns. [8, 8, 8, 8, 5] → burns.
  */
 export function checkFourOfAKindBurn(playPile: readonly Card[]): boolean {
+  // Count 8s that sit at the very top of the pile (before any non-8 card).
+  let leadingEights = 0;
+  for (const card of playPile) {
+    if (card.rank === 8) leadingEights++;
+    else break;
+  }
+  if (leadingEights >= 4) return true;
+
+  // General case: skip 8s anywhere in the sequence; if the first 4 non-8
+  // cards share a rank, the pile burns.
   let targetRank: Rank | null = null;
   let count = 0;
   for (const card of playPile) {

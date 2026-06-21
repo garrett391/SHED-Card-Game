@@ -56,6 +56,7 @@ function setupGame(opts: {
     log: [],
     winnerId: null,
     shitheadId: null,
+    lastManStanding: false,
   };
 }
 
@@ -127,6 +128,19 @@ describe('rules', () => {
       card(5, '♠', '5a'), card(8),
       card(5, '♥', '5b'), card(5, '♦', '5c'), card(5, '♣', '5d'),
     ])).toBe(true);
+  });
+
+  test('four-of-a-kind: four 8s at the top burns', () => {
+    expect(checkFourOfAKindBurn([
+      card(8, '♠', '8a'), card(8, '♥', '8b'),
+      card(8, '♦', '8c'), card(8, '♣', '8d'),
+    ])).toBe(true);
+  });
+
+  test('four-of-a-kind: three 8s is not enough to burn', () => {
+    expect(checkFourOfAKindBurn([
+      card(8, '♠', '8a'), card(8, '♥', '8b'), card(8, '♦', '8c'),
+    ])).toBe(false);
   });
 
   test('four-of-a-kind: any non-8 between matching cards DOES break it', () => {
@@ -281,6 +295,25 @@ describe('engine', () => {
     expect(r3.state.currentPlayerIndex).toBe(0); // burn = extra turn
   });
 
+  test('playing four 8s burns the pile and grants an extra turn', () => {
+    const g = setupGame({
+      players: [
+        player({
+          hand: [
+            card(8, '♠', '8a'), card(8, '♥', '8b'),
+            card(8, '♦', '8c'), card(8, '♣', '8d'),
+          ],
+        }),
+        player({ hand: [card(5)] }),
+      ],
+      pile: [card(9)],
+    });
+    const { state, events } = playCards(g, 0, ['8a', '8b', '8c', '8d']);
+    expect(state.playPile).toHaveLength(0);
+    expect(events.some(e => e.type === 'pileBurned' && e.reason === 'fourOfKind')).toBe(true);
+    expect(state.currentPlayerIndex).toBe(0); // extra turn
+  });
+
   test('player draws back to 3 after playing from hand while draw pile has cards', () => {
     const g = setupGame({
       players: [
@@ -339,13 +372,16 @@ describe('engine', () => {
   });
 
   test('emptying all piles wins; last with cards is the shithead', () => {
-    const g = setupGame({
-      players: [
-        player({ hand: [card(13)] }),               // about to go out
-        player({ hand: [card(3)], faceUp: [card(5)] }),
-      ],
-      pile: [card(4)],
-    });
+    const g: GameState = {
+      ...setupGame({
+        players: [
+          player({ hand: [card(13)] }),               // about to go out
+          player({ hand: [card(3)], faceUp: [card(5)] }),
+        ],
+        pile: [card(4)],
+      }),
+      lastManStanding: true,
+    };
     const { state } = playCards(g, 0, [card(13).id]);
     expect(state.phase).toBe('gameOver');
     expect(state.winnerId).toBe(0);
