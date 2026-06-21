@@ -104,6 +104,12 @@ export default function GameScreen() {
     return game.players[game.currentPlayerIndex];
   }, [game]);
 
+  // Memoized sorted hand to ensure logical visual order (lowest to highest)
+  const sortedHand = useMemo(() => {
+    if (!currentPlayer?.hand) return [];
+    return [...currentPlayer.hand].sort((a, b) => a.rank - b.rank);
+  }, [currentPlayer?.hand]);
+
   if (!game || !currentPlayer) {
     return (
       <View style={styles.container}>
@@ -144,7 +150,7 @@ export default function GameScreen() {
         <>
           <Text style={styles.sectionLabel}>Your hand</Text>
           <View style={styles.cardRow}>
-            {currentPlayer.hand.map((c) => {
+            {sortedHand.map((c) => {
               const playable = playableIds.includes(c.id);
               return (
                 <PlayingCard
