@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../src/components/Button';
 import { Center } from '../src/components/Center';
@@ -7,27 +7,31 @@ import { OpponentStrip } from '../src/components/OpponentStrip';
 import { PlayingCard } from '../src/components/PlayingCard';
 import { theme } from '../src/components/theme';
 import { decideBotAction } from '../src/ai/bot';
+import { rankLabel, cardLabel } from '../src/engine/cards';
 import {
   getPlayableCardIds,
   getPlaySource,
   hasPlayableMove,
 } from '../src/engine/engine';
 import { useGameStore } from '../src/store/gameStore';
-import { GameState } from '../src/engine/types';
+import { Card, GameEvent, GameState } from '../src/engine/types';
 
-const BOT_THINK_MS = 900;
+const BOT_THINK_MS = 400;
+const BOT_DISPLAY_MS = 1500;
 
 /**
  * Main table screen.
  *
  * Layout (top → bottom):
- *  - Opponent strips (everyone except current player)
+ *  - Player scoreboard (ALL players, fixed order, turn indicator on active)
  *  - Center area (draw / pile / burned)
+ *  - Turn banner + recent events
  *  - Current player's hand area + action buttons
  *
  * Two things drive the UX:
  *  1. Bot turns auto-advance with a small delay so you can see what happened.
- *  2. Human turns are gated by a "pass device to X" screen for privacy.
+ *  2. Multi-human games gate turns with "pass device to X" for privacy.
+ *     Solo human vs bots skips the gate entirely.
  */
 export default function GameScreen() {
   const router = useRouter();
@@ -41,6 +45,21 @@ export default function GameScreen() {
   const revealHand = useGameStore((s) => s.revealHand);
   const recentEvents = useGameStore((s) => s.recentEvents);
 
+  // Face-down flip result: pause to show what was flipped before bots continue.
+  const [flipResult, setFlipResult] = useState<{
+    card: Card;
+    success: boolean;
+  } | null>(null);
+
+  // Bot action interstitial: show what the bot just did for BOT_DISPLAY_MS.
+  const [botAction, setBotAction] = useState<{
+    botName: string;
+    headline: string;   // e.g. "played K♠"
+    detail?: string;    // e.g. "🔥 Burns the pile!"
+    card?: Card;        // shown visually
+    emoji: string;      // leading emoji
+  } | null>(null);
+
   // Track which player we last triggered a bot action for, to avoid
   // re-firing on every re-render.
   const lastBotTurnRef = useRef<{ idx: number; epoch: number } | null>(null);
@@ -50,16 +69,18 @@ export default function GameScreen() {
     if (!game) router.replace('/');
   }, [game, router]);
 
-  // Route to game-over when phase changes.
+  // Route to game-over when phase changes (wait for bot action display to clear).
   useEffect(() => {
-    if (game && game.phase === 'gameOver') {
+    if (game && game.phase === 'gameOver' && !botAction) {
       router.replace('/game-over');
     }
-  }, [game, router]);
+  }, [game, router, botAction]);
 
   // Bot autoplay.
   useEffect(() => {
     if (!game || game.phase !== 'playing') return;
+    if (flipResult) return; // Wait for human to dismiss flip result first
+    if (botAction) return;  // Wait for bot action display to clear
     const current = game.players[game.currentPlayerIndex];
     if (!current.isBot) return;
     if (current.isFinished) return;
@@ -73,6 +94,8 @@ export default function GameScreen() {
       return;
     }
     lastBotTurnRef.current = { idx: game.currentPlayerIndex, epoch };
+
+    const botName = current.name;
 
     const timer = setTimeout(() => {
       // Re-read latest store state in case something changed.
@@ -96,9 +119,34 @@ export default function GameScreen() {
           latest.playSelected();
         }
       }
+
+      // Capture what just happened for the interstitial display.
+      const events = useGameStore.getState().recentEvents;
+      setBotAction(buildBotActionDisplay(botName, events));
     }, BOT_THINK_MS);
     return () => clearTimeout(timer);
-  }, [game]);
+  }, [game, flipResult, botAction]);
+
+  // Auto-dismiss bot action interstitial after BOT_DISPLAY_MS.
+  useEffect(() => {
+    if (!botAction) return;
+    const timer = setTimeout(() => setBotAction(null), BOT_DISPLAY_MS);
+    return () => clearTimeout(timer);
+  }, [botAction]);
+
+  // Auto-reveal hand for solo human (no pass-and-play gate needed).
+  const humanCount = useMemo(
+    () => (game ? game.players.filter((p) => !p.isBot).length : 0),
+    [game],
+  );
+
+  useEffect(() => {
+    if (!game || game.phase !== 'playing') return;
+    const current = game.players[game.currentPlayerIndex];
+    if (!current.isBot && !handRevealed && humanCount <= 1) {
+      revealHand();
+    }
+  }, [game, handRevealed, humanCount, revealHand]);
 
   const currentPlayer = useMemo(() => {
     if (!game) return null;
@@ -126,8 +174,30 @@ export default function GameScreen() {
     : [];
   const canPlay = isHumanTurn && hasPlayableMove(game, game.currentPlayerIndex);
 
+  // Bot action interstitial: full-screen display of what the bot just did.
+  if (botAction) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.botActionGate}>
+          <Text style={styles.botActionEmoji}>{botAction.emoji}</Text>
+          <Text style={styles.botActionName}>{botAction.botName}</Text>
+          <Text style={styles.botActionHeadline}>{botAction.headline}</Text>
+          {botAction.card && (
+            <View style={styles.botActionCardWrap}>
+              <PlayingCard card={botAction.card} />
+            </View>
+          )}
+          {botAction.detail && (
+            <Text style={styles.botActionDetail}>{botAction.detail}</Text>
+          )}
+        </View>
+      </View>
+    );
+  }
+
   // Pass-and-play gate: hide hand until the human taps "I'm ready".
-  if (isHumanTurn && !handRevealed) {
+  // Skip the gate entirely when only one human is playing (solo vs bots).
+  if (isHumanTurn && !handRevealed && humanCount > 1) {
     return (
       <View style={styles.container}>
         <View style={styles.gate}>
@@ -139,6 +209,33 @@ export default function GameScreen() {
             </Text>
           )}
           <Button title="I'm ready" onPress={revealHand} />
+        </View>
+      </View>
+    );
+  }
+
+  // Face-down flip result gate: show what was flipped before continuing.
+  if (flipResult) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.gate}>
+          <Text style={styles.passLabel}>You flipped…</Text>
+          <View style={styles.flipCardWrap}>
+            <PlayingCard card={flipResult.card} />
+          </View>
+          <Text
+            style={[
+              styles.flipVerdict,
+              { color: flipResult.success ? theme.color.accent : theme.color.danger },
+            ]}
+          >
+            {flipResult.success
+              ? '✅  It plays!'
+              : '❌  No good — you pick up the pile'}
+          </Text>
+          <View style={{ marginTop: 24 }}>
+            <Button title="Continue" onPress={() => setFlipResult(null)} />
+          </View>
         </View>
       </View>
     );
@@ -199,7 +296,25 @@ export default function GameScreen() {
               <PlayingCard
                 key={c.id}
                 faceDown
-                onPress={() => playFaceDown(c.id)}
+                onPress={() => {
+                  playFaceDown(c.id);
+                  // Read latest events to determine flip outcome
+                  const latest = useGameStore.getState();
+                  const events = latest.recentEvents;
+                  const failed = events.find(
+                    (e) => e.type === 'faceDownFlipFailed',
+                  );
+                  if (failed && failed.type === 'faceDownFlipFailed') {
+                    setFlipResult({ card: failed.card, success: false });
+                  } else {
+                    const played = events.find(
+                      (e) => e.type === 'cardsPlayed' && e.source === 'faceDown',
+                    );
+                    if (played && played.type === 'cardsPlayed') {
+                      setFlipResult({ card: played.cards[0], success: true });
+                    }
+                  }
+                }}
               />
             ))}
           </View>
@@ -211,17 +326,15 @@ export default function GameScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Opponents */}
-      <View style={styles.opponents}>
-        {game.players.map((p, i) =>
-          i === game.currentPlayerIndex ? null : (
-            <OpponentStrip
-              key={p.id}
-              player={p}
-              isCurrent={false}
-            />
-          ),
-        )}
+      {/* Player scoreboard — fixed order, turn indicator on active player */}
+      <View style={styles.scoreboard}>
+        {game.players.map((p, i) => (
+          <OpponentStrip
+            key={p.id}
+            player={p}
+            isCurrent={i === game.currentPlayerIndex}
+          />
+        ))}
       </View>
 
       {/* Center: draw / pile / burned */}
@@ -271,6 +384,66 @@ export default function GameScreen() {
   );
 }
 
+/** Build a display object from bot action events for the interstitial screen. */
+function buildBotActionDisplay(
+  botName: string,
+  events: GameEvent[],
+): { botName: string; headline: string; detail?: string; card?: Card; emoji: string } {
+  // Check for pile pickup
+  const pickup = events.find((e) => e.type === 'pileTakenUp');
+  if (pickup && pickup.type === 'pileTakenUp') {
+    // Check if it was a failed face-down flip
+    const flipFail = events.find((e) => e.type === 'faceDownFlipFailed');
+    if (flipFail && flipFail.type === 'faceDownFlipFailed') {
+      return {
+        botName,
+        emoji: '🙈',
+        headline: `flipped ${cardLabel(flipFail.card)}`,
+        detail: `No good — picks up ${pickup.cardCount} cards`,
+        card: flipFail.card,
+      };
+    }
+    return {
+      botName,
+      emoji: '📥',
+      headline: `picked up the pile`,
+      detail: `${pickup.cardCount} cards`,
+    };
+  }
+
+  // Check for cards played
+  const played = events.find((e) => e.type === 'cardsPlayed');
+  if (played && played.type === 'cardsPlayed') {
+    const n = played.cards.length;
+    const label = n === 1
+      ? `played ${cardLabel(played.cards[0])}`
+      : `played ${n}× ${rankLabel(played.cards[0].rank)}`;
+
+    // Check for burn
+    const burn = events.find((e) => e.type === 'pileBurned');
+    const finished = events.find((e) => e.type === 'playerFinished');
+
+    let detail: string | undefined;
+    if (burn && burn.type === 'pileBurned') {
+      detail = burn.reason === 'ten' ? '🔥 Burns the pile!' : '🔥 Four-of-a-kind — burns the pile!';
+    }
+    if (finished) {
+      detail = (detail ? detail + '\n' : '') + '🏆 Out of the game!';
+    }
+
+    return {
+      botName,
+      emoji: '🃏',
+      headline: label,
+      detail,
+      card: played.cards[0],
+    };
+  }
+
+  // Fallback
+  return { botName, emoji: '🤖', headline: 'took their turn' };
+}
+
 /** Turn a list of engine events into a one-line summary for the UI. */
 function summarizeRecent(
   events: ReturnType<typeof useGameStore.getState>['recentEvents'],
@@ -313,7 +486,7 @@ const styles = StyleSheet.create({
     minHeight: '100%',
     paddingBottom: 40,
   },
-  opponents: { marginBottom: 4 },
+  scoreboard: { marginBottom: 4 },
   turnBanner: {
     alignItems: 'center',
     paddingVertical: 8,
@@ -369,5 +542,49 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 24,
     textAlign: 'center',
+  },
+  flipCardWrap: {
+    marginVertical: 20,
+    alignItems: 'center',
+  },
+  flipVerdict: {
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  botActionGate: {
+    flex: 1,
+    marginTop: 80,
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  botActionEmoji: {
+    fontSize: 48,
+    marginBottom: 8,
+  },
+  botActionName: {
+    color: theme.color.accent,
+    fontSize: 36,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  botActionHeadline: {
+    color: theme.color.textOnDark,
+    fontSize: 24,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  botActionCardWrap: {
+    marginVertical: 12,
+    alignItems: 'center',
+  },
+  botActionDetail: {
+    color: theme.color.accent,
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: 12,
   },
 });

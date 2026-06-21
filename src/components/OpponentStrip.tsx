@@ -9,10 +9,14 @@ interface Props {
   isCurrent: boolean;
 }
 
-/** A horizontal strip showing an opponent: name, hand count, face-up cards, face-down count. */
+/** A horizontal strip showing a player: name, hand count, face-up cards, face-down count. */
 export function OpponentStrip({ player, isCurrent }: Props) {
   return (
     <View style={[styles.row, isCurrent && styles.current]}>
+      {/* Turn indicator */}
+      <View style={[styles.chip, isCurrent && styles.chipActive]}>
+        <Text style={styles.chipText}>{isCurrent ? '🔴' : '⚪'}</Text>
+      </View>
       <View style={styles.nameCol}>
         <Text
           style={[styles.name, isCurrent && styles.currentName]}
@@ -24,7 +28,7 @@ export function OpponentStrip({ player, isCurrent }: Props) {
         <Text style={styles.meta}>
           {player.hand.length} in hand · {player.faceDown.length} down
         </Text>
-        {player.isFinished && <Text style={styles.finished}>OUT</Text>}
+        {player.isFinished && <Text style={styles.finished}>OUT ✓</Text>}
       </View>
       <View style={styles.cardsRow}>
         {player.faceUp.map((c) => (
@@ -54,7 +58,17 @@ const styles = StyleSheet.create({
   current: {
     borderWidth: 2,
     borderColor: theme.color.accent,
+    backgroundColor: '#12352a',
   },
+  chip: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  chipActive: {},
+  chipText: { fontSize: 12 },
   nameCol: { flex: 1 },
   name: { color: theme.color.textOnDark, fontWeight: '700', fontSize: 15 },
   currentName: { color: theme.color.accent },
