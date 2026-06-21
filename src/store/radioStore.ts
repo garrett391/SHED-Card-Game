@@ -71,20 +71,6 @@ export const STATIONS: Station[] = [
     urls: ['https://icecast.radiofrance.fr/francemusiquelajazz-hifi.aac'],
   },
   {
-    // NPR-affiliated public broadcaster (KNKX).
-    id: 'jazz24',
-    name: 'Jazz24',
-    emoji: '🎺',
-    urls: ['https://live.amperwave.net/direct/ppm-jazz24mp3-ibc1'],
-  },
-  {
-    // WBGO Newark — legendary NPR jazz station.
-    id: 'wbgo',
-    name: 'WBGO Newark',
-    emoji: '🏙️',
-    urls: ['https://playerservices.streamtheworld.com/api/livestream-redirect/WBGO.mp3'],
-  },
-  {
     // Jazz Radio (infomaniak.ch) — Classic jazz.
     id: 'jazz-radio-classic',
     name: 'Classic Jazz',
