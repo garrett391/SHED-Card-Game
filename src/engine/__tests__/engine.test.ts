@@ -187,6 +187,33 @@ describe('engine', () => {
     expect(g.drawPile).toHaveLength(52 - 9 * 3);
   });
 
+  test('createGame handles 6 players by using 2 decks (104 cards) and finishes swap without crashing', () => {
+      let g = createGame([
+        { name: 'P1', isBot: false },
+        { name: 'P2', isBot: false },
+        { name: 'P3', isBot: false },
+        { name: 'P4', isBot: false },
+        { name: 'P5', isBot: false },
+        { name: 'P6', isBot: false },
+      ]);
+      
+      expect(g.phase).toBe('swap');
+      // Each of the 6 players must have fully loaded 3/3/3 piles
+      for (const p of g.players) {
+        expect(p.hand).toHaveLength(3);
+        expect(p.faceUp).toHaveLength(3);
+        expect(p.faceDown).toHaveLength(3);
+      }
+      // 104 - (6 players * 9 cards) = 50 cards left in draw pile
+      expect(g.drawPile).toHaveLength(104 - 6 * 9);
+
+      // Simulate everyone finishing swap to verify findStartingPlayer runs smoothly
+      for (let i = 0; i < 6; i++) {
+        g = finishSwap(g, i);
+      }
+      expect(g.phase).toBe('playing');
+    });
+
   test('finishing swap for all players starts play', () => {
     let g = createGame([
       { name: 'A', isBot: false },

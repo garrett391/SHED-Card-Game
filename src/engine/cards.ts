@@ -3,13 +3,15 @@ import { Card, Rank, Suit } from './types';
 const SUITS: readonly Suit[] = ['♠', '♥', '♦', '♣'];
 const RANKS: readonly Rank[] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
 
-/** Build a fresh, ordered 52-card deck (no jokers). */
-export function createDeck(): Card[] {
+/** Build a fresh, ordered deck (no jokers). Supports combining multiple decks. */
+export function createDeck(deckCount = 1): Card[] {
   const deck: Card[] = [];
   let i = 0;
-  for (const suit of SUITS) {
-    for (const rank of RANKS) {
-      deck.push({ id: `c${i++}`, rank, suit });
+  for (let d = 0; d < deckCount; d++) {
+    for (const suit of SUITS) {
+      for (const rank of RANKS) {
+        deck.push({ id: `c${i++}`, rank, suit });
+      }
     }
   }
   return deck;

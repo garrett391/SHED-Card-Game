@@ -37,7 +37,11 @@ export function createGame(playerConfigs: PlayerConfig[]): GameState {
   if (playerConfigs.length < 2 || playerConfigs.length > 6) {
     throw new Error('SHED supports 2–6 players');
   }
-  const deck = shuffle(createDeck());
+
+  // Use 2 standard decks (104 cards) for 5 or 6 players so the cards don't run dry
+  const deckCount = playerConfigs.length > 4 ? 2 : 1;
+  const deck = shuffle(createDeck(deckCount));
+  
   const players: Player[] = playerConfigs.map((cfg, i) => ({
     id: i,
     name: cfg.name,
