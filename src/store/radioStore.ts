@@ -1,5 +1,5 @@
 /**
- * Radio store — streams RelaxingJazz.com smooth jazz.
+ * Radio store — multi-station internet radio.
  *
  * Behavior:
  *   - On native (iOS / Android): autoplay works immediately.
@@ -7,42 +7,170 @@
  *     We attempt autoplay on init, and if it fails, we register
  *     a one-time click/keydown listener so the very first tap
  *     anywhere on the page (e.g. "New game") starts the stream.
- *   - The saxophone toggle on the home header controls play/pause.
+ *   - The saxophone toggle in the header controls play/pause on every screen.
+ *   - The station name + ▾ opens a picker; tapping a station switches to it
+ *     and starts playing (see `setStation`).
  *   - Audio persists across screen navigations (store + Sound live
  *     outside the component tree).
+ *
+ * HTTPS everywhere:
+ *   iOS ATS and Android 9+ block cleartext (http://) by default, so every
+ *   station leads with HTTPS. On web, HTML5 <audio> (which expo-av uses
+ *   under the hood) doesn't need CORS headers for simple playback — it works
+ *   like <img>. So all stations are offered on all platforms. If a stream
+ *   genuinely fails to load the store surfaces `loadError` so the picker can
+ *   show feedback rather than silent failure.
+ *
+ * ⚠️  Streams rot. Internet radio URLs go dead without notice. The picker
+ *     makes switching painless, and `loadSound` walks a fallback list, but
+ *     expect to prune/replace entries here over time.
+ *
+ * ⚠️  SomaFM note: their TOS says streams are "for individual, personal use
+ *     only — not for use in video games, streams, etc."
+ *     SomaFM stations are commented out — uncomment if you're comfortable
+ *     with the licensing for your use case.
  */
 
 import { create } from 'zustand';
 import { Audio } from 'expo-av';
 import { Platform } from 'react-native';
 
-// Use HTTPS on web to avoid mixed-content blocking.
-// Native gets the lighter 128 kbps stream; web gets 320 over HTTPS.
-const STREAM_URL =
-  Platform.OS === 'web'
-    ? 'https://443-1.autopo.st/171/stream/3/'
-    : 'http://stream-02-eu.relaxingjazz.com/stream/1/';
+// ---------------------------------------------------------------------------
+// Station catalogue
+// ---------------------------------------------------------------------------
 
-interface RadioStore {
-  /** True while the stream is audibly playing. */
-  isPlaying: boolean;
-  /** True during initial load (before first play attempt resolves). */
-  isLoading: boolean;
-  /** Initialize audio and attempt autoplay. Call once from _layout. */
-  init: () => Promise<void>;
-  /** Toggle play / pause. */
-  toggle: () => Promise<void>;
+export interface Station {
+  id: string;
+  name: string;
+  emoji: string;
+  /** URLs to try, ordered best → fallback. All HTTPS. */
+  urls: string[];
 }
 
-// Internal state kept outside the store to avoid serialization concerns.
+export const STATIONS: Station[] = [
+  {
+    id: 'relaxing-jazz',
+    name: 'Relaxing Jazz',
+    emoji: '🎷',
+    urls: [
+      'https://443-1.autopo.st/171/stream/3/',               // HTTPS proxy, 320 kbps
+    ],
+  },
+  {
+    // Radio Paradise "Mellow Mix" — rock-solid, eclectic, perfect background.
+    id: 'radio-paradise-mellow',
+    name: 'RP Mellow Mix',
+    emoji: '🌙',
+    urls: ['https://stream.radioparadise.com/mellow-128'],
+  },
+  {
+    // France Musique — La Jazz. Public broadcaster, very reliable.
+    id: 'france-musique-jazz',
+    name: 'France Musique Jazz',
+    emoji: '🇫🇷',
+    urls: ['https://icecast.radiofrance.fr/francemusiquelajazz-hifi.aac'],
+  },
+  {
+    // NPR-affiliated public broadcaster (KNKX).
+    id: 'jazz24',
+    name: 'Jazz24',
+    emoji: '🎺',
+    urls: ['https://live.amperwave.net/direct/ppm-jazz24mp3-ibc1'],
+  },
+  {
+    // WBGO Newark — legendary NPR jazz station.
+    id: 'wbgo',
+    name: 'WBGO Newark',
+    emoji: '🏙️',
+    urls: ['https://playerservices.streamtheworld.com/api/livestream-redirect/WBGO.mp3'],
+  },
+  {
+    // Jazz Radio (infomaniak.ch) — Classic jazz.
+    id: 'jazz-radio-classic',
+    name: 'Classic Jazz',
+    emoji: '🎹',
+    urls: ['https://jazz-wr01.ice.infomaniak.ch/jazz-wr01-128.mp3'],
+  },
+  {
+    // Jazz Radio — Cocktail / Happy Hour channel.
+    id: 'jazz-radio-cocktail',
+    name: 'Cocktail Jazz',
+    emoji: '🍸',
+    urls: ['https://jazz-wr14.ice.infomaniak.ch/jazz-wr14-128.mp3'],
+  },
+  {
+    // Jazz Radio — Lounge channel.
+    id: 'jazz-radio-lounge',
+    name: 'Lounge',
+    emoji: '🛋️',
+    urls: ['https://jazzlounge.ice.infomaniak.ch/jazzlounge-high.mp3'],
+  },
+
+  // ── SomaFM — check TOS before shipping publicly ─────────────────────────
+  // {
+  //   id: 'groove-salad',
+  //   name: 'Groove Salad',
+  //   emoji: '🥗',
+  //   urls: ['https://ice.somafm.com/groovesalad'],
+  // },
+  // {
+  //   id: 'vaporwaves',
+  //   name: 'Vaporwaves',
+  //   emoji: '🌊',
+  //   urls: ['https://ice.somafm.com/vaporwaves'],
+  // },
+];
+
+// ---------------------------------------------------------------------------
+// Internal state (outside the store to avoid Zustand serialization issues)
+// ---------------------------------------------------------------------------
+
 let _sound: Audio.Sound | null = null;
 let _initialized = false;
 /** Tracks the user's *intent* — true means "I want music on". */
 let _wantsToPlay = true;
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Try each URL in order; return the first Sound that loads, or null. */
+async function loadSound(urls: string[]): Promise<Audio.Sound | null> {
+  for (const uri of urls) {
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        { uri },
+        { shouldPlay: false },
+      );
+      return sound;
+    } catch {
+      // This URL failed — try the next one.
+    }
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Store
+// ---------------------------------------------------------------------------
+
+interface RadioStore {
+  isPlaying: boolean;
+  isLoading: boolean;
+  stationIndex: number;
+  /** Non-null when the most recent setStation/toggle load attempt failed. */
+  loadError: string | null;
+  init: () => Promise<void>;
+  toggle: () => Promise<void>;
+  /** Switch to a specific station by index and start playing it. */
+  setStation: (index: number) => Promise<void>;
+}
+
 export const useRadioStore = create<RadioStore>((set, get) => ({
   isPlaying: false,
   isLoading: false,
+  stationIndex: 0,
+  loadError: null,
 
   init: async () => {
     if (_initialized) return;
@@ -50,21 +178,20 @@ export const useRadioStore = create<RadioStore>((set, get) => ({
     set({ isLoading: true });
 
     try {
-      // Allow playback in silent mode (iOS) and in the background.
       await Audio.setAudioModeAsync({
         playsInSilentModeIOS: true,
         staysActiveInBackground: true,
       });
 
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: STREAM_URL },
-        { shouldPlay: false },
-      );
-      _sound = sound;
+      _sound = await loadSound(STATIONS[0].urls);
+      if (!_sound) {
+        set({ isLoading: false });
+        return;
+      }
 
       // Attempt autoplay.
       try {
-        await sound.playAsync();
+        await _sound.playAsync();
         set({ isPlaying: true, isLoading: false });
       } catch {
         // Autoplay blocked (expected on web before user gesture).
@@ -88,14 +215,13 @@ export const useRadioStore = create<RadioStore>((set, get) => ({
         }
       }
     } catch {
-      // Network error / expo-av not available — degrade silently.
       set({ isLoading: false });
     }
   },
 
   toggle: async () => {
     if (!_sound) return;
-    const { isPlaying } = get();
+    const { isPlaying, stationIndex } = get();
     try {
       if (isPlaying) {
         await _sound.pauseAsync();
@@ -104,19 +230,73 @@ export const useRadioStore = create<RadioStore>((set, get) => ({
       } else {
         await _sound.playAsync();
         _wantsToPlay = true;
-        set({ isPlaying: true });
+        set({ isPlaying: true, loadError: null });
       }
     } catch {
-      // If the stream died, try reloading it.
+      // If the stream died, try reloading the current station.
       try {
+        set({ isLoading: true });
         await _sound.unloadAsync();
-        await _sound.loadAsync({ uri: STREAM_URL });
+        _sound = await loadSound(STATIONS[stationIndex].urls);
+        if (_sound) {
+          await _sound.playAsync();
+          _wantsToPlay = true;
+          set({ isPlaying: true, isLoading: false, loadError: null });
+        } else {
+          set({ isLoading: false, loadError: 'Stream unavailable' });
+        }
+      } catch {
+        set({ isLoading: false });
+      }
+    }
+  },
+
+  setStation: async (index: number) => {
+    const { stationIndex } = get();
+
+    // Re-tapping the station that's already loaded: just (re)start it.
+    if (index === stationIndex && _sound) {
+      try {
         await _sound.playAsync();
         _wantsToPlay = true;
-        set({ isPlaying: true });
+        set({ isPlaying: true, loadError: null });
       } catch {
-        // Give up silently — it's background music, not critical.
+        // fall through to a full reload below
       }
+      if (get().isPlaying) return;
+    }
+
+    set({ isLoading: true, stationIndex: index, loadError: null });
+
+    // Tear down whatever's currently loaded.
+    try {
+      await _sound?.stopAsync();
+      await _sound?.unloadAsync();
+    } catch {
+      /* ignore */
+    }
+    _sound = null;
+
+    // Load + play the chosen station.
+    try {
+      _sound = await loadSound(STATIONS[index].urls);
+      if (_sound) {
+        await _sound.playAsync();
+        _wantsToPlay = true;
+        set({ isPlaying: true, isLoading: false });
+      } else {
+        set({
+          isPlaying: false,
+          isLoading: false,
+          loadError: `Couldn't connect to ${STATIONS[index].name}`,
+        });
+      }
+    } catch {
+      set({
+        isLoading: false,
+        isPlaying: false,
+        loadError: `Couldn't connect to ${STATIONS[index].name}`,
+      });
     }
   },
 }));
