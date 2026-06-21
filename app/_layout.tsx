@@ -41,13 +41,13 @@ export default function RootLayout() {
           headerStyle: { backgroundColor: theme.color.feltBgDark },
           headerTintColor: theme.color.textOnDark,
           contentStyle: { backgroundColor: theme.color.feltBg },
+          headerRight: () => <RadioToggle />,
         }}
       >
         <Stack.Screen
           name="index"
           options={{
             title: 'Shed',
-            headerRight: () => <RadioToggle />,
           }}
         />
         <Stack.Screen name="setup" options={{ title: 'Players' }} />
