@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useEffect, useState } from 'react';
 import { theme } from '../src/components/theme';
 import { useRadioStore, STATIONS } from '../src/store/radioStore';
@@ -29,15 +29,20 @@ function RadioToggle() {
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const station = STATIONS[stationIndex];
+  const isWeb = Platform.OS === 'web';
 
   return (
     <View style={styles.headerRow}>
-      {/* Play / pause */}
+      {/* Emoji tap: mobile = open picker, web = play/pause */}
       <Pressable
-        onPress={toggle}
-        hitSlop={8}
+        onPress={isWeb ? toggle : () => setPickerOpen(true)}
+        hitSlop={isWeb ? 8 : 12}
         style={styles.toggleBtn}
-        accessibilityLabel={isPlaying ? `Pause ${station.name}` : `Play ${station.name}`}
+        accessibilityLabel={
+          isWeb
+            ? isPlaying ? `Pause ${station.name}` : `Play ${station.name}`
+            : 'Open radio controls'
+        }
         accessibilityRole="button"
       >
         <Text style={{ fontSize: 20, opacity: isPlaying ? 1 : 0.35 }}>
@@ -45,22 +50,24 @@ function RadioToggle() {
         </Text>
       </Pressable>
 
-      {/* Station name + caret — opens the picker */}
-      <Pressable
-        onPress={() => setPickerOpen(true)}
-        hitSlop={8}
-        style={styles.pickerBtn}
-        accessibilityLabel="Choose radio station"
-        accessibilityRole="button"
-      >
-        <Text
-          style={[styles.stationName, !isPlaying && styles.stationNameDim]}
-          numberOfLines={1}
+      {/* Station name + caret: web only */}
+      {isWeb && (
+        <Pressable
+          onPress={() => setPickerOpen(true)}
+          hitSlop={8}
+          style={styles.pickerBtn}
+          accessibilityLabel="Choose radio station"
+          accessibilityRole="button"
         >
-          {station.name}
-        </Text>
-        <Text style={styles.caret}>▾</Text>
-      </Pressable>
+          <Text
+            style={[styles.stationName, !isPlaying && styles.stationNameDim]}
+            numberOfLines={1}
+          >
+            {station.name}
+          </Text>
+          <Text style={styles.caret}>▾</Text>
+        </Pressable>
+      )}
 
       <StationPicker
         visible={pickerOpen}
