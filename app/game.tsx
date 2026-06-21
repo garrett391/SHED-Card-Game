@@ -13,6 +13,7 @@ import {
   hasPlayableMove,
 } from '../src/engine/engine';
 import { useGameStore } from '../src/store/gameStore';
+import { GameState } from '../src/engine/types';
 
 const BOT_THINK_MS = 900;
 
@@ -134,7 +135,7 @@ export default function GameScreen() {
           <Text style={styles.passName}>{currentPlayer.name}</Text>
           {recentEvents.length > 0 && (
             <Text style={styles.lastAction}>
-              {summarizeRecent(recentEvents)}
+              {summarizeRecent(recentEvents, game.players)}
             </Text>
           )}
           <Button title="I'm ready" onPress={revealHand} />
@@ -234,7 +235,7 @@ export default function GameScreen() {
             : `Your turn, ${currentPlayer.name}`}
         </Text>
         {recentEvents.length > 0 && (
-          <Text style={styles.recent}>{summarizeRecent(recentEvents)}</Text>
+          <Text style={styles.recent}>{summarizeRecent(recentEvents, game.players)}</Text>
         )}
       </View>
 
@@ -271,7 +272,12 @@ export default function GameScreen() {
 }
 
 /** Turn a list of engine events into a one-line summary for the UI. */
-function summarizeRecent(events: ReturnType<typeof useGameStore.getState>['recentEvents']): string {
+function summarizeRecent(
+  events: ReturnType<typeof useGameStore.getState>['recentEvents'],
+  players: GameState['players'],
+): string {
+  const playerName = (id: number) => players?.find((p) => p.id === id)?.name ?? 'Someone';
+
   // Walk most-impactful → least.
   for (const e of events) {
     if (e.type === 'pileBurned') {
@@ -281,10 +287,10 @@ function summarizeRecent(events: ReturnType<typeof useGameStore.getState>['recen
       return `Face-down flip failed — pile picked up.`;
     }
     if (e.type === 'pileTakenUp') {
-      return `Pile picked up (${e.cardCount} cards)`;
+      return `${playerName(e.playerId)} picked up the pile (${e.cardCount} cards)`;
     }
     if (e.type === 'playerFinished') {
-      return `🏆 Player finished!`;
+      return `🏆 ${playerName(e.playerId)} finished!`;
     }
   }
   for (const e of events) {
@@ -293,7 +299,8 @@ function summarizeRecent(events: ReturnType<typeof useGameStore.getState>['recen
       const rank = e.cards[0].rank;
       const label =
         rank === 11 ? 'J' : rank === 12 ? 'Q' : rank === 13 ? 'K' : rank === 14 ? 'A' : String(rank);
-      return n === 1 ? `Played ${label}` : `Played ${n}× ${label}`;
+      const played = n === 1 ? `played ${label}` : `played ${n}× ${label}`;
+      return `${playerName(e.playerId)} ${played}`;
     }
   }
   return '';
