@@ -19,14 +19,8 @@ export default function GameOverScreen() {
 
   const winner =
     game.winnerId !== null ? game.players[game.winnerId] : null;
-  const shithead =
-    game.shitheadId !== null ? game.players[game.shitheadId] : null;
 
-  // Everyone else, in finish order if we had one — we don't track it,
-  // so just show the rest.
-  const others = game.players.filter(
-    (p) => p.id !== game.winnerId && p.id !== game.shitheadId,
-  );
+  const shitheads = game.players.filter((p) => p.id !== game.winnerId);
 
   return (
     <View style={styles.container}>
@@ -37,28 +31,15 @@ export default function GameOverScreen() {
           {winner?.isBot ? ' 🤖' : ''}
         </Text>
 
-        {others.length > 0 && (
+        {shitheads.length > 0 && (
           <>
-            <Text style={[styles.label, { marginTop: 28 }]}>Survived</Text>
-            {others.map((p) => (
-              <Text key={p.id} style={styles.other}>
+            <Text style={[styles.label, { marginTop: 28 }]}>💩 Shitheads</Text>
+            {shitheads.map((p) => (
+              <Text key={p.id} style={styles.shithead}>
                 {p.name}
                 {p.isBot ? ' 🤖' : ''}
               </Text>
             ))}
-          </>
-        )}
-
-        {shithead && (
-          <>
-            <Text style={[styles.label, { marginTop: 28 }]}>💩 Shithead</Text>
-            <Text style={styles.shithead}>
-              {shithead.name}
-              {shithead.isBot ? ' 🤖' : ''}
-            </Text>
-            <Text style={styles.note}>
-              Loser deals next round (house rule).
-            </Text>
           </>
         )}
       </View>
@@ -105,23 +86,12 @@ const styles = StyleSheet.create({
     marginTop: 6,
     textAlign: 'center',
   },
-  other: {
-    color: theme.color.textOnDark,
-    fontSize: 18,
-    marginTop: 4,
-  },
   shithead: {
     color: theme.color.danger,
-    fontSize: 32,
-    fontWeight: '800',
-    marginTop: 6,
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 4,
     textAlign: 'center',
-  },
-  note: {
-    color: theme.color.textMuted,
-    fontSize: 12,
-    marginTop: 6,
-    fontStyle: 'italic',
   },
   actions: { marginBottom: 30 },
 });
