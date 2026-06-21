@@ -49,11 +49,20 @@ export interface Station {
 
 export const STATIONS: Station[] = [
   {
-    id: 'relaxing-jazz',
-    name: 'Relaxing Jazz',
+    // RelaxingJazz.com
+    id: 'relaxing-jazz-hd',
+    name: 'Relaxing Jazz HD',
     emoji: '🎷',
     urls: [
       'https://443-1.autopo.st/171/stream/3/',               // HTTPS proxy, 320 kbps
+    ],
+  },
+  {
+    id: 'relaxing-jazz',
+    name: 'Relaxing Jazz',
+    emoji: '🎵',
+    urls: [
+      'http://stream-02-eu.relaxingjazz.com/stream/1/',    
     ],
   },
   {
