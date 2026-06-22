@@ -54,6 +54,14 @@ export default function GameScreen() {
   // Game history modal
   const [historyOpen, setHistoryOpen] = useState(false);
 
+  // Toast for tapping "Play" with nothing selected
+  const [toast, setToast] = useState<string | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 1800);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   // Bot action interstitial: show what the bot just did for BOT_DISPLAY_MS.
   const [botAction, setBotAction] = useState<{
     botName: string;
@@ -352,20 +360,63 @@ export default function GameScreen() {
         ))}
       </View>
 
-      {/* Center: draw / pile / burned */}
-      <Center game={game} />
+      {/* Center: draw / pile / burned — pile is tappable for pickup */}
+      <Center
+        game={game}
+        onPickup={isHumanTurn ? pickup : undefined}
+        isHumanTurn={isHumanTurn}
+        mustPickup={isHumanTurn && !canPlay}
+      />
 
-      {/* Turn banner */}
+      {/* Turn banner — info left, play button right */}
       <View style={styles.turnBanner}>
-        <Text style={styles.turnText}>
-          {currentPlayer.isBot
-            ? `${currentPlayer.name} is thinking…`
-            : `${currentPlayer.name}'s turn`}
-        </Text>
-        {recentEvents.length > 0 && (
-          <Text style={styles.recent}>{summarizeRecent(recentEvents, game.players)}</Text>
+        <View style={styles.turnInfo}>
+          <Text style={styles.turnText}>
+            {currentPlayer.isBot
+              ? `${currentPlayer.name} is thinking…`
+              : `${currentPlayer.name}'s turn`}
+          </Text>
+          {recentEvents.length > 0 && (
+            <Text style={styles.recent}>{summarizeRecent(recentEvents, game.players)}</Text>
+          )}
+        </View>
+        {isHumanTurn && source !== 'faceDown' && canPlay && (
+          <Pressable
+            onPress={() => {
+              if (selectedCardIds.length === 0) {
+                setToast('Select a card first');
+              } else {
+                playSelected();
+              }
+            }}
+            style={({ pressed }) => [
+              styles.playBtn,
+              selectedCardIds.length > 0
+                ? styles.playBtnActive
+                : styles.playBtnDim,
+              pressed && { opacity: 0.7 },
+            ]}
+          >
+            <Text
+              style={[
+                styles.playBtnText,
+                selectedCardIds.length === 0 && styles.playBtnTextDim,
+              ]}
+            >
+              {selectedCardIds.length > 1
+                ? `Play ${selectedCardIds.length}`
+                : 'Play'}
+            </Text>
+          </Pressable>
         )}
       </View>
+
+      {/* Toast for empty selection */}
+      {toast && (
+        <View style={styles.toast}>
+          <Text style={styles.toastText}>{toast}</Text>
+        </View>
+      )}
 
       {/* Player area */}
       <View style={styles.playerArea}>
@@ -376,25 +427,6 @@ export default function GameScreen() {
         )}
       </View>
 
-      {/* Actions */}
-      {isHumanTurn && source !== 'faceDown' && (
-        <View style={styles.actions}>
-          <Button
-            title={
-              selectedCardIds.length > 1
-                ? `Play ${selectedCardIds.length} cards`
-                : 'Play selected'
-            }
-            onPress={playSelected}
-            disabled={selectedCardIds.length === 0}
-          />
-          <Button
-            title={canPlay ? 'Pick up pile (forfeit turn)' : 'Pick up pile'}
-            variant={canPlay ? 'ghost' : 'danger'}
-            onPress={pickup}
-          />
-        </View>
-      )}
       {/* Game history modal */}
       <Modal
         visible={historyOpen}
@@ -563,11 +595,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   turnBanner: {
+    flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
+    paddingHorizontal: 12,
     marginVertical: 6,
     backgroundColor: theme.color.feltBgDark,
     borderRadius: theme.radius.md,
+  },
+  turnInfo: {
+    flex: 1,
   },
   turnText: {
     color: theme.color.accent,
@@ -578,6 +615,35 @@ const styles = StyleSheet.create({
     color: theme.color.textMuted,
     fontSize: 12,
     marginTop: 2,
+  },
+  playBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: theme.radius.md,
+    marginLeft: 10,
+  },
+  playBtnActive: {
+    backgroundColor: theme.color.primary,
+  },
+  playBtnDim: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  playBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  playBtnTextDim: {
+    color: theme.color.textMuted,
+  },
+  toast: {
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  toastText: {
+    color: theme.color.accent,
+    fontSize: 12,
+    fontWeight: '600',
   },
   playerArea: {
     marginTop: 8,
@@ -593,9 +659,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingVertical: 16, // room for selected lift
-  },
-  actions: {
-    marginTop: 12,
   },
   dim: { color: theme.color.textMuted, fontStyle: 'italic' },
   gate: {
