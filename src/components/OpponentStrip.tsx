@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { Player } from '../engine/types';
 import { PlayingCard } from './PlayingCard';
 import { theme } from './theme';
@@ -11,8 +11,34 @@ interface Props {
 
 /** A horizontal strip showing a player: name, hand count, face-up cards, face-down count. */
 export function OpponentStrip({ player, isCurrent }: Props) {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (isCurrent) {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 0.4, duration: 1200, useNativeDriver: false }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 1200, useNativeDriver: false }),
+        ]),
+      );
+      loop.start();
+      return () => loop.stop();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [isCurrent, pulseAnim]);
+
   return (
-    <View style={[styles.row, isCurrent && styles.current]}>
+    <Animated.View
+      style={[
+        styles.row,
+        isCurrent && styles.current,
+        isCurrent && { borderColor: pulseAnim.interpolate({
+          inputRange: [0.4, 1],
+          outputRange: ['rgba(244,196,48,0.35)', 'rgba(244,196,48,1)'],
+        }) },
+      ]}
+    >
       {/* Turn indicator */}
       <View style={[styles.chip, isCurrent && styles.chipActive]}>
         <Text style={styles.chipText}>{isCurrent ? '🔴' : '⚪'}</Text>
@@ -41,7 +67,7 @@ export function OpponentStrip({ player, isCurrent }: Props) {
           ))
         )}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

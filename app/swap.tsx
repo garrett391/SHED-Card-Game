@@ -169,7 +169,7 @@ export default function SwapScreen() {
         ))}
       </View>
 
-      <Text style={styles.section}>Your hand</Text>
+      <Text style={styles.section}>{activePlayer.name}'s hand</Text>
       <View style={styles.row}>
         {activePlayer.hand.map((c) => (
           <PlayingCard

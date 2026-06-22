@@ -16,14 +16,14 @@ import { PlayerConfig } from '../src/engine/types';
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 6;
 
-const DEFAULT_NAMES = ['You', 'Jake', 'Erich', 'Bauer', 'Cousin', 'Elder'];
+const DEFAULT_NAMES = ['Player 1', 'Jake', 'Erich', 'Bauer', 'Cousin', 'Elder'];
 
 export default function SetupScreen() {
   const router = useRouter();
   const startGame = useGameStore((s) => s.startGame);
 
   const [players, setPlayers] = useState<PlayerConfig[]>([
-    { name: 'You', isBot: false },
+    { name: 'Player 1', isBot: false },
     { name: 'Bot 1', isBot: true },
     { name: 'Bot 2', isBot: true },
   ]);

@@ -2,11 +2,8 @@
  * Radio store — multi-station internet radio.
  *
  * Behavior:
- *   - On native (iOS / Android): autoplay works immediately.
- *   - On web: browsers block autoplay before any user gesture.
- *     We attempt autoplay on init, and if it fails, we register
- *     a one-time click/keydown listener so the very first tap
- *     anywhere on the page (e.g. "New game") starts the stream.
+ *   - Audio starts PAUSED — the user must click play to hear anything.
+ *     This avoids jarring autoplay when someone's volume is up.
  *   - The saxophone toggle in the header controls play/pause on every screen.
  *   - The station name + ▾ opens a picker; tapping a station switches to it
  *     and starts playing (see `setStation`).
@@ -130,7 +127,7 @@ export const STATIONS: Station[] = [
 let _sound: Audio.Sound | null = null;
 let _initialized = false;
 /** Tracks the user's *intent* — true means "I want music on". */
-let _wantsToPlay = true;
+let _wantsToPlay = false;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -191,31 +188,8 @@ export const useRadioStore = create<RadioStore>((set, get) => ({
         return;
       }
 
-      // Attempt autoplay.
-      try {
-        await _sound.playAsync();
-        set({ isPlaying: true, isLoading: false });
-      } catch {
-        // Autoplay blocked (expected on web before user gesture).
-        set({ isPlaying: false, isLoading: false });
-
-        if (Platform.OS === 'web') {
-          const resume = async () => {
-            document.removeEventListener('click', resume);
-            document.removeEventListener('keydown', resume);
-            if (_sound && _wantsToPlay) {
-              try {
-                await _sound.playAsync();
-                set({ isPlaying: true });
-              } catch {
-                // Stream may have timed out; silent fail is fine.
-              }
-            }
-          };
-          document.addEventListener('click', resume);
-          document.addEventListener('keydown', resume);
-        }
-      }
+      // Don't autoplay — wait for the user to click play.
+      set({ isPlaying: false, isLoading: false });
     } catch {
       set({ isLoading: false });
     }

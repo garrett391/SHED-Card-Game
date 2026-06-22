@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../src/components/Button';
 import { Center } from '../src/components/Center';
 import { OpponentStrip } from '../src/components/OpponentStrip';
@@ -50,6 +50,9 @@ export default function GameScreen() {
     card: Card;
     success: boolean;
   } | null>(null);
+
+  // Game history modal
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   // Bot action interstitial: show what the bot just did for BOT_DISPLAY_MS.
   const [botAction, setBotAction] = useState<{
@@ -219,7 +222,7 @@ export default function GameScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.gate}>
-          <Text style={styles.passLabel}>You flipped…</Text>
+          <Text style={styles.passLabel}>{currentPlayer.name} flipped…</Text>
           <View style={styles.flipCardWrap}>
             <PlayingCard card={flipResult.card} />
           </View>
@@ -246,7 +249,7 @@ export default function GameScreen() {
     if (source === 'hand') {
       return (
         <>
-          <Text style={styles.sectionLabel}>Your hand</Text>
+          <Text style={styles.sectionLabel}>{currentPlayer.name}'s hand</Text>
           <View style={styles.cardRow}>
             {sortedHand.map((c) => {
               const playable = playableIds.includes(c.id);
@@ -327,6 +330,18 @@ export default function GameScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Player scoreboard — fixed order, turn indicator on active player */}
+      <View style={styles.scoreboardHeader}>
+        <Text style={styles.scoreboardTitle}>Players</Text>
+        <Pressable
+          onPress={() => setHistoryOpen(true)}
+          hitSlop={8}
+          style={styles.historyBtn}
+          accessibilityLabel="Game history"
+          accessibilityRole="button"
+        >
+          <Text style={styles.historyBtnText}>📜</Text>
+        </Pressable>
+      </View>
       <View style={styles.scoreboard}>
         {game.players.map((p, i) => (
           <OpponentStrip
@@ -345,7 +360,7 @@ export default function GameScreen() {
         <Text style={styles.turnText}>
           {currentPlayer.isBot
             ? `${currentPlayer.name} is thinking…`
-            : `Your turn, ${currentPlayer.name}`}
+            : `${currentPlayer.name}'s turn`}
         </Text>
         {recentEvents.length > 0 && (
           <Text style={styles.recent}>{summarizeRecent(recentEvents, game.players)}</Text>
@@ -380,6 +395,46 @@ export default function GameScreen() {
           />
         </View>
       )}
+      {/* Game history modal */}
+      <Modal
+        visible={historyOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setHistoryOpen(false)}
+      >
+        <Pressable style={styles.historyBackdrop} onPress={() => setHistoryOpen(false)}>
+          <Pressable style={styles.historyCard} onPress={() => {}}>
+            <View style={styles.historyHeader}>
+              <Text style={styles.historyTitle}>Game Log</Text>
+              <View style={styles.historyActions}>
+                <Pressable
+                  onPress={() => {
+                    const text = game.log.map((e) => e.text).join('\n');
+                    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                      navigator.clipboard.writeText(text);
+                    }
+                  }}
+                  hitSlop={8}
+                  style={styles.historyCopyBtn}
+                >
+                  <Text style={styles.historyCopyText}>📋 Copy</Text>
+                </Pressable>
+                <Pressable onPress={() => setHistoryOpen(false)} hitSlop={8}>
+                  <Text style={styles.historyClose}>✕</Text>
+                </Pressable>
+              </View>
+            </View>
+            <ScrollView style={styles.historyList} bounces={false}>
+              {game.log.map((entry) => (
+                <View key={entry.id} style={styles.historyRow}>
+                  <Text style={styles.historyNum}>{entry.id + 1}</Text>
+                  <Text style={styles.historyText}>{entry.text}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }
@@ -487,6 +542,26 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   scoreboard: { marginBottom: 4 },
+  scoreboardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  scoreboardTitle: {
+    color: theme.color.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  historyBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  historyBtnText: {
+    fontSize: 18,
+  },
   turnBanner: {
     alignItems: 'center',
     paddingVertical: 8,
@@ -586,5 +661,86 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     marginTop: 12,
+  },
+  // History modal
+  historyBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  historyCard: {
+    width: '100%',
+    maxWidth: 420,
+    maxHeight: '80%',
+    backgroundColor: theme.color.feltBgDark,
+    borderRadius: theme.radius.lg,
+    paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.12)',
+  },
+  historyTitle: {
+    color: theme.color.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+  },
+  historyActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  historyCopyBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: theme.radius.sm,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  historyCopyText: {
+    color: theme.color.accent,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  historyClose: {
+    color: theme.color.textMuted,
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  historyList: {
+    paddingTop: 6,
+    paddingHorizontal: 16,
+  },
+  historyRow: {
+    flexDirection: 'row',
+    paddingVertical: 5,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  historyNum: {
+    color: theme.color.textMuted,
+    fontSize: 11,
+    width: 28,
+    textAlign: 'right',
+    marginRight: 10,
+    fontVariant: ['tabular-nums'],
+  },
+  historyText: {
+    color: theme.color.textOnDark,
+    fontSize: 13,
+    flex: 1,
   },
 });
