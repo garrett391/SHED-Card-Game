@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { GameEvent, GameState, PlayerConfig } from '../engine/types';
+import { GameEvent, GameState, PlayerConfig, RuleConfig } from '../engine/types';
+import { DEFAULT_RULES } from '../engine/rules';
 import * as engine from '../engine/engine';
 
 interface GameStore {
@@ -10,7 +11,7 @@ interface GameStore {
   handRevealed: boolean;
 
   // lifecycle
-  startGame: (configs: PlayerConfig[], lastManStanding?: boolean) => void;
+  startGame: (configs: PlayerConfig[], ruleConfig?: RuleConfig) => void;
   reset: () => void;
 
   // swap phase
@@ -35,10 +36,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   selectedCardIds: [],
   handRevealed: false,
 
-  startGame: (configs, lastManStanding) => {
-    const game = engine.createGame(configs);
+  startGame: (configs, ruleConfig) => {
+    const config = ruleConfig ?? DEFAULT_RULES;
+    const game = engine.createGame(configs, config);
     set({
-      game: { ...game, lastManStanding: lastManStanding ?? false },
+      game,
       recentEvents: [],
       selectedCardIds: [],
       handRevealed: false,

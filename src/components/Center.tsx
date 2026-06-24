@@ -18,9 +18,10 @@ interface Props {
 
 export function Center({ game, onPickup, isHumanTurn, mustPickup }: Props) {
   const topRaw = game.playPile[0];
-  const topEffective = getEffectiveTopCard(game.playPile);
+  const topEffective = getEffectiveTopCard(game.playPile, game.ruleConfig);
+  const transparentRank = game.ruleConfig.transparentRank;
   const eightOverride =
-    topRaw && topRaw.rank === 8 && topEffective && topEffective.rank !== 8;
+    topRaw && topRaw.rank === transparentRank && topEffective && topEffective.rank !== transparentRank;
 
   // Pulsing glow animation for the pile when the player must pick up
   const pulseAnim = useRef(new Animated.Value(0)).current;
@@ -69,7 +70,7 @@ export function Center({ game, onPickup, isHumanTurn, mustPickup }: Props) {
         <Text style={styles.count}>{game.playPile.length} cards</Text>
         {eightOverride && (
           <Text style={styles.eight}>
-            8 invisible → counts as {rankLabel(topEffective!.rank)}
+            {rankLabel(transparentRank)} invisible → counts as {rankLabel(topEffective!.rank)}
           </Text>
         )}
       </>

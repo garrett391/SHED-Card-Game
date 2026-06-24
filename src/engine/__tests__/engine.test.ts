@@ -4,6 +4,7 @@ import {
   findStartingPlayer,
   getEffectiveTopCard,
   isPowerCard,
+  DEFAULT_RULES,
 } from '../rules';
 import {
   createGame,
@@ -58,6 +59,7 @@ function setupGame(opts: {
     winnerId: null,
     shitheadId: null,
     lastManStanding: false,
+    ruleConfig: DEFAULT_RULES,
   };
 }
 

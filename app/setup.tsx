@@ -11,17 +11,67 @@ import {
 import { Button } from '../src/components/Button';
 import { theme } from '../src/components/theme';
 import { useGameStore } from '../src/store/gameStore';
-import { PlayerConfig } from '../src/engine/types';
+import { PlayerConfig, RuleConfig } from '../src/engine/types';
+import { RULE_PRESETS, PRESET_ORDER } from '../src/campaign/presets';
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 6;
 
 const DEFAULT_NAMES = ['Player 1', 'Jake', 'Erich', 'Bauer', 'Cousin', 'Elder'];
 
+// ─── Mode picker card ───────────────────────────────────────────────────────────
+
+function ModeCard({
+  preset,
+  selected,
+  onPress,
+}: {
+  preset: RuleConfig;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.modeCard,
+        selected && styles.modeCardSelected,
+      ]}
+    >
+      <View style={styles.modeHeader}>
+        <View
+          style={[
+            styles.modeRadio,
+            selected && styles.modeRadioSelected,
+          ]}
+        >
+          {selected && <View style={styles.modeRadioDot} />}
+        </View>
+        <Text
+          style={[
+            styles.modeName,
+            selected && styles.modeNameSelected,
+          ]}
+          numberOfLines={1}
+        >
+          {preset.name}
+        </Text>
+      </View>
+      <Text style={styles.modeDesc}>{preset.description}</Text>
+      {selected && (
+        <Text style={styles.modeFlavor}>"{preset.flavorText}"</Text>
+      )}
+    </Pressable>
+  );
+}
+
+// ─── Setup screen ───────────────────────────────────────────────────────────────
+
 export default function SetupScreen() {
   const router = useRouter();
   const startGame = useGameStore((s) => s.startGame);
 
+  const [selectedMode, setSelectedMode] = useState<string>('jake-classic');
   const [players, setPlayers] = useState<PlayerConfig[]>([
     { name: 'Player 1', isBot: false },
     { name: 'Bot 1', isBot: true },
@@ -60,12 +110,26 @@ export default function SetupScreen() {
   };
 
   const start = () => {
-    startGame(players);
+    const preset = RULE_PRESETS[selectedMode] ?? RULE_PRESETS['jake-classic'];
+    startGame(players, preset);
     router.replace('/swap');
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      {/* ── Game mode picker ────────────────────────────────────────── */}
+      <Text style={styles.sectionLabel}>Game mode</Text>
+      {PRESET_ORDER.map((id) => (
+        <ModeCard
+          key={id}
+          preset={RULE_PRESETS[id]}
+          selected={selectedMode === id}
+          onPress={() => setSelectedMode(id)}
+        />
+      ))}
+
+      {/* ── Player config ───────────────────────────────────────────── */}
+      <Text style={[styles.sectionLabel, { marginTop: 24 }]}>Players</Text>
       <Text style={styles.intro}>
         2–6 players. Tap a row to toggle human / bot.
       </Text>
@@ -106,8 +170,82 @@ export default function SetupScreen() {
   );
 }
 
+// ─── Styles ─────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   container: { padding: theme.space.lg, paddingBottom: 40 },
+
+  // Section labels
+  sectionLabel: {
+    color: theme.color.textOnDark,
+    fontSize: 13,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginBottom: 10,
+    opacity: 0.6,
+  },
+
+  // Mode picker
+  modeCard: {
+    backgroundColor: theme.color.feltBgDark,
+    borderRadius: theme.radius.md,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    padding: 14,
+    marginBottom: 8,
+  },
+  modeCardSelected: {
+    borderColor: '#d4a843',
+    backgroundColor: '#1a3e2e',
+  },
+  modeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  modeRadio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    borderColor: theme.color.textMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeRadioSelected: {
+    borderColor: '#d4a843',
+  },
+  modeRadioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#d4a843',
+  },
+  modeName: {
+    color: theme.color.textOnDark,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  modeNameSelected: {
+    color: '#f0d78c',
+  },
+  modeDesc: {
+    color: theme.color.textMuted,
+    fontSize: 12,
+    marginTop: 6,
+    marginLeft: 28,
+    lineHeight: 17,
+  },
+  modeFlavor: {
+    color: '#d4a843',
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginTop: 6,
+    marginLeft: 28,
+  },
+
+  // Player config
   intro: {
     color: theme.color.textOnDark,
     fontSize: 14,

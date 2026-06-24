@@ -8,12 +8,15 @@ import {
   PlayerConfig,
   PlaySource,
   Rank,
+  RuleConfig,
 } from './types';
 import { createDeck, shuffle, rankLabel } from './cards';
 import {
   canPlayCardOnTop,
   canPlayMultiple,
   checkFourOfAKindBurn,
+  checkTripleTransparentBurn,
+  DEFAULT_RULES,
   findStartingPlayer,
   getEffectiveTopCard,
 } from './rules';
@@ -28,20 +31,22 @@ function entry(text: string, playerId?: number): LogEntry {
 }
 
 /**
- * Build a fresh game from player configs. Deals 3-3-3 per the rules:
- * one card at a time, around the table, three full passes for face-down,
- * then face-up, then hand. After this the game is in 'swap' phase so
- * each player can swap hand↔face-up before play begins.
+ * Build a fresh game from player configs and an optional rule config.
+ * Deals 3-3-3 per the rules: face-down, face-up, then hand.
+ * After this the game is in 'swap' phase.
  */
-export function createGame(playerConfigs: PlayerConfig[]): GameState {
+export function createGame(
+  playerConfigs: PlayerConfig[],
+  ruleConfig: RuleConfig = DEFAULT_RULES,
+): GameState {
   if (playerConfigs.length < 2 || playerConfigs.length > 6) {
     throw new Error('SHED supports 2–6 players');
   }
 
-  // Explicitly calculate the deck configuration based on num players, i.e. 2 standard decks (104 cards) for 5 or 6 players
+  // Explicitly calculate the deck configuration based on num players
   const deckCount = playerConfigs.length > 4 ? 2 : 1;
   const deck = shuffle(createDeck(deckCount));
-  
+
   const players: Player[] = playerConfigs.map((cfg, i) => ({
     id: i,
     name: cfg.name,
@@ -52,7 +57,7 @@ export function createGame(playerConfigs: PlayerConfig[]): GameState {
     isFinished: false,
   }));
 
-  // Deal cards sequentially around the table
+  // Deal one card at a time, clockwise, per the rules.
   for (let r = 0; r < FACE_DOWN_SIZE; r++) {
     for (const p of players) p.faceDown.push(deck.pop()!);
   }
@@ -76,9 +81,10 @@ export function createGame(playerConfigs: PlayerConfig[]): GameState {
     startingPlayerIndex: 0,
     pendingExtraTurn: false,
     log: [entry('Dealt. Swap any hand cards with face-up cards before play.')],
+    ruleConfig,
+    lastManStanding: ruleConfig.lastManStanding,
     winnerId: null,
     shitheadId: null,
-    lastManStanding: false,
   };
 }
 
@@ -113,7 +119,7 @@ export function finishSwap(state: GameState, playerIdx: number): GameState {
   if (!swapsComplete.every(Boolean)) {
     return { ...state, swapsComplete };
   }
-  const starter = findStartingPlayer(state.players);
+  const starter = findStartingPlayer(state.players, state.ruleConfig);
   return {
     ...state,
     swapsComplete,
@@ -152,14 +158,17 @@ export function getPlayableCardIds(state: GameState, playerIdx: number): string[
   // Face-down is blind — any one of them may be chosen; legality is post-reveal.
   if (source === 'faceDown') return player.faceDown.map(c => c.id);
   const cards = source === 'hand' ? player.hand : player.faceUp;
-  const top = getEffectiveTopCard(state.playPile);
-  return cards.filter(c => canPlayCardOnTop(c, top)).map(c => c.id);
+  const top = getEffectiveTopCard(state.playPile, state.ruleConfig);
+  return cards.filter(c => canPlayCardOnTop(c, top, state.ruleConfig)).map(c => c.id);
 }
 
 /**
  * Returns true if the player has no playable card from their current source.
- * Used to enable the "Pick up pile" prompt automatically.
  * Face-down is always considered "playable" (the player commits to flip).
+ *
+ * When allowVoluntaryPickup is true, hasPlayableMove still reports accurately
+ * — the UI uses it to decide whether to FORCE pickup. Voluntary pickup is
+ * handled separately by the UI offering a "pick up" button at all times.
  */
 export function hasPlayableMove(state: GameState, playerIdx: number): boolean {
   const player = state.players[playerIdx];
@@ -186,6 +195,7 @@ export function playCards(
   if (state.phase !== 'playing') return { state, events: [] };
   if (state.currentPlayerIndex !== playerIdx) return { state, events: [] };
 
+  const cfg = state.ruleConfig;
   const player = state.players[playerIdx];
   const source = getPlaySource(player);
   if (source === null) return { state, events: [] };
@@ -200,14 +210,14 @@ export function playCards(
     .filter((c): c is Card => Boolean(c));
   if (cards.length === 0) return { state, events: [] };
 
-  const top = getEffectiveTopCard(state.playPile);
+  const top = getEffectiveTopCard(state.playPile, cfg);
 
   // ─── Face-down special path ─────────────────────────────────────────────
   if (source === 'faceDown') {
     const card = cards[0]; // face-down is always single-card
     const remainingFaceDown = player.faceDown.filter(c => c.id !== card.id);
 
-    if (!canPlayCardOnTop(card, top)) {
+    if (!canPlayCardOnTop(card, top, cfg)) {
       // Failed flip: pick up pile + this card.
       const newHand = [...player.hand, card, ...state.playPile];
       const players = state.players.map((p, i) =>
@@ -238,7 +248,7 @@ export function playCards(
     // Successful flip falls through to normal play logic below.
   } else {
     // Hand / face-up: must be valid multi-card play
-    const check = canPlayMultiple(cards, top);
+    const check = canPlayMultiple(cards, top, cfg);
     if (!check.ok) return { state, events: [] };
   }
 
@@ -266,15 +276,38 @@ export function playCards(
     ),
   ];
 
-  // Burn checks: 10 always burns, four-of-a-kind on top burns.
+  // ─── Reverse checks ────────────────────────────────────────────────────
+  let direction = state.direction;
+  let reversed = false;
+
+  // reverseRank: any time this rank is played, direction reverses
+  if (cfg.reverseRank !== null && rank === cfg.reverseRank) {
+    direction = direction === 1 ? -1 : 1;
+    reversed = true;
+    events.push({ type: 'directionReversed', playerId: playerIdx });
+    log.push(entry('Direction reversed!', playerIdx));
+  }
+
+  // sixNineReverse: playing a 9 on a 6 reverses direction (skip if reverseRank already handled it)
+  if (!reversed && cfg.sixNineReverse && rank === 9 && top !== null && top.rank === 6) {
+    direction = direction === 1 ? -1 : 1;
+    events.push({ type: 'directionReversed', playerId: playerIdx });
+    log.push(entry('9 on 6 — direction reversed!', playerIdx));
+  }
+
+  // ─── Burn checks ───────────────────────────────────────────────────────
   let burned = false;
-  let burnReason: 'ten' | 'fourOfKind' | null = null;
-  if (rank === 10) {
+  let burnReason: 'ten' | 'fourOfKind' | 'tripleTransparent' | null = null;
+
+  if (rank === cfg.burnRank) {
     burned = true;
     burnReason = 'ten';
-  } else if (checkFourOfAKindBurn(newPlayPile)) {
+  } else if (checkFourOfAKindBurn(newPlayPile, cfg)) {
     burned = true;
     burnReason = 'fourOfKind';
+  } else if (checkTripleTransparentBurn(newPlayPile, cfg)) {
+    burned = true;
+    burnReason = 'tripleTransparent';
   }
 
   let burnedPile = state.burnedPile;
@@ -285,14 +318,18 @@ export function playCards(
     pendingExtraTurn = true;
     events.push({ type: 'pileBurned', reason: burnReason! });
     log.push(entry(
-      burnReason === 'ten' ? 'Burned by 10!' : 'Four of a kind — burned!',
+      burnReason === 'ten'
+        ? `Burned by ${rankLabel(cfg.burnRank)}!`
+        : burnReason === 'tripleTransparent'
+        ? `Triple ${rankLabel(cfg.transparentRank)}s — burned!`
+        : 'Four of a kind — burned!',
       playerIdx,
     ));
     events.push({ type: 'extraTurn', playerId: playerIdx });
   }
 
   // Refill hand to 3 from draw pile, but only when playing from hand
-  // and only while the draw pile has cards (rule stops applying once empty).
+  // and only while the draw pile has cards.
   let drawPile = state.drawPile;
   if (source === 'hand') {
     const current = players[playerIdx];
@@ -328,7 +365,6 @@ export function playCards(
   const remaining = players.filter(p => !p.isFinished);
 
   if (state.lastManStanding) {
-    // Last-man-standing: game ends when only 0 or 1 active players remain.
     if (remaining.length <= 1) {
       phase = 'gameOver';
       shitheadId = remaining[0]?.id ?? null;
@@ -340,7 +376,6 @@ export function playCards(
       ));
     }
   } else {
-    // Default: first winner takes all — game ends immediately.
     if (winnerId !== null && events.some(e => e.type === 'playerFinished' && e.playerId === winnerId)) {
       phase = 'gameOver';
       shitheadId = null;
@@ -355,6 +390,7 @@ export function playCards(
     playPile: newPlayPile,
     burnedPile,
     drawPile,
+    direction,
     pendingExtraTurn,
     log,
     phase,
@@ -406,11 +442,8 @@ function advanceTurn(state: GameState): GameState {
   if (state.pendingExtraTurn) {
     const current = state.players[state.currentPlayerIndex];
     if (!current.isFinished) {
-      // Same player keeps turn; clear flag.
       return { ...state, pendingExtraTurn: false };
     }
-    // Edge case: burn was the player's last move and they finished mid-burn.
-    // Fall through to normal advance.
   }
 
   let next = state.currentPlayerIndex;

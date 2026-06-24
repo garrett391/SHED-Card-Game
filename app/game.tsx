@@ -17,7 +17,7 @@ import { useGameStore } from '../src/store/gameStore';
 import { Card, GameEvent, GameState } from '../src/engine/types';
 
 const BOT_THINK_MS = 400;
-const BOT_DISPLAY_MS = 1500;
+const BOT_DISPLAY_MS = 1800;
 
 /**
  * Main table screen.
@@ -337,6 +337,13 @@ export default function GameScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      {/* Variant badge — shows which ruleset is active */}
+      {game.ruleConfig.id !== 'jake-classic' && (
+        <View style={styles.variantBadge}>
+          <Text style={styles.variantBadgeText}>{game.ruleConfig.name}</Text>
+        </View>
+      )}
+
       {/* Player scoreboard — fixed order, turn indicator on active player */}
       <View style={styles.scoreboardHeader}>
         <Text style={styles.scoreboardTitle}>Players</Text>
@@ -509,10 +516,18 @@ function buildBotActionDisplay(
     // Check for burn
     const burn = events.find((e) => e.type === 'pileBurned');
     const finished = events.find((e) => e.type === 'playerFinished');
+    const reversed = events.find((e) => e.type === 'directionReversed');
 
     let detail: string | undefined;
     if (burn && burn.type === 'pileBurned') {
-      detail = burn.reason === 'ten' ? '🔥 Burns the pile!' : '🔥 Four-of-a-kind — burns the pile!';
+      detail = burn.reason === 'ten'
+        ? '🔥 Burns the pile!'
+        : burn.reason === 'tripleTransparent'
+        ? '🔥 Triple 8s — burns the pile!'
+        : '🔥 Four-of-a-kind — burns the pile!';
+    }
+    if (reversed) {
+      detail = (detail ? detail + '\n' : '') + '🔄 Direction reversed!';
     }
     if (finished) {
       detail = (detail ? detail + '\n' : '') + '🏆 Out of the game!';
@@ -541,7 +556,14 @@ function summarizeRecent(
   // Walk most-impactful → least.
   for (const e of events) {
     if (e.type === 'pileBurned') {
-      return e.reason === 'ten' ? '🔥 10 burns the pile' : '🔥 Four-of-a-kind burns the pile';
+      return e.reason === 'ten'
+        ? '🔥 10 burns the pile'
+        : e.reason === 'tripleTransparent'
+        ? '🔥 Triple 8s burn the pile'
+        : '🔥 Four-of-a-kind burns the pile';
+    }
+    if (e.type === 'directionReversed') {
+      return '🔄 Direction reversed!';
     }
     if (e.type === 'faceDownFlipFailed') {
       return `Face-down flip failed — pile picked up.`;
@@ -574,6 +596,20 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   scoreboard: { marginBottom: 4 },
+  variantBadge: {
+    alignSelf: 'center',
+    backgroundColor: 'rgba(212,168,67,0.15)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginBottom: 6,
+  },
+  variantBadgeText: {
+    color: '#d4a843',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
   scoreboardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
