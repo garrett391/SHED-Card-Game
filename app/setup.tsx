@@ -1,6 +1,9 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
+  Animated,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -72,11 +75,41 @@ export default function SetupScreen() {
   const startGame = useGameStore((s) => s.startGame);
 
   const [selectedMode, setSelectedMode] = useState<string>('jake-classic');
+  // Mode picker starts collapsed so the Players section and Deal button sit
+  // above the fold. The collapsed header shows the current selection; tapping
+  // it expands the full list, and choosing a mode snaps it shut again.
+  const [modeExpanded, setModeExpanded] = useState(false);
   const [players, setPlayers] = useState<PlayerConfig[]>([
     { name: 'Player 1', isBot: false },
     { name: 'Bot 1', isBot: true },
     { name: 'Bot 2', isBot: true },
   ]);
+
+  // ── Scroll-down affordance ──────────────────────────────────────────────
+  // The mode picker can fill the whole viewport on mobile, hiding the Players
+  // section and "Deal cards" button below the fold. We surface a floating cue
+  // that fades in while there's more content below and out once you reach the
+  // bottom. Tapping it scrolls down.
+  const scrollRef = useRef<ScrollView>(null);
+  const cueOpacity = useRef(new Animated.Value(0)).current;
+  const viewportH = useRef(0);
+  const contentH = useRef(0);
+  const offsetY = useRef(0);
+
+  const updateCue = () => {
+    const remaining = contentH.current - (offsetY.current + viewportH.current);
+    const shouldShow = remaining > 24; // a little slack so it hides at the end
+    Animated.timing(cueOpacity, {
+      toValue: shouldShow ? 1 : 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    offsetY.current = e.nativeEvent.contentOffset.y;
+    updateCue();
+  };
 
   const setName = (idx: number, name: string) =>
     setPlayers((ps) => ps.map((p, i) => (i === idx ? { ...p, name } : p)));
@@ -115,65 +148,177 @@ export default function SetupScreen() {
     router.replace('/swap');
   };
 
+  const selectedPreset =
+    RULE_PRESETS[selectedMode] ?? RULE_PRESETS['jake-classic'];
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {/* ── Game mode picker ────────────────────────────────────────── */}
-      <Text style={styles.sectionLabel}>Game mode</Text>
-      {PRESET_ORDER.map((id) => (
-        <ModeCard
-          key={id}
-          preset={RULE_PRESETS[id]}
-          selected={selectedMode === id}
-          onPress={() => setSelectedMode(id)}
-        />
-      ))}
+    <View style={styles.screen}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.container}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        onLayout={(e) => {
+          viewportH.current = e.nativeEvent.layout.height;
+          updateCue();
+        }}
+        onContentSizeChange={(_w, h) => {
+          contentH.current = h;
+          updateCue();
+        }}
+      >
+        {/* ── Game mode picker (collapsible) ──────────────────────────── */}
+        <Pressable
+          onPress={() => setModeExpanded((e) => !e)}
+          style={styles.modeSectionHeader}
+          accessibilityRole="button"
+          accessibilityLabel={
+            modeExpanded
+              ? 'Collapse game mode list'
+              : `Game mode: ${selectedPreset.name}. Tap to change.`
+          }
+        >
+          <Text style={styles.sectionLabel}>Game mode</Text>
+          <Text style={styles.modeChevron}>{modeExpanded ? '⌄' : '›'}</Text>
+        </Pressable>
 
-      {/* ── Player config ───────────────────────────────────────────── */}
-      <Text style={[styles.sectionLabel, { marginTop: 24 }]}>Players</Text>
-      <Text style={styles.intro}>
-        2–6 players. Tap a row to toggle human / bot.
-      </Text>
-
-      {players.map((p, i) => (
-        <View key={i} style={styles.row}>
+        {modeExpanded ? (
+          PRESET_ORDER.map((id) => (
+            <ModeCard
+              key={id}
+              preset={RULE_PRESETS[id]}
+              selected={selectedMode === id}
+              onPress={() => {
+                setSelectedMode(id);
+                setModeExpanded(false);
+              }}
+            />
+          ))
+        ) : (
           <Pressable
-            style={[styles.botToggle, p.isBot && styles.botToggleActive]}
-            onPress={() => toggleBot(i)}
+            onPress={() => setModeExpanded(true)}
+            style={[styles.modeCard, styles.modeCardSelected, styles.modeSummary]}
           >
-            <Text style={styles.botEmoji}>{p.isBot ? '🤖' : '🧑'}</Text>
-            <Text style={styles.botLabel}>{p.isBot ? 'Bot' : 'Human'}</Text>
+            <View style={styles.modeSummaryBody}>
+              <Text style={[styles.modeName, styles.modeNameSelected]} numberOfLines={1}>
+                {selectedPreset.name}
+              </Text>
+              <Text style={[styles.modeDesc, styles.modeSummaryDesc]} numberOfLines={2}>
+                {selectedPreset.description}
+              </Text>
+            </View>
+            <Text style={styles.modeChange}>Change</Text>
           </Pressable>
-          <TextInput
-            value={p.name}
-            onChangeText={(t) => setName(i, t)}
-            style={styles.input}
-            placeholder="Name"
-            placeholderTextColor={theme.color.textMuted}
-            maxLength={16}
-          />
-          {players.length > MIN_PLAYERS && (
-            <Pressable onPress={() => removePlayer(i)} style={styles.removeBtn}>
-              <Text style={styles.removeText}>✕</Text>
+        )}
+
+        {/* ── Player config ───────────────────────────────────────────── */}
+        <Text style={[styles.sectionLabel, { marginTop: 24 }]}>Players</Text>
+        <Text style={styles.intro}>
+          2–6 players. Tap a row to toggle human / bot.
+        </Text>
+
+        {players.map((p, i) => (
+          <View key={i} style={styles.row}>
+            <Pressable
+              style={[styles.botToggle, p.isBot && styles.botToggleActive]}
+              onPress={() => toggleBot(i)}
+            >
+              <Text style={styles.botEmoji}>{p.isBot ? '🤖' : '🧑'}</Text>
+              <Text style={styles.botLabel}>{p.isBot ? 'Bot' : 'Human'}</Text>
             </Pressable>
-          )}
+            <TextInput
+              value={p.name}
+              onChangeText={(t) => setName(i, t)}
+              style={styles.input}
+              placeholder="Name"
+              placeholderTextColor={theme.color.textMuted}
+              maxLength={16}
+            />
+            {players.length > MIN_PLAYERS && (
+              <Pressable onPress={() => removePlayer(i)} style={styles.removeBtn}>
+                <Text style={styles.removeText}>✕</Text>
+              </Pressable>
+            )}
+          </View>
+        ))}
+
+        {players.length < MAX_PLAYERS && (
+          <Button title="+ Add player" variant="ghost" onPress={addPlayer} />
+        )}
+
+        <View style={styles.footer}>
+          <Button title="Deal cards" onPress={start} />
         </View>
-      ))}
+      </ScrollView>
 
-      {players.length < MAX_PLAYERS && (
-        <Button title="+ Add player" variant="ghost" onPress={addPlayer} />
-      )}
-
-      <View style={styles.footer}>
-        <Button title="Deal cards" onPress={start} />
-      </View>
-    </ScrollView>
+      {/* Floating scroll-down cue — only visible while content sits below the fold */}
+      <Animated.View
+        style={[styles.scrollCue, { opacity: cueOpacity }]}
+        pointerEvents="box-none"
+      >
+        <Pressable
+          onPress={() =>
+            scrollRef.current?.scrollTo({
+              y: offsetY.current + viewportH.current * 0.8,
+              animated: true,
+            })
+          }
+          accessibilityRole="button"
+          accessibilityLabel="Scroll down for players and deal"
+          style={styles.scrollCuePill}
+          hitSlop={8}
+        >
+          <Text style={styles.scrollCueText}>More below</Text>
+          <Text style={styles.scrollCueChevron}>⌄</Text>
+        </Pressable>
+      </Animated.View>
+    </View>
   );
 }
 
 // ─── Styles ─────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
   container: { padding: theme.space.lg, paddingBottom: 40 },
+
+  // Floating scroll-down cue
+  scrollCue: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 16,
+    alignItems: 'center',
+  },
+  scrollCuePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(10,42,32,0.95)',
+    borderColor: '#d4a843',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 6,
+  },
+  scrollCueText: {
+    color: '#f0d78c',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  scrollCueChevron: {
+    color: '#f0d78c',
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 14,
+    marginTop: -2,
+  },
 
   // Section labels
   sectionLabel: {
@@ -184,6 +329,39 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginBottom: 10,
     opacity: 0.6,
+  },
+
+  // Collapsible mode section
+  modeSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modeChevron: {
+    color: theme.color.textOnDark,
+    fontSize: 20,
+    fontWeight: '700',
+    opacity: 0.6,
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
+  modeSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  modeSummaryBody: {
+    flex: 1,
+  },
+  modeSummaryDesc: {
+    marginLeft: 0,
+  },
+  modeChange: {
+    color: '#d4a843',
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 
   // Mode picker
