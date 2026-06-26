@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../src/components/Button';
 import { PlayingCard } from '../src/components/PlayingCard';
+import { VariantBadge } from '../src/components/VariantBadge';
 import { theme } from '../src/components/theme';
 import { useGameStore } from '../src/store/gameStore';
 
@@ -145,11 +146,7 @@ export default function SwapScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.who}>{activePlayer.name}'s swap</Text>
-      {game.ruleConfig.id !== 'jake-classic' && (
-        <View style={styles.variantBadge}>
-          <Text style={styles.variantBadgeText}>{game.ruleConfig.name}</Text>
-        </View>
-      )}
+      <VariantBadge config={game.ruleConfig} />
       <Text style={styles.hint}>
         Tap one hand card + one face-up card to swap them. Repeat as needed.
         {'\n'}This is your only chance before play begins — choose wisely!
@@ -227,20 +224,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
     marginBottom: 6,
-  },
-  variantBadge: {
-    alignSelf: 'center',
-    backgroundColor: 'rgba(212,168,67,0.15)',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    marginBottom: 6,
-  },
-  variantBadgeText: {
-    color: '#d4a843',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
   },
   hint: {
     color: theme.color.textMuted,

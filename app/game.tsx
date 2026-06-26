@@ -5,6 +5,7 @@ import { Button } from '../src/components/Button';
 import { Center } from '../src/components/Center';
 import { OpponentStrip } from '../src/components/OpponentStrip';
 import { PlayingCard } from '../src/components/PlayingCard';
+import { VariantBadge } from '../src/components/VariantBadge';
 import { theme } from '../src/components/theme';
 import { decideBotAction } from '../src/ai/bot';
 import { rankLabel, cardLabel } from '../src/engine/cards';
@@ -338,11 +339,7 @@ export default function GameScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Variant badge — shows which ruleset is active */}
-      {game.ruleConfig.id !== 'jake-classic' && (
-        <View style={styles.variantBadge}>
-          <Text style={styles.variantBadgeText}>{game.ruleConfig.name}</Text>
-        </View>
-      )}
+      <VariantBadge config={game.ruleConfig} />
 
       {/* Player scoreboard — fixed order, turn indicator on active player */}
       <View style={styles.scoreboardHeader}>
@@ -520,7 +517,7 @@ function buildBotActionDisplay(
 
     let detail: string | undefined;
     if (burn && burn.type === 'pileBurned') {
-      detail = burn.reason === 'ten'
+      detail = burn.reason === 'burnRank'
         ? '🔥 Burns the pile!'
         : burn.reason === 'tripleTransparent'
         ? '🔥 Triple 8s — burns the pile!'
@@ -556,7 +553,7 @@ function summarizeRecent(
   // Walk most-impactful → least.
   for (const e of events) {
     if (e.type === 'pileBurned') {
-      return e.reason === 'ten'
+      return e.reason === 'burnRank'
         ? '🔥 10 burns the pile'
         : e.reason === 'tripleTransparent'
         ? '🔥 Triple 8s burn the pile'
@@ -596,20 +593,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   scoreboard: { marginBottom: 4 },
-  variantBadge: {
-    alignSelf: 'center',
-    backgroundColor: 'rgba(212,168,67,0.15)',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    marginBottom: 6,
-  },
-  variantBadgeText: {
-    color: '#d4a843',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
   scoreboardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

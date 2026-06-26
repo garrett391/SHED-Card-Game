@@ -297,11 +297,11 @@ export function playCards(
 
   // ─── Burn checks ───────────────────────────────────────────────────────
   let burned = false;
-  let burnReason: 'ten' | 'fourOfKind' | 'tripleTransparent' | null = null;
+  let burnReason: 'burnRank' | 'fourOfKind' | 'tripleTransparent' | null = null;
 
   if (rank === cfg.burnRank) {
     burned = true;
-    burnReason = 'ten';
+    burnReason = 'burnRank';
   } else if (checkFourOfAKindBurn(newPlayPile, cfg)) {
     burned = true;
     burnReason = 'fourOfKind';
@@ -318,7 +318,7 @@ export function playCards(
     pendingExtraTurn = true;
     events.push({ type: 'pileBurned', reason: burnReason! });
     log.push(entry(
-      burnReason === 'ten'
+      burnReason === 'burnRank'
         ? `Burned by ${rankLabel(cfg.burnRank)}!`
         : burnReason === 'tripleTransparent'
         ? `Triple ${rankLabel(cfg.transparentRank)}s — burned!`

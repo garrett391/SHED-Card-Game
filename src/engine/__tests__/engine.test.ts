@@ -1,6 +1,7 @@
 import {
   canPlayCardOnTop,
   checkFourOfAKindBurn,
+  checkTripleTransparentBurn,
   findStartingPlayer,
   getEffectiveTopCard,
   isPowerCard,
@@ -14,7 +15,8 @@ import {
   pickupPile,
   playCards,
 } from '../engine';
-import { Card, GameState, Player, Rank, Suit } from '../types';
+import { getPreset } from '../../campaign/presets';
+import { Card, GameState, Player, Rank, RuleConfig, Suit } from '../types';
 
 // ─── helpers ─────────────────────────────────────────────────────────────
 function card(rank: Rank, suit: Suit = '♠', id = `${rank}${suit}`): Card {
@@ -33,6 +35,11 @@ function player(overrides: Partial<Player> = {}): Player {
   };
 }
 
+/** Build a RuleConfig by overriding specific flags on the default ruleset. */
+function rules(overrides: Partial<RuleConfig>): RuleConfig {
+  return { ...DEFAULT_RULES, ...overrides };
+}
+
 /**
  * Force the game into the playing phase with a deterministic player setup.
  * Skips the random deal — we hand-build the state for clarity in tests.
@@ -42,7 +49,9 @@ function setupGame(opts: {
   pile?: Card[];
   draw?: Card[];
   current?: number;
+  ruleConfig?: RuleConfig;
 }): GameState {
+  const ruleConfig = opts.ruleConfig ?? DEFAULT_RULES;
   return {
     players: opts.players.map((p, i) => ({ ...p, id: i })),
     deckCount: opts.players.length > 4 ? 2 : 1,
@@ -58,8 +67,8 @@ function setupGame(opts: {
     log: [],
     winnerId: null,
     shitheadId: null,
-    lastManStanding: false,
-    ruleConfig: DEFAULT_RULES,
+    lastManStanding: ruleConfig.lastManStanding,
+    ruleConfig,
   };
 }
 
@@ -224,7 +233,7 @@ describe('engine', () => {
     });
     const { state, events } = playCards(g, 0, [card(10).id]);
     expect(state.playPile).toHaveLength(0);
-    expect(events.some(e => e.type === 'pileBurned' && e.reason === 'ten')).toBe(true);
+    expect(events.some(e => e.type === 'pileBurned' && e.reason === 'burnRank')).toBe(true);
     expect(state.currentPlayerIndex).toBe(0); // extra turn
   });
 
@@ -429,5 +438,268 @@ describe('engine', () => {
       g = finishSwap(g, i);
     }
     expect(g.phase).toBe('playing');
+  });
+});
+
+// ─── rule variants ───────────────────────────────────────────────────────
+// One focused test per behavioral flag added by the rule-presets refactor.
+// Each builds an isolated RuleConfig via rules({ ... }) so only the flag under
+// test differs from Jake's Classic.
+describe('rule variants', () => {
+  // ── Hard Eights (Justin's Schism) ──────────────────────────────────────
+  describe('hardEights', () => {
+    const cfg = rules({ hardEights: true });
+
+    test('transparent (8) cannot be played on the lowerThan card (7)', () => {
+      expect(canPlayCardOnTop(card(8), card(7), cfg)).toBe(false);
+    });
+
+    test('reset (2) is still always playable on a 7', () => {
+      expect(canPlayCardOnTop(card(2), card(7), cfg)).toBe(true);
+    });
+
+    test('8 is still playable on a non-7 (e.g. a 6)', () => {
+      expect(canPlayCardOnTop(card(8), card(6), cfg)).toBe(true);
+    });
+
+    test('contrast: with default rules, 8 plays freely on a 7', () => {
+      expect(canPlayCardOnTop(card(8), card(7), DEFAULT_RULES)).toBe(true);
+    });
+  });
+
+  // ── Super Tens (burnRankOverridesLowerThan) ────────────────────────────
+  describe('burnRankOverridesLowerThan', () => {
+    const cfg = rules({ burnRankOverridesLowerThan: true });
+
+    test('burn card (10) can be played on the lowerThan card (7)', () => {
+      expect(canPlayCardOnTop(card(10), card(7), cfg)).toBe(true);
+    });
+
+    test('a non-burn card is still blocked by the lowerThan rule', () => {
+      expect(canPlayCardOnTop(card(9), card(7), cfg)).toBe(false);
+    });
+
+    test('contrast: with default rules, 10 is blocked on a 7', () => {
+      expect(canPlayCardOnTop(card(10), card(7), DEFAULT_RULES)).toBe(false);
+    });
+  });
+
+  // ── Burn card restricted on face cards ─────────────────────────────────
+  describe('burnRankRestricted', () => {
+    const cfg = rules({ burnRankRestricted: true });
+
+    test('burn card (10) cannot be played on a face card (J/Q/K/A)', () => {
+      expect(canPlayCardOnTop(card(10), card(11), cfg)).toBe(false); // Jack
+      expect(canPlayCardOnTop(card(10), card(12), cfg)).toBe(false); // Queen
+      expect(canPlayCardOnTop(card(10), card(13), cfg)).toBe(false); // King
+      expect(canPlayCardOnTop(card(10), card(14), cfg)).toBe(false); // Ace
+    });
+
+    test('burn card (10) is still playable on a number card', () => {
+      expect(canPlayCardOnTop(card(10), card(5), cfg)).toBe(true);
+    });
+
+    test('contrast: with default rules, 10 plays on a Jack', () => {
+      expect(canPlayCardOnTop(card(10), card(11), DEFAULT_RULES)).toBe(true);
+    });
+  });
+
+  // ── reverseRank (Chaos Shed): direction flips and persists ─────────────
+  describe('reverseRank', () => {
+    const cfg = rules({ reverseRank: 9 });
+
+    test('playing the reverse rank flips direction and it persists across turns', () => {
+      // 3 players so a direction flip is observable in turn order.
+      const g = setupGame({
+        players: [
+          player({ hand: [card(9, '♠', '9p0'), card(3), card(4)] }),
+          player({ hand: [card(5)] }),
+          player({ hand: [card(11, '♠', 'Jp2'), card(2)] }),
+        ],
+        pile: [card(4)],
+        ruleConfig: cfg,
+      });
+
+      // P0 plays a 9 → direction reverses to -1, turn passes to P2 (0 - 1 mod 3).
+      const r1 = playCards(g, 0, ['9p0']);
+      expect(r1.state.direction).toBe(-1);
+      expect(r1.state.currentPlayerIndex).toBe(2);
+      expect(r1.events.some(e => e.type === 'directionReversed')).toBe(true);
+
+      // P2 plays a plain Jack → direction STAYS -1, turn passes to P1.
+      const r2 = playCards(r1.state, 2, ['Jp2']);
+      expect(r2.state.direction).toBe(-1);
+      expect(r2.state.currentPlayerIndex).toBe(1);
+      expect(r2.events.some(e => e.type === 'directionReversed')).toBe(false);
+    });
+  });
+
+  // ── sixNineReverse (The 69): 9-on-6 reverses, 9-on-5 does not ──────────
+  describe('sixNineReverse', () => {
+    const cfg = rules({ sixNineReverse: true });
+
+    test('playing a 9 on a 6 reverses direction', () => {
+      const g = setupGame({
+        players: [
+          player({ hand: [card(9, '♠', '9a'), card(3), card(4)] }),
+          player({ hand: [card(5)] }),
+          player({ hand: [card(7)] }),
+        ],
+        pile: [card(6)],
+        ruleConfig: cfg,
+      });
+      const r = playCards(g, 0, ['9a']);
+      expect(r.state.direction).toBe(-1);
+      expect(r.state.currentPlayerIndex).toBe(2);
+      expect(r.events.some(e => e.type === 'directionReversed')).toBe(true);
+    });
+
+    test('playing a 9 on a 5 does NOT reverse direction', () => {
+      const g = setupGame({
+        players: [
+          player({ hand: [card(9, '♠', '9b'), card(3), card(4)] }),
+          player({ hand: [card(5)] }),
+          player({ hand: [card(7)] }),
+        ],
+        pile: [card(5)],
+        ruleConfig: cfg,
+      });
+      const r = playCards(g, 0, ['9b']);
+      expect(r.state.direction).toBe(1);
+      expect(r.state.currentPlayerIndex).toBe(1);
+      expect(r.events.some(e => e.type === 'directionReversed')).toBe(false);
+    });
+  });
+
+  // ── The !reversed guard: reverseRank + sixNineReverse don't double-flip ─
+  describe('reverseRank + sixNineReverse together', () => {
+    const cfg = rules({ reverseRank: 9, sixNineReverse: true });
+
+    test('playing a 9 on a 6 reverses exactly once (no double-flip)', () => {
+      const g = setupGame({
+        players: [
+          player({ hand: [card(9, '♠', '9c'), card(3), card(4)] }),
+          player({ hand: [card(5)] }),
+          player({ hand: [card(7)] }),
+        ],
+        pile: [card(6)],
+        ruleConfig: cfg,
+      });
+      const r = playCards(g, 0, ['9c']);
+      // A single net flip: -1, not back to 1.
+      expect(r.state.direction).toBe(-1);
+      // And only ONE directionReversed event, not two.
+      const reversals = r.events.filter(e => e.type === 'directionReversed');
+      expect(reversals).toHaveLength(1);
+    });
+  });
+
+  // ── tripleTransparentBurns (OFCOM): three 8s burn, two don't ───────────
+  describe('tripleTransparentBurns', () => {
+    const cfg = rules({ tripleTransparentBurns: true });
+
+    test('pure check: three consecutive transparents burn', () => {
+      expect(checkTripleTransparentBurn(
+        [card(8, '♠', '8a'), card(8, '♥', '8b'), card(8, '♦', '8c')],
+        cfg,
+      )).toBe(true);
+    });
+
+    test('pure check: two transparents do not burn', () => {
+      expect(checkTripleTransparentBurn(
+        [card(8, '♠', '8a'), card(8, '♥', '8b')],
+        cfg,
+      )).toBe(false);
+    });
+
+    test('pure check: a non-transparent breaking the run prevents the burn', () => {
+      expect(checkTripleTransparentBurn(
+        [card(8, '♠', '8a'), card(8, '♥', '8b'), card(5), card(8, '♦', '8c')],
+        cfg,
+      )).toBe(false);
+    });
+
+    test('pure check: disabled by default', () => {
+      expect(checkTripleTransparentBurn(
+        [card(8, '♠', '8a'), card(8, '♥', '8b'), card(8, '♦', '8c')],
+        DEFAULT_RULES,
+      )).toBe(false);
+    });
+
+    test('engine: playing the third 8 burns the pile and grants an extra turn', () => {
+      const g = setupGame({
+        players: [
+          player({ hand: [card(8, '♦', '8z'), card(3), card(4)] }),
+          player({ hand: [card(5)] }),
+        ],
+        pile: [card(8, '♠', '8x'), card(8, '♥', '8y')],
+        ruleConfig: cfg,
+      });
+      const { state, events } = playCards(g, 0, ['8z']);
+      expect(state.playPile).toHaveLength(0);
+      expect(events.some(
+        e => e.type === 'pileBurned' && e.reason === 'tripleTransparent',
+      )).toBe(true);
+      expect(state.currentPlayerIndex).toBe(0); // extra turn
+    });
+
+    test('engine: playing only the second 8 does NOT burn', () => {
+      const g = setupGame({
+        players: [
+          player({ hand: [card(8, '♥', '8y'), card(3), card(4)] }),
+          player({ hand: [card(5)] }),
+        ],
+        pile: [card(8, '♠', '8x')],
+        ruleConfig: cfg,
+      });
+      const { state, events } = playCards(g, 0, ['8y']);
+      expect(state.playPile).toHaveLength(2);
+      expect(events.some(e => e.type === 'pileBurned')).toBe(false);
+    });
+  });
+
+  // ── burnRank rename: pileBurned reason is 'burnRank', not 'ten' ─────────
+  describe('burnRank event reason', () => {
+    test('burning with the burn rank reports reason "burnRank"', () => {
+      const g = setupGame({
+        players: [
+          player({ hand: [card(10), card(5), card(6)] }),
+          player({ hand: [card(7)] }),
+        ],
+        pile: [card(9)],
+      });
+      const { events } = playCards(g, 0, [card(10).id]);
+      expect(events.some(
+        e => e.type === 'pileBurned' && e.reason === 'burnRank',
+      )).toBe(true);
+    });
+  });
+
+  // ── lastManStanding wired from config ──────────────────────────────────
+  describe('lastManStanding from config', () => {
+    test('createGame copies ruleConfig.lastManStanding onto state', () => {
+      const on = createGame(
+        [{ name: 'A', isBot: false }, { name: 'B', isBot: false }],
+        rules({ lastManStanding: true }),
+      );
+      expect(on.lastManStanding).toBe(true);
+      expect(on.ruleConfig.lastManStanding).toBe(true);
+
+      const off = createGame(
+        [{ name: 'A', isBot: false }, { name: 'B', isBot: false }],
+        rules({ lastManStanding: false }),
+      );
+      expect(off.lastManStanding).toBe(false);
+    });
+
+    test("the Backpacker's Codex preset enables lastManStanding end-to-end", () => {
+      const codex = getPreset('backpackers-codex');
+      expect(codex.lastManStanding).toBe(true);
+      const g = createGame(
+        [{ name: 'A', isBot: false }, { name: 'B', isBot: false }],
+        codex,
+      );
+      expect(g.lastManStanding).toBe(true);
+    });
   });
 });

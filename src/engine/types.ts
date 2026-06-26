@@ -72,6 +72,10 @@ export interface RuleConfig {
   sixNineReverse: boolean;          // Playing 9 on a 6 reverses direction
 
   // Gameplay variants
+  // TODO(rule-presets): allowVoluntaryPickup is an intentional placeholder — it is
+  // read by no engine or UI code yet. Wiring it up means having the UI offer a
+  // "pick up" button even when hasPlayableMove() is true (see note in engine.ts).
+  // All presets currently set it to false, so behavior is unchanged until then.
   allowVoluntaryPickup: boolean;    // Player may pick up even when they can play
   lastManStanding: boolean;         // true = play until one remains; false = first out wins
 }
@@ -99,7 +103,7 @@ export interface GameState {
 
 export type GameEvent =
   | { type: 'cardsPlayed'; playerId: number; cards: Card[]; source: PlaySource }
-  | { type: 'pileBurned'; reason: 'ten' | 'fourOfKind' | 'tripleTransparent' }
+  | { type: 'pileBurned'; reason: 'burnRank' | 'fourOfKind' | 'tripleTransparent' }
   | { type: 'extraTurn'; playerId: number }
   | { type: 'pileTakenUp'; playerId: number; cardCount: number }
   | { type: 'cardsDrawn'; playerId: number; count: number }

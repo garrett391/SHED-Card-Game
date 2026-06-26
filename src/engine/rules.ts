@@ -24,8 +24,17 @@ export const DEFAULT_RULES: RuleConfig = {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
 
-/** Derive the set of power ranks from a config. */
+// Cache the derived power-rank Set per config object. The ranks are fixed for the
+// lifetime of a RuleConfig (presets are immutable constants), so we compute the
+// Set once and reuse it — isPowerCard runs inside bot sort comparisons and the
+// findStartingPlayer inner loop, where re-allocating a Set each call adds up.
+const _powerRankCache = new WeakMap<RuleConfig, ReadonlySet<Rank>>();
+
+/** Derive the set of power ranks from a config (memoized per config object). */
 export function getPowerRanks(config: RuleConfig = DEFAULT_RULES): ReadonlySet<Rank> {
+  const cached = _powerRankCache.get(config);
+  if (cached) return cached;
+
   const ranks: Rank[] = [
     config.resetRank,
     config.lowerThanRank,
@@ -33,7 +42,9 @@ export function getPowerRanks(config: RuleConfig = DEFAULT_RULES): ReadonlySet<R
     config.burnRank,
   ];
   if (config.reverseRank !== null) ranks.push(config.reverseRank);
-  return new Set(ranks);
+  const set: ReadonlySet<Rank> = new Set(ranks);
+  _powerRankCache.set(config, set);
+  return set;
 }
 
 export function isPowerCard(rank: Rank, config: RuleConfig = DEFAULT_RULES): boolean {
