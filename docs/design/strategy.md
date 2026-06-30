@@ -29,7 +29,7 @@ Power card priority: 10, 8, 2, 7,
 - When previous player picks up, play 7. if 7 unavailable, play lowest card
 - Play any multiples first
 - Once the final  card is taken from then  deck, say "Decks out. Harambe."
-## Mid game
+### Mid game
 - if next player has only high cards, play 7
 - if thext player has 7, play 9 or higher
 - Burnign the pile is the lowest priority to minimize number of cards in the end game
