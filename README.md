@@ -134,3 +134,8 @@ Strategy notes are in the file's doc comment. To make it harder:
 ## License
 
 For Cousin Jake. Use freely.
+
+## Todo
+Check this out
+ - https://cardgames101.com/learn-to-play-the-card-game/shithead
+ - https://youtu.be/JZ_Qd5KTy3k?si=3Xt4eJHNrmY2sNoy

@@ -20,7 +20,21 @@ export default function GameOverScreen() {
   const winner =
     game.winnerId !== null ? game.players[game.winnerId] : null;
 
-  const shitheads = game.players.filter((p) => p.id !== game.winnerId);
+  // Who counts as a "Shithead" depends on the mode:
+  //   - first-out-wins (default): everyone who didn't win first is a shithead.
+  //   - last-man-standing: only the single last player left holding cards
+  //     (players who shed out in the middle finished safely and are spared).
+  const shitheads = game.lastManStanding
+    ? game.players.filter((p) => p.id === game.shitheadId)
+    : game.players.filter((p) => p.id !== game.winnerId);
+
+  // Last-man-standing only: players who shed all their cards mid-game. They're
+  // neither the winner (on the podium) nor the shithead (still holding cards,
+  // so never isFinished), so this filter naturally excludes both. Empty in
+  // first-out-wins mode, where play stops the instant the first player is out.
+  const safe = game.lastManStanding
+    ? game.players.filter((p) => p.isFinished && p.id !== game.winnerId)
+    : [];
 
   return (
     <View style={styles.container}>
@@ -31,9 +45,23 @@ export default function GameOverScreen() {
           {winner?.isBot ? ' 🤖' : ''}
         </Text>
 
+        {safe.length > 0 && (
+          <>
+            <Text style={[styles.label, { marginTop: 28 }]}>✅ Got out safe</Text>
+            {safe.map((p) => (
+              <Text key={p.id} style={styles.safe}>
+                {p.name}
+                {p.isBot ? ' 🤖' : ''}
+              </Text>
+            ))}
+          </>
+        )}
+
         {shitheads.length > 0 && (
           <>
-            <Text style={[styles.label, { marginTop: 28 }]}>💩 Shitheads</Text>
+            <Text style={[styles.label, { marginTop: 28 }]}>
+              {shitheads.length === 1 ? '💩 Shithead' : '💩 Shitheads'}
+            </Text>
             {shitheads.map((p) => (
               <Text key={p.id} style={styles.shithead}>
                 {p.name}
@@ -90,6 +118,13 @@ const styles = StyleSheet.create({
     color: theme.color.danger,
     fontSize: 18,
     fontWeight: '700',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  safe: {
+    color: theme.color.textOnDark,
+    fontSize: 18,
+    fontWeight: '600',
     marginTop: 4,
     textAlign: 'center',
   },
