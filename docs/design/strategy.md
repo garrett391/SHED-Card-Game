@@ -17,6 +17,15 @@ Play smallest available card
 ### Late game
 Play smallest available card(s)
 
+## Schemer Strat
+### Early game
+Play smallest available card(s)
+### Mid game
+Play largest available card
+Burn pile when able 
+### Late game
+Play smallest available card(s)
+
 ## Nick Strat
 Card priority: K, Q, J, 9, 6, 5 ,4 ,3
 Power card priority: 10, 8, 2, 7,
