@@ -194,7 +194,7 @@ export const LESSONS: Lesson[] = [
     id: 'ten-burn',
     title: 'The 10 — burn',
     intro: [
-      'The 10 is the great equaliser. Play it on anything and the entire pile BURNS — gone, out of the game.',
+      'The 10 is the great equaliser. Play it on anything (except a 7) and the entire pile BURNS — gone, out of the game.',
       'Better still: after a burn the pile is empty and it is still your turn. Play your 10 and watch it burn.',
     ],
     setup: () =>

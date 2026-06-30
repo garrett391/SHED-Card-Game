@@ -100,21 +100,31 @@ export default function TutorialScreen() {
   };
 
   const dialogueFooter = isFinalEnd ? (
-    <View style={styles.finalButtons}>
+    <View>
       <Button
         title="Play a real game"
+        compact
         onPress={() => {
           resetGame();
           router.replace('/setup');
         }}
-        style={styles.flexBtn}
       />
-      <Button
-        title="Menu"
-        variant="ghost"
-        onPress={() => router.replace('/')}
-        style={styles.flexBtn}
-      />
+      <View style={styles.finalButtons}>
+        <Button
+          title="Read the rules"
+          variant="ghost"
+          compact
+          onPress={() => router.push('/rules')}
+          style={styles.flexBtn}
+        />
+        <Button
+          title="Menu"
+          variant="ghost"
+          compact
+          onPress={() => router.replace('/')}
+          style={styles.flexBtn}
+        />
+      </View>
     </View>
   ) : undefined;
 
