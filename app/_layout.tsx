@@ -197,6 +197,7 @@ export default function RootLayout() {
       >
         <Stack.Screen name="index" options={{ title: 'Shed' }} />
         <Stack.Screen name="setup" options={{ title: 'Players' }} />
+        <Stack.Screen name="tutorial" options={{ title: 'How to play' }} />
         <Stack.Screen name="swap" options={{ title: 'Swap cards' }} />
         <Stack.Screen name="game" options={{ title: 'Shed', headerBackVisible: false }} />
         <Stack.Screen name="game-over" options={{ title: 'Game over', headerBackVisible: false }} />

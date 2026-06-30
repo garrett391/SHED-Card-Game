@@ -25,6 +25,11 @@ export default function HomeScreen() {
             router.push('/setup');
           }}
         />
+        <Button
+          title="Tutorial"
+          variant="ghost"
+          onPress={() => router.push('/tutorial')}
+        />
         <Link href="/rules" asChild>
           <Button title="Rules" variant="ghost" onPress={() => {}} />
         </Link>
