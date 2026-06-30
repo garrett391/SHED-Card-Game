@@ -37,7 +37,7 @@ export default function HomeScreen() {
 
       <View style={styles.footerContainer}>
         <Text style={styles.footer}>
-          Long live Jake the Elder.
+          Long live Jake the Elder. 🪲
         </Text>
         <Text style={styles.version}>
           v{appVersion}

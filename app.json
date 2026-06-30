@@ -2,7 +2,7 @@
   "expo": {
     "name": "Shed",
     "slug": "shed",
-    "version": "0.2.2 🧙",
+    "version": "0.2.2.1",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "scheme": "shed",
