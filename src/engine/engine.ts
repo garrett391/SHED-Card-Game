@@ -25,9 +25,9 @@ const HAND_SIZE = 3;
 const FACE_UP_SIZE = 3;
 const FACE_DOWN_SIZE = 3;
 
-let _logSeq = 0;
-function entry(text: string, playerId?: number): LogEntry {
-  return { id: _logSeq++, text, playerId };
+
+function entry(log: readonly LogEntry[], text: string, playerId?: number): LogEntry {
+  return { id: log.length, text, playerId };
 }
 
 /**
@@ -80,7 +80,7 @@ export function createGame(
     swapsComplete: players.map(() => false),
     startingPlayerIndex: 0,
     pendingExtraTurn: false,
-    log: [entry('Dealt. Swap any hand cards with face-up cards before play.')],
+    log: [entry([], 'Dealt. Swap any hand cards with face-up cards before play.')],
     ruleConfig,
     lastManStanding: ruleConfig.lastManStanding,
     winnerId: null,
@@ -128,7 +128,7 @@ export function finishSwap(state: GameState, playerIdx: number): GameState {
     startingPlayerIndex: starter,
     log: [
       ...state.log,
-      entry(
+      entry(state.log, 
         `${state.players[starter].name} starts (lowest non-power card).`,
         starter,
       ),
@@ -229,7 +229,7 @@ export function playCards(
       ];
       const log: LogEntry[] = [
         ...state.log,
-        entry(
+        entry(state.log, 
           `${player.name} flipped ${rankLabel(card.rank)} — can't beat ${top ? rankLabel(top.rank) : 'pile'}, picks up.`,
           playerIdx,
         ),
@@ -270,7 +270,7 @@ export function playCards(
   const rank = cards[0].rank;
   const log: LogEntry[] = [
     ...state.log,
-    entry(
+    entry(state.log, 
       `${player.name} played ${cards.length > 1 ? cards.length + '× ' : ''}${rankLabel(rank)}.`,
       playerIdx,
     ),
@@ -285,14 +285,14 @@ export function playCards(
     direction = direction === 1 ? -1 : 1;
     reversed = true;
     events.push({ type: 'directionReversed', playerId: playerIdx });
-    log.push(entry('Direction reversed!', playerIdx));
+    log.push(entry(log, 'Direction reversed!', playerIdx));
   }
 
   // sixNineReverse: playing a 9 on a 6 reverses direction (skip if reverseRank already handled it)
   if (!reversed && cfg.sixNineReverse && rank === 9 && top !== null && top.rank === 6) {
     direction = direction === 1 ? -1 : 1;
     events.push({ type: 'directionReversed', playerId: playerIdx });
-    log.push(entry('9 on 6 — direction reversed!', playerIdx));
+    log.push(entry(log, '9 on 6 — direction reversed!', playerIdx));
   }
 
   // ─── Burn checks ───────────────────────────────────────────────────────
@@ -317,7 +317,7 @@ export function playCards(
     newPlayPile = [];
     pendingExtraTurn = true;
     events.push({ type: 'pileBurned', reason: burnReason! });
-    log.push(entry(
+    log.push(entry(log, 
       burnReason === 'burnRank'
         ? `Burned by ${rankLabel(cfg.burnRank)}!`
         : burnReason === 'tripleTransparent'
@@ -350,7 +350,7 @@ export function playCards(
   if (after.hand.length === 0 && after.faceUp.length === 0 && after.faceDown.length === 0) {
     players = players.map((p, i) => (i === playerIdx ? { ...p, isFinished: true } : p));
     events.push({ type: 'playerFinished', playerId: playerIdx });
-    log.push(entry(`${player.name} is out!`, playerIdx));
+    log.push(entry(log, `${player.name} is out!`, playerIdx));
   }
 
   let phase: GameState['phase'] = state.phase;
@@ -369,7 +369,7 @@ export function playCards(
       phase = 'gameOver';
       shitheadId = remaining[0]?.id ?? null;
       events.push({ type: 'gameOver', winnerId: winnerId!, shitheadId });
-      log.push(entry(
+      log.push(entry(log, 
         remaining[0]
           ? `Game over — ${remaining[0].name} is the Shithead.`
           : 'Game over.',
@@ -380,7 +380,7 @@ export function playCards(
       phase = 'gameOver';
       shitheadId = null;
       events.push({ type: 'gameOver', winnerId, shitheadId });
-      log.push(entry(`Game over — ${players[winnerId].name} wins!`));
+      log.push(entry(log, `Game over — ${players[winnerId].name} wins!`));
     }
   }
 
@@ -418,7 +418,7 @@ export function pickupPile(state: GameState, playerIdx: number): PlayResult {
   ];
   const log: LogEntry[] = [
     ...state.log,
-    entry(`${player.name} picks up the pile (${pickedUp.length} cards).`, playerIdx),
+    entry(state.log, `${player.name} picks up the pile (${pickedUp.length} cards).`, playerIdx),
   ];
   return {
     state: advanceTurn({
