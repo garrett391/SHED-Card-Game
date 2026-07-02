@@ -3,28 +3,28 @@ An attempt to lay out play style for bots and bosses
 
 ## Dickhead Strat
 ### Early game
-Play largest available card
+- Play largest available card
 ### Mid game
-Play largest available card
+- Play largest available card
 ### Late game
-Play largest available card(s)
+- Play largest available card(s)
 
 ## Coward Strat
 ### Early game
-Play smallest available card
+- Play smallest available card
 ### Mid game
-Play smallest available card
+- Play smallest available card
 ### Late game
-Play smallest available card(s)
+- Play smallest available card(s)
 
 ## Schemer Strat
 ### Early game
-Play smallest available card(s)
+- Pick up pile ~~Play smallest available card(s)~~
 ### Mid game
-Play largest available card
-Burn pile when able 
+- Pick up pile ~~Play largest available card~~
 ### Late game
-Play smallest available card(s)
+- Burn pile when able
+- Play smallest card(s) ~~Play smallest available card(s)~~
 
 ## Nick Strat
 Card priority: K, Q, J, 9, 6, 5 ,4 ,3
