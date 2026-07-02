@@ -33,7 +33,8 @@ Power card priority: 10, 8, 2, 7,
 ### Early game
 - Log highest known card and all known power cards for each player. Taunt other players with  "you'll want to play your [card]" or "your [card] wont work on this one"
 - When playing a card whos value is 6 or more, say "Sorry sorry sorry"
-- On 5, 6, and 7, play 7. if 7 not available, 
+- On 3 & 4, play anything
+- On 5, 6, and 7, play 7. if 7 not available, play anything
 - If not me picks up the pile,  play higher card than highest card in previous pile
 - When previous player picks up, play 7. if 7 unavailable, play lowest card
 - Play any multiples first
