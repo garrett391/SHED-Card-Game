@@ -12,6 +12,7 @@ export const DEFAULT_RULES: RuleConfig = {
   transparentRank: 8,
   burnRank: 10,
   reverseRank: null,
+  reverseRankWild: false,
   fourOfAKindBurns: true,
   tripleTransparentBurns: false,
   hardEights: false,
@@ -41,7 +42,10 @@ export function getPowerRanks(config: RuleConfig = DEFAULT_RULES): ReadonlySet<R
     config.transparentRank,
     config.burnRank,
   ];
-  if (config.reverseRank !== null) ranks.push(config.reverseRank);
+  // The reverse rank counts as a power card only when it's wild (always
+  // playable). An ordered reverse rank is a normal card that happens to flip
+  // direction, so it stays in the starting-card calc and isn't hoarded.
+  if (config.reverseRank !== null && config.reverseRankWild) ranks.push(config.reverseRank);
   const set: ReadonlySet<Rank> = new Set(ranks);
   _powerRankCache.set(config, set);
   return set;
@@ -74,7 +78,8 @@ export function getEffectiveTopCard(
  *
  *   - Reset rank is always playable.
  *   - Transparent rank is always playable UNLESS hardEights is on and top is lowerThan.
- *   - Reverse rank (if set) is always playable.
+ *   - Reverse rank (if set) is always playable only when reverseRankWild is on;
+ *     otherwise it obeys the normal meets-or-beats rule.
  *   - On an empty effective top, anything is playable.
  *   - On a lowerThan card: next card must be <= lowerThanRank,
  *     unless burnRankOverridesLowerThan is true and card is the burn rank.
@@ -98,8 +103,12 @@ export function canPlayCardOnTop(
     return true;
   }
 
-  // Reverse rank: always playable (if set)
-  if (config.reverseRank !== null && card.rank === config.reverseRank) return true;
+  // Reverse rank: always playable ONLY when configured wild (Chaos). Otherwise
+  // it falls through to the normal meets-or-beats rule below — its reverse
+  // effect still fires when it's legally played (see applyCardEffects).
+  if (config.reverseRank !== null && config.reverseRankWild && card.rank === config.reverseRank) {
+    return true;
+  }
 
   // Empty pile — anything goes
   if (top === null) return true;

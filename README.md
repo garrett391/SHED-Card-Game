@@ -1,11 +1,11 @@
-# SHED — v1 starter
+# SHED
 
 A cross-platform (iOS / Android / Web) mobile app for the card game
 **Shithead / Shed**, built with React Native + Expo + TypeScript.
 
 > Original rules as spake by Jake the Elder. Long live Jake.
 
-## What's in v1
+## What's in the app
 
 - 2–6 player **pass-and-play** local multiplayer on one device
 - Mix any number of **humans and bots** (simple heuristic AI)
@@ -17,21 +17,25 @@ A cross-platform (iOS / Android / Web) mobile app for the card game
   - Lowest non-power card starts; draw-to-3 from draw pile
 - Pre-game **swap** screen (each player can trade hand ↔ face-up)
 - Pass-the-device privacy gates so humans don't see each other's hands
-- Rules reference screen
-- Pure, fully tested **game engine** (24 unit tests, no UI dependency)
+- **Rule variants** — selectable presets (Justin's Schism, Super Tens, Chaos
+  Shed, The 69, OFCOM Standard, the Backpacker's Codex) with a variant badge
+  and an auto-generated rules summary
+- Interactive **tutorial** and rules reference screen
+- Background **jazz radio** (streamed, HTTPS on native)
+- Pure, fully tested **game engine** (57 engine unit tests, plus a fuzz
+  simulation, no UI dependency)
 
-### Not in v1 (deliberate)
+### Not yet (deliberate)
 
 - Online multiplayer / accounts (engine is decoupled to make this easy later)
-- Animations, sound, haptics
+- Haptics
 - Stats / history / leaderboards
-- Tutorials, rule variants
 - Spectator mode
 
 ## Setup
 
 ```bash
-cd shed-app
+# from the project root
 npm install
 npm start
 ```
@@ -48,14 +52,16 @@ Then:
 npm test
 ```
 
-The engine has 24 unit tests covering all power cards, edge cases (8 in
-four-of-a-kind, 10 on 7, face-down failed flips), starting-player logic, and
-full integration scenarios.
+The engine has 57 unit tests covering all power cards, rule variants (reverse
+rank ordered vs wild, Super Tens, Hard Eights, OFCOM triple-8 burn), edge cases
+(8 in four-of-a-kind, 10 on 7, face-down failed flips), starting-player logic,
+and full integration scenarios — plus a fuzz simulation that plays thousands of
+random games across every preset to check card conservation and termination.
 
 ## Project layout
 
 ```
-shed-app/
+.
 ├── app/                        Expo Router screens (file-based)
 │   ├── _layout.tsx             Stack navigator + theme
 │   ├── index.tsx               Home
@@ -63,7 +69,8 @@ shed-app/
 │   ├── swap.tsx                Pre-game card swap (per player)
 │   ├── game.tsx                Main table
 │   ├── game-over.tsx           Winner / shithead announcement
-│   └── rules.tsx               Rules reference
+│   ├── rules.tsx               Rules reference
+│   └── tutorial.tsx            Interactive tutorial
 ├── src/
 │   ├── engine/                 Pure game logic — no React, no I/O
 │   │   ├── types.ts            Card, Player, GameState, GameEvent
@@ -73,14 +80,21 @@ shed-app/
 │   │   └── __tests__/          Jest unit tests
 │   ├── ai/
 │   │   └── bot.ts              Heuristic bot — easily swappable
+│   ├── campaign/
+│   │   ├── presets.ts          Rule-variant presets
+│   │   ├── ruleSummary.ts      Human-readable variant diff
+│   │   └── tutorial.ts         Tutorial lesson definitions
 │   ├── store/
-│   │   └── gameStore.ts        Zustand store wrapping the engine
-│   │   └── radioStore.ts       Zustand store wrapping the jazz radio
+│   │   ├── gameStore.ts        Zustand store wrapping the engine
+│   │   ├── radioStore.ts       Zustand store wrapping the jazz radio
+│   │   └── tutorialStore.ts    Zustand store for tutorial progress
 │   └── components/
 │       ├── theme.ts            Colors + spacing tokens
 │       ├── Button.tsx
 │       ├── PlayingCard.tsx
 │       ├── OpponentStrip.tsx   Compact opponent display
+│       ├── VariantBadge.tsx    Active-variant badge + popover
+│       ├── CharacterDialogue.tsx
 │       └── Center.tsx          Draw / pile / burned columns
 ├── jest.config.js
 ├── tsconfig.json               strict mode, @/* alias to src/*
@@ -135,7 +149,7 @@ Strategy notes are in the file's doc comment. To make it harder:
 
 For Cousin Jake. Use freely.
 
-## Todo
-Check this out
- - https://cardgames101.com/learn-to-play-the-card-game/shithead
- - https://youtu.be/JZ_Qd5KTy3k?si=3Xt4eJHNrmY2sNoy
+## References
+
+- [How to play Shithead](https://cardgames101.com/learn-to-play-the-card-game/shithead)
+- [Video walkthrough](https://youtu.be/JZ_Qd5KTy3k?si=3Xt4eJHNrmY2sNoy)
