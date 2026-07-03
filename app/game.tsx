@@ -101,11 +101,11 @@ export default function GameScreen() {
     // meaningfully, the log grows, so we can re-fire for the same bot if
     // they get an extra turn.
     const epoch = game.log.length;
+    const turnIdx = game.currentPlayerIndex;
     const last = lastBotTurnRef.current;
-    if (last && last.idx === game.currentPlayerIndex && last.epoch === epoch) {
+    if (last && last.idx === turnIdx && last.epoch === epoch) {
       return;
     }
-    lastBotTurnRef.current = { idx: game.currentPlayerIndex, epoch };
 
     const botName = current.name;
 
@@ -113,10 +113,18 @@ export default function GameScreen() {
       // Re-read latest store state in case something changed.
       const latest = useGameStore.getState();
       if (!latest.game || latest.game.phase !== 'playing') return;
-      const cur = latest.game.players[latest.game.currentPlayerIndex];
+      // Bail if the turn moved on between scheduling and firing. This also makes
+      // effect teardown/re-run (and React StrictMode's double-invoke) safe:
+      // because we haven't claimed the turn yet, a canceled timer leaves nothing
+      // claimed, so the re-run can still schedule and act.
+      if (latest.game.currentPlayerIndex !== turnIdx || latest.game.log.length !== epoch) return;
+      const cur = latest.game.players[turnIdx];
       if (!cur.isBot || cur.isFinished) return;
 
-      const action = decideBotAction(latest.game, latest.game.currentPlayerIndex);
+      // Claim the turn only now that we're actually committing to act.
+      lastBotTurnRef.current = { idx: turnIdx, epoch };
+
+      const action = decideBotAction(latest.game, turnIdx);
       if (action.type === 'pickup') {
         latest.pickup();
       } else {
