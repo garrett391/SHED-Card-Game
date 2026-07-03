@@ -15,7 +15,7 @@ import {
   hasPlayableMove,
 } from '../src/engine/engine';
 import { useGameStore } from '../src/store/gameStore';
-import { Card, GameEvent, GameState } from '../src/engine/types';
+import { Card, GameEvent, GameState, RuleConfig } from '../src/engine/types';
 
 const BOT_THINK_MS = 400;
 const BOT_DISPLAY_MS = 1800;
@@ -142,7 +142,7 @@ export default function GameScreen() {
 
       // Capture what just happened for the interstitial display.
       const events = useGameStore.getState().recentEvents;
-      setBotAction(buildBotActionDisplay(botName, events));
+      setBotAction(buildBotActionDisplay(botName, events, latest.game?.ruleConfig ?? game.ruleConfig));
     }, BOT_THINK_MS);
     return () => clearTimeout(timer);
   }, [game, flipResult, botAction]);
@@ -225,7 +225,7 @@ export default function GameScreen() {
           <Text style={styles.passName}>{currentPlayer.name}</Text>
           {recentEvents.length > 0 && (
             <Text style={styles.lastAction}>
-              {summarizeRecent(recentEvents, game.players)}
+              {summarizeRecent(recentEvents, game.players, game.ruleConfig)}
             </Text>
           )}
           <Button title="I'm ready" onPress={revealHand} />
@@ -389,7 +389,7 @@ export default function GameScreen() {
               : `${currentPlayer.name}'s turn`}
           </Text>
           {recentEvents.length > 0 && (
-            <Text style={styles.recent}>{summarizeRecent(recentEvents, game.players)}</Text>
+            <Text style={styles.recent}>{summarizeRecent(recentEvents, game.players, game.ruleConfig)}</Text>
           )}
         </View>
         {isHumanTurn && source !== 'faceDown' && canPlay && (
@@ -487,6 +487,7 @@ export default function GameScreen() {
 function buildBotActionDisplay(
   botName: string,
   events: GameEvent[],
+  cfg: RuleConfig,
 ): { botName: string; headline: string; detail?: string; card?: Card; emoji: string } {
   // Check for pile pickup
   const pickup = events.find((e) => e.type === 'pileTakenUp');
@@ -528,7 +529,7 @@ function buildBotActionDisplay(
       detail = burn.reason === 'burnRank'
         ? '🔥 Burns the pile!'
         : burn.reason === 'tripleTransparent'
-        ? '🔥 Triple 8s — burns the pile!'
+        ? `🔥 Triple ${rankLabel(cfg.transparentRank)}s — burns the pile!`
         : '🔥 Four-of-a-kind — burns the pile!';
     }
     if (reversed) {
@@ -555,6 +556,7 @@ function buildBotActionDisplay(
 function summarizeRecent(
   events: ReturnType<typeof useGameStore.getState>['recentEvents'],
   players: GameState['players'],
+  cfg: RuleConfig,
 ): string {
   const playerName = (id: number) => players?.find((p) => p.id === id)?.name ?? 'Someone';
 
@@ -562,9 +564,9 @@ function summarizeRecent(
   for (const e of events) {
     if (e.type === 'pileBurned') {
       return e.reason === 'burnRank'
-        ? '🔥 10 burns the pile'
+        ? `🔥 ${rankLabel(cfg.burnRank)} burns the pile`
         : e.reason === 'tripleTransparent'
-        ? '🔥 Triple 8s burn the pile'
+        ? `🔥 Triple ${rankLabel(cfg.transparentRank)}s burn the pile`
         : '🔥 Four-of-a-kind burns the pile';
     }
     if (e.type === 'directionReversed') {
@@ -583,9 +585,7 @@ function summarizeRecent(
   for (const e of events) {
     if (e.type === 'cardsPlayed') {
       const n = e.cards.length;
-      const rank = e.cards[0].rank;
-      const label =
-        rank === 11 ? 'J' : rank === 12 ? 'Q' : rank === 13 ? 'K' : rank === 14 ? 'A' : String(rank);
+      const label = rankLabel(e.cards[0].rank);
       const played = n === 1 ? `played ${label}` : `played ${n}× ${label}`;
       return `${playerName(e.playerId)} ${played}`;
     }

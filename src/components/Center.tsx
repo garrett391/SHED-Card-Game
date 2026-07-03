@@ -108,7 +108,7 @@ export function Center({ game, onPickup, isHumanTurn, mustPickup }: Props) {
             </View>
           )}
           <Text style={[styles.pickupHint, mustPickup && styles.pickupHintForced]}>
-            {mustPickup ? 'Tap to pick up' : 'Tap to pick up'}
+            {mustPickup ? 'No moves — tap to pick up' : 'Tap to pick up'}
           </Text>
         </Pressable>
       );

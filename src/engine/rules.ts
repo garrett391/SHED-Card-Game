@@ -1,4 +1,5 @@
 import { Card, Player, Rank, RuleConfig } from './types';
+import { rankLabel } from './cards';
 
 // ─── Default rule config (Jake the Elder's rules) ──────────────────────────────
 
@@ -19,7 +20,6 @@ export const DEFAULT_RULES: RuleConfig = {
   burnRankRestricted: false,
   burnRankOverridesLowerThan: false,
   sixNineReverse: false,
-  allowVoluntaryPickup: false,
   lastManStanding: false,
 };
 
@@ -144,7 +144,10 @@ export function canPlayMultiple(
     return { ok: false, reason: 'All selected cards must share a rank' };
   }
   if (!canPlayCardOnTop(cards[0], top, config)) {
-    return { ok: false, reason: `Cannot play ${rank} on ${top?.rank ?? 'empty pile'}` };
+    return {
+      ok: false,
+      reason: `Cannot play ${rankLabel(rank)} on ${top ? rankLabel(top.rank) : 'empty pile'}`,
+    };
   }
   return { ok: true };
 }

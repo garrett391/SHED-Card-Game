@@ -58,6 +58,10 @@ export interface RuleConfig {
 
   // Optional power card
   reverseRank: Rank | null; // Reverses play direction (e.g. 9). null = disabled.
+  // When true, the reverse rank is wild: always playable, like a power card.
+  // When false (all current presets), it's an ordinary card that obeys
+  // meets-or-beats — its reverse effect still fires when legally played.
+  reverseRankWild: boolean;
 
   // Burn variants
   fourOfAKindBurns: boolean;        // 4 same-rank (skipping transparent) burns pile
@@ -72,11 +76,9 @@ export interface RuleConfig {
   sixNineReverse: boolean;          // Playing 9 on a 6 reverses direction
 
   // Gameplay variants
-  // TODO(rule-presets): allowVoluntaryPickup is an intentional placeholder — it is
-  // read by no engine or UI code yet. Wiring it up means having the UI offer a
-  // "pick up" button even when hasPlayableMove() is true (see note in engine.ts).
-  // All presets currently set it to false, so behavior is unchanged until then.
-  allowVoluntaryPickup: boolean;    // Player may pick up even when they can play
+  // Note: voluntary pickup (choosing to take the pile even when you can play)
+  // is a standing rule in every variant — the pile is always tappable on your
+  // turn — so it isn't configurable here.
   lastManStanding: boolean;         // true = play until one remains; false = first out wins
 }
 

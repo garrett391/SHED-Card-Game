@@ -13,10 +13,6 @@ import { rankLabel } from '../engine/cards';
 /**
  * Plain-language list of how `config` differs from Jake's Classic.
  * Empty array means it IS Jake's Classic (no differences).
- *
- * Note: `allowVoluntaryPickup` is intentionally excluded — it's an unwired
- * placeholder in the engine, so surfacing it would describe behaviour that
- * doesn't exist yet.
  */
 export function variantDiff(config: RuleConfig): string[] {
   const base = DEFAULT_RULES;
@@ -35,8 +31,19 @@ export function variantDiff(config: RuleConfig): string[] {
   // ── Optional reverse rank ──────────────────────────────────────────────────
   if (config.reverseRank !== base.reverseRank) {
     if (config.reverseRank !== null)
-      out.push(`Playing a ${rankLabel(config.reverseRank)} reverses the direction of play.`);
+      out.push(
+        config.reverseRankWild
+          ? `The ${rankLabel(config.reverseRank)} is wild: playable on anything, and it reverses the direction of play.`
+          : `Playing a ${rankLabel(config.reverseRank)} reverses the direction of play. (It's an ordinary card otherwise — normal rules apply.)`,
+      );
     else out.push('The reverse card is disabled.');
+  } else if (config.reverseRank !== null && config.reverseRankWild !== base.reverseRankWild) {
+    // Same rank as base but wildness changed.
+    out.push(
+      config.reverseRankWild
+        ? `The ${rankLabel(config.reverseRank)} is now wild: playable on anything.`
+        : `The ${rankLabel(config.reverseRank)} is no longer wild — normal play rules apply.`,
+    );
   }
 
   // ── Special combo ──────────────────────────────────────────────────────────

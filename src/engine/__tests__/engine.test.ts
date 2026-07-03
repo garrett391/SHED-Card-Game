@@ -534,6 +534,76 @@ describe('rule variants', () => {
     });
   });
 
+  // ── reverseRankWild: wild vs ordered reverse card ───────────────────────
+  describe('reverseRankWild', () => {
+    test('ordered reverse rank (default) obeys meets-or-beats', () => {
+      const cfg = rules({ reverseRank: 9, reverseRankWild: false });
+      // 9 on a K is an illegal play when the reverse rank is ordered.
+      expect(canPlayCardOnTop(card(9), card(13), cfg)).toBe(false);
+      // ...but legal on lower ranks, as any 9 would be.
+      expect(canPlayCardOnTop(card(9), card(5), cfg)).toBe(true);
+    });
+
+    test('wild reverse rank is always playable', () => {
+      const cfg = rules({ reverseRank: 9, reverseRankWild: true });
+      expect(canPlayCardOnTop(card(9), card(13), cfg)).toBe(true);
+      expect(canPlayCardOnTop(card(9), card(14), cfg)).toBe(true);
+    });
+
+    test('wild reverse rank counts as a power card; ordered does not', () => {
+      const wild = rules({ reverseRank: 9, reverseRankWild: true });
+      const ordered = rules({ reverseRank: 9, reverseRankWild: false });
+      expect(isPowerCard(9, wild)).toBe(true);
+      expect(isPowerCard(9, ordered)).toBe(false);
+    });
+
+    test('all shipped presets use an ordered (non-wild) reverse rank', () => {
+      for (const id of ['chaos-shed', 'backpackers-codex']) {
+        const preset = getPreset(id);
+        expect(preset.reverseRank).toBe(9);
+        expect(preset.reverseRankWild).toBe(false);
+      }
+    });
+  });
+
+  // ── strict card-ID resolution: no silent partial plays ──────────────────
+  describe('playCards ID validation', () => {
+    test('rejects the whole move if any requested ID is not in the source', () => {
+      const p0 = player({ hand: [card(5, '♠', '5s'), card(5, '♥', '5h')] });
+      const p1 = player({ hand: [card(6)] });
+      const state = setupGame({ players: [p0, p1] });
+      const r = playCards(state, 0, ['5s', 'not-a-card']);
+      expect(r.events).toHaveLength(0);
+      expect(r.state).toBe(state); // unchanged — nothing played
+    });
+
+    test('rejects duplicate IDs instead of double-resolving one card', () => {
+      const p0 = player({ hand: [card(5, '♠', '5s'), card(6, '♥', '6h')] });
+      const p1 = player({ hand: [card(6)] });
+      const state = setupGame({ players: [p0, p1] });
+      const r = playCards(state, 0, ['5s', '5s']);
+      expect(r.events).toHaveLength(0);
+      expect(r.state).toBe(state);
+    });
+
+    test('does NOT reject two-deck games: same rank+suit but distinct namespaced IDs play fine', () => {
+      // Mirrors createDeck()'s real ID scheme (`d${deckIndex}-r${rank}-s${suit}`).
+      // A 5-6 player game uses 2 decks, so two physically distinct 6♣ cards can
+      // legitimately coexist in one hand — they must NOT be treated as duplicates
+      // just because rank/suit match; only a literal repeated ID is rejected.
+      const sixOfClubsDeckA = card(6, '♣', 'd0-r6-s♣');
+      const sixOfClubsDeckB = card(6, '♣', 'd1-r6-s♣');
+      const p0 = player({ hand: [sixOfClubsDeckA, sixOfClubsDeckB] });
+      const p1 = player({ hand: [card(7)] });
+      const state = setupGame({ players: [p0, p1] });
+      const r = playCards(state, 0, ['d0-r6-s♣', 'd1-r6-s♣']);
+      const played = r.events.find((e) => e.type === 'cardsPlayed');
+      expect(played).toBeDefined();
+      expect(played && played.type === 'cardsPlayed' && played.cards).toHaveLength(2);
+      expect(r.state.players[0].hand).toHaveLength(0);
+    });
+  });
+
   // ── sixNineReverse (The 69): 9-on-6 reverses, 9-on-5 does not ──────────
   describe('sixNineReverse', () => {
     const cfg = rules({ sixNineReverse: true });

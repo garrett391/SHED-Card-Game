@@ -163,12 +163,12 @@ export function getPlayableCardIds(state: GameState, playerIdx: number): string[
 }
 
 /**
- * Returns true if the player has no playable card from their current source.
+ * Returns true if the player has a playable card from their current source.
  * Face-down is always considered "playable" (the player commits to flip).
  *
- * When allowVoluntaryPickup is true, hasPlayableMove still reports accurately
- * — the UI uses it to decide whether to FORCE pickup. Voluntary pickup is
- * handled separately by the UI offering a "pick up" button at all times.
+ * Voluntary pickup is a standing rule: the pile is always tappable on your
+ * turn (see pickupPile). The UI uses this function only to decide whether
+ * pickup is FORCED (no legal play) and should be highlighted as such.
  */
 export function hasPlayableMove(state: GameState, playerIdx: number): boolean {
   const player = state.players[playerIdx];
@@ -205,10 +205,18 @@ export function playCards(
     : source === 'faceUp' ? player.faceUp
     : player.faceDown;
 
+  // Resolve requested IDs strictly: every ID must exist in the active source,
+  // with no duplicates. Silently playing a subset would let a desynced or
+  // buggy caller "play 3 cards" and have 1 land — reject the whole move
+  // instead so state never diverges from intent.
+  const uniqueIds = new Set(cardIds);
   const cards = cardIds
     .map(id => sourceArr.find(c => c.id === id))
     .filter((c): c is Card => Boolean(c));
   if (cards.length === 0) return { state, events: [] };
+  if (cards.length !== uniqueIds.size || cards.length !== cardIds.length) {
+    return { state, events: [] };
+  }
 
   const top = getEffectiveTopCard(state.playPile, cfg);
 

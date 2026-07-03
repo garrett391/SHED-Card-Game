@@ -114,6 +114,15 @@ export default function SetupScreen() {
   const setName = (idx: number, name: string) =>
     setPlayers((ps) => ps.map((p, i) => (i === idx ? { ...p, name } : p)));
 
+  // Lowest "Bot N" name not already taken, so toggling players back and
+  // forth never produces duplicate bot names.
+  const nextBotName = (ps: PlayerConfig[]) => {
+    const taken = new Set(ps.map((p) => p.name));
+    let n = 1;
+    while (taken.has(`Bot ${n}`)) n++;
+    return `Bot ${n}`;
+  };
+
   const toggleBot = (idx: number) =>
     setPlayers((ps) =>
       ps.map((p, i) =>
@@ -122,7 +131,7 @@ export default function SetupScreen() {
               ...p,
               isBot: !p.isBot,
               name: !p.isBot
-                ? `Bot ${ps.filter((q) => q.isBot).length + 1}`
+                ? nextBotName(ps)
                 : DEFAULT_NAMES[idx] ?? `Player ${idx + 1}`,
             }
           : p,
@@ -131,10 +140,7 @@ export default function SetupScreen() {
 
   const addPlayer = () => {
     if (players.length >= MAX_PLAYERS) return;
-    setPlayers([
-      ...players,
-      { name: `Bot ${players.filter((p) => p.isBot).length + 1}`, isBot: true },
-    ]);
+    setPlayers([...players, { name: nextBotName(players), isBot: true }]);
   };
 
   const removePlayer = (idx: number) => {
