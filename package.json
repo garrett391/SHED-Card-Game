@@ -1,6 +1,6 @@
 {
   "name": "shed",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
@@ -12,6 +12,7 @@
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
     "expo": "~54.0.9",
+    "expo-audio": "~1.1.1",
     "expo-av": "~16.0.8",
     "expo-constants": "~18.0.9",
     "expo-linking": "~8.0.8",

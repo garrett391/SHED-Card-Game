@@ -16,6 +16,7 @@ import { theme } from '../src/components/theme';
 import { useGameStore } from '../src/store/gameStore';
 import { PlayerConfig, RuleConfig } from '../src/engine/types';
 import { RULE_PRESETS, PRESET_ORDER } from '../src/campaign/presets';
+import { playSfx } from '../src/audio/sfx';
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 6;
@@ -150,6 +151,7 @@ export default function SetupScreen() {
 
   const start = () => {
     const preset = RULE_PRESETS[selectedMode] ?? RULE_PRESETS['jake-classic'];
+    playSfx('shuffle'); // the deal — fired on the tap itself
     startGame(players, preset);
     router.replace('/swap');
   };

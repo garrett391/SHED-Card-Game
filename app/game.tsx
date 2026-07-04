@@ -15,6 +15,7 @@ import {
   hasPlayableMove,
 } from '../src/engine/engine';
 import { useGameStore } from '../src/store/gameStore';
+import { playSfx } from '../src/audio/sfx';
 import { Card, GameEvent, GameState, RuleConfig } from '../src/engine/types';
 
 const BOT_THINK_MS = 400;
@@ -146,6 +147,21 @@ export default function GameScreen() {
     }, BOT_THINK_MS);
     return () => clearTimeout(timer);
   }, [game, flipResult, botAction]);
+
+  // Game sounds, driven by engine events rather than buttons, so every path
+  // is covered — human taps, bot turns, forced pickups, failed face-down
+  // flips. recentEvents is replaced wholesale on each action, so each sound
+  // fires exactly once per action. The two branches are mutually exclusive
+  // in practice (an action emits cardsPlayed OR pileTakenUp, never both — a
+  // failed flip emits faceDownFlipFailed + pileTakenUp); the pickup branch
+  // is checked first as the salient moment just in case that ever changes.
+  useEffect(() => {
+    if (recentEvents.some((e) => e.type === 'pileTakenUp')) {
+      playSfx('cardPickup');
+    } else if (recentEvents.some((e) => e.type === 'cardsPlayed')) {
+      playSfx('cardPlace');
+    }
+  }, [recentEvents]);
 
   // Auto-dismiss bot action interstitial after BOT_DISPLAY_MS.
   useEffect(() => {

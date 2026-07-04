@@ -5,6 +5,7 @@ import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from '
 import { useEffect, useState } from 'react';
 import { theme } from '../src/components/theme';
 import { useRadioStore, STATIONS } from '../src/store/radioStore';
+import { preloadSfx } from '../src/audio/sfx';
 
 // ---------------------------------------------------------------------------
 // RadioToggle  (lives in the header of every screen)
@@ -182,6 +183,10 @@ export default function RootLayout() {
 
   useEffect(() => {
     init();
+    // Create SFX players up front so the first sound has no load latency.
+    // (Playback itself only ever happens after a user tap, which keeps web
+    // autoplay policies happy.)
+    preloadSfx();
   }, [init]);
 
   return (

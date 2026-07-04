@@ -15,6 +15,7 @@ import {
   allowedCardIds,
   canPlaySelection,
 } from '../src/campaign/tutorial';
+import { playSfx } from '../src/audio/sfx';
 
 const CHRIS_PORTRAIT = require('../assets/images/characters/chris-portrait.png');
 
@@ -176,14 +177,24 @@ export default function TutorialScreen() {
               <View style={styles.actions}>
                 <Button
                   title="Play selected"
-                  onPress={confirmPlay}
+                  onPress={() => {
+                    playSfx('cardPlace');
+                    confirmPlay();
+                  }}
                   disabled={!canPlaySelection(selectedCardIds, lesson)}
                 />
               </View>
             )}
             {stage === 'play' && action === 'pickup' && (
               <View style={styles.actions}>
-                <Button title="Pick up pile" variant="danger" onPress={pickup} />
+                <Button
+                  title="Pick up pile"
+                  variant="danger"
+                  onPress={() => {
+                    playSfx('cardPickup');
+                    pickup();
+                  }}
+                />
               </View>
             )}
           </>
@@ -196,7 +207,12 @@ export default function TutorialScreen() {
           name="Chris the Scribe"
           text={text}
           portrait={CHRIS_PORTRAIT}
-          onAdvance={tapContinue}
+          onAdvance={() => {
+            // Page-turn on the tap itself (not an effect watching lineIndex)
+            // so the sound stays causal and never fires on mount.
+            playSfx('pageTurn');
+            tapContinue();
+          }}
           canAdvance={canAdvance}
           footer={dialogueFooter}
         />
