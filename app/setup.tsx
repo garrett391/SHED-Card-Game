@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
   Animated,
@@ -91,8 +91,15 @@ export default function SetupScreen() {
   const router = useRouter();
   const startGame = useGameStore((s) => s.startGame);
 
-  const [selectedMode, setSelectedMode] = useState<string>('jake-classic');
   const completed = useCampaignStore((s) => s.completed);
+  // Preselect a variant when arriving from the campaign map. Guarded by the
+  // unlock check so a stale/hand-typed param can't bypass the ladder.
+  const { preset: presetParam } = useLocalSearchParams<{ preset?: string }>();
+  const [selectedMode, setSelectedMode] = useState<string>(() =>
+    presetParam && RULE_PRESETS[presetParam] && isUnlocked(completed, presetParam)
+      ? presetParam
+      : 'jake-classic',
+  );
   // Mode picker starts collapsed so the Players section and Deal button sit
   // above the fold. The collapsed header shows the current selection; tapping
   // it expands the full list, and choosing a mode snaps it shut again.

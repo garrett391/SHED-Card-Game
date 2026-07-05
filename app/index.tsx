@@ -19,7 +19,15 @@ export default function HomeScreen() {
 
       <View style={styles.actions}>
         <Button
-          title="New game"
+          title="Campaign"
+          onPress={() => {
+            reset();
+            router.push('/campaign');
+          }}
+        />
+        <Button
+          title="Free play"
+          variant="ghost"
           onPress={() => {
             reset();
             router.push('/setup');

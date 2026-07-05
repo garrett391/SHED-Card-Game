@@ -5,7 +5,7 @@ import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from '
 import { useEffect, useState } from 'react';
 import { theme } from '../src/components/theme';
 import { useRadioStore, STATIONS } from '../src/store/radioStore';
-import { preloadSfx } from '../src/audio/sfx';
+import { preloadSfx, setSfxMuted, isSfxMuted } from '../src/audio/sfx';
 
 // ---------------------------------------------------------------------------
 // RadioToggle  (lives in the header of every screen)
@@ -83,7 +83,33 @@ function RadioToggle() {
         }}
         onToggle={toggle}
       />
+
+      {/* SFX mute — independent of the radio. Local state mirrors the
+          module-level flag in sfx.ts; initial read keeps it in sync if the
+          header remounts. */}
+      <SfxToggle />
     </View>
+  );
+}
+
+function SfxToggle() {
+  const [sfxMuted, setSfxMutedState] = useState(isSfxMuted());
+  return (
+    <Pressable
+      onPress={() => {
+        const next = !sfxMuted;
+        setSfxMuted(next);
+        setSfxMutedState(next);
+      }}
+      hitSlop={10}
+      style={styles.toggleBtn}
+      accessibilityLabel={sfxMuted ? 'Unmute sound effects' : 'Mute sound effects'}
+      accessibilityRole="button"
+    >
+      <Text style={{ fontSize: 16, opacity: sfxMuted ? 0.35 : 1 }}>
+        {sfxMuted ? '🔇' : '🔊'}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -201,6 +227,7 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="index" options={{ title: 'Shed' }} />
+        <Stack.Screen name="campaign" options={{ title: 'Campaign' }} />
         <Stack.Screen name="setup" options={{ title: 'Players' }} />
         <Stack.Screen name="tutorial" options={{ title: 'Tutorial' }} />
         <Stack.Screen name="swap" options={{ title: 'Swap cards' }} />
