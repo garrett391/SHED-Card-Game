@@ -16,6 +16,7 @@ import { theme } from '../src/components/theme';
 import { useGameStore } from '../src/store/gameStore';
 import { PlayerConfig, RuleConfig } from '../src/engine/types';
 import { RULE_PRESETS, PRESET_ORDER } from '../src/campaign/presets';
+import { isUnlocked, useCampaignStore } from '../src/store/campaignStore';
 import { playSfx } from '../src/audio/sfx';
 
 const MIN_PLAYERS = 2;
@@ -28,18 +29,28 @@ const DEFAULT_NAMES = ['Player 1', 'Jake', 'Erich', 'Bauer', 'Cousin', 'Elder'];
 function ModeCard({
   preset,
   selected,
+  locked,
+  unlockHint,
   onPress,
 }: {
   preset: RuleConfig;
   selected: boolean;
+  locked: boolean;
+  unlockHint: string | null;
   onPress: () => void;
 }) {
   return (
     <Pressable
-      onPress={onPress}
+      onPress={locked ? undefined : onPress}
+      disabled={locked}
+      accessibilityState={{ disabled: locked }}
+      accessibilityLabel={
+        locked ? `${preset.name}. Locked. ${unlockHint ?? ''}` : undefined
+      }
       style={[
         styles.modeCard,
         selected && styles.modeCardSelected,
+        locked && styles.modeCardLocked,
       ]}
     >
       <View style={styles.modeHeader}>
@@ -55,14 +66,19 @@ function ModeCard({
           style={[
             styles.modeName,
             selected && styles.modeNameSelected,
+            locked && styles.modeNameLocked,
           ]}
           numberOfLines={1}
         >
-          {preset.name}
+          {locked ? `🔒 ${preset.name}` : preset.name}
         </Text>
       </View>
-      <Text style={styles.modeDesc}>{preset.description}</Text>
-      {selected && (
+      {/* Locked variants keep their description hidden — discovering each
+          rule twist is part of the campaign's reveal. */}
+      <Text style={styles.modeDesc}>
+        {locked ? unlockHint ?? 'Locked' : preset.description}
+      </Text>
+      {selected && !locked && (
         <Text style={styles.modeFlavor}>"{preset.flavorText}"</Text>
       )}
     </Pressable>
@@ -76,6 +92,7 @@ export default function SetupScreen() {
   const startGame = useGameStore((s) => s.startGame);
 
   const [selectedMode, setSelectedMode] = useState<string>('jake-classic');
+  const completed = useCampaignStore((s) => s.completed);
   // Mode picker starts collapsed so the Players section and Deal button sit
   // above the fold. The collapsed header shows the current selection; tapping
   // it expands the full list, and choosing a mode snaps it shut again.
@@ -191,17 +208,23 @@ export default function SetupScreen() {
         </Pressable>
 
         {modeExpanded ? (
-          PRESET_ORDER.map((id) => (
-            <ModeCard
-              key={id}
-              preset={RULE_PRESETS[id]}
-              selected={selectedMode === id}
-              onPress={() => {
-                setSelectedMode(id);
-                setModeExpanded(false);
-              }}
-            />
-          ))
+          PRESET_ORDER.map((id, i) => {
+            const locked = !isUnlocked(completed, id);
+            const prev = i > 0 ? RULE_PRESETS[PRESET_ORDER[i - 1]] : null;
+            return (
+              <ModeCard
+                key={id}
+                preset={RULE_PRESETS[id]}
+                selected={selectedMode === id}
+                locked={locked}
+                unlockHint={prev ? `Beat ${prev.name} to unlock` : null}
+                onPress={() => {
+                  setSelectedMode(id);
+                  setModeExpanded(false);
+                }}
+              />
+            );
+          })
         ) : (
           <Pressable
             onPress={() => setModeExpanded(true)}
@@ -384,6 +407,12 @@ const styles = StyleSheet.create({
   modeCardSelected: {
     borderColor: '#d4a843',
     backgroundColor: '#1a3e2e',
+  },
+  modeCardLocked: {
+    opacity: 0.55,
+  },
+  modeNameLocked: {
+    color: theme.color.textMuted,
   },
   modeHeader: {
     flexDirection: 'row',

@@ -4,11 +4,16 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '../src/components/Button';
 import { theme } from '../src/components/theme';
 import { useGameStore } from '../src/store/gameStore';
+import { useCampaignStore } from '../src/store/campaignStore';
+import { RULE_PRESETS } from '../src/campaign/presets';
 
 export default function GameOverScreen() {
   const router = useRouter();
   const game = useGameStore((s) => s.game);
   const reset = useGameStore((s) => s.reset);
+  const lastUnlockedId = useCampaignStore((s) => s.lastUnlockedId);
+  const acknowledgeUnlock = useCampaignStore((s) => s.acknowledgeUnlock);
+  const unlockedPreset = lastUnlockedId ? RULE_PRESETS[lastUnlockedId] : null;
 
   // If state was wiped, bail home.
   useEffect(() => {
@@ -72,10 +77,19 @@ export default function GameOverScreen() {
         )}
       </View>
 
+      {unlockedPreset && (
+        <View style={styles.unlockBanner}>
+          <Text style={styles.unlockTitle}>🔓 New variant unlocked</Text>
+          <Text style={styles.unlockName}>{unlockedPreset.name}</Text>
+          <Text style={styles.unlockFlavor}>"{unlockedPreset.flavorText}"</Text>
+        </View>
+      )}
+
       <View style={styles.actions}>
         <Button
           title="Play again"
           onPress={() => {
+            acknowledgeUnlock();
             reset();
             router.replace('/setup');
           }}
@@ -84,6 +98,7 @@ export default function GameOverScreen() {
           title="Home"
           variant="ghost"
           onPress={() => {
+            acknowledgeUnlock();
             reset();
             router.replace('/');
           }}
@@ -129,4 +144,33 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   actions: { marginBottom: 30 },
+  unlockBanner: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.08)',
+    borderColor: 'rgba(255, 215, 0, 0.35)',
+    borderWidth: 1,
+    borderRadius: theme.radius.md,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    marginBottom: 20,
+  },
+  unlockTitle: {
+    color: theme.color.textMuted,
+    fontSize: 13,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  unlockName: {
+    color: theme.color.accent,
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  unlockFlavor: {
+    color: theme.color.textMuted,
+    fontSize: 13,
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
 });

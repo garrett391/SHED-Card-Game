@@ -15,6 +15,7 @@ import {
   hasPlayableMove,
 } from '../src/engine/engine';
 import { useGameStore } from '../src/store/gameStore';
+import { useCampaignStore } from '../src/store/campaignStore';
 import { playSfx } from '../src/audio/sfx';
 import { Card, GameEvent, GameState, RuleConfig } from '../src/engine/types';
 
@@ -85,6 +86,11 @@ export default function GameScreen() {
   // Route to game-over when phase changes (wait for bot action display to clear).
   useEffect(() => {
     if (game && game.phase === 'gameOver' && !botAction) {
+      // Campaign progress: a HUMAN win completes this variant. markCompleted
+      // is idempotent, so re-fires of this effect are harmless.
+      if (game.winnerId !== null && !game.players[game.winnerId].isBot) {
+        useCampaignStore.getState().markCompleted(game.ruleConfig.id);
+      }
       router.replace('/game-over');
     }
   }, [game, router, botAction]);
