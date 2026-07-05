@@ -112,6 +112,9 @@ export type GameEvent =
   | { type: 'playerFinished'; playerId: number }
   | { type: 'gameOver'; winnerId: number; shitheadId: number | null }
   | { type: 'faceDownFlipFailed'; playerId: number; card: Card }
+  /** An attempted play was illegal under the current rules. State is
+   *  unchanged; `reason` is player-facing text explaining why. */
+  | { type: 'playRejected'; playerId: number; reason: string }
   | { type: 'directionReversed'; playerId: number };
 
 export interface PlayResult {

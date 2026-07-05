@@ -566,6 +566,29 @@ describe('rule variants', () => {
     });
   });
 
+  // ── playRejected: illegal plays surface a reason ────────────────────────
+  describe('playRejected event', () => {
+    test('illegal play emits playRejected with a player-facing reason; state unchanged', () => {
+      const p0 = player({ hand: [card(5, '♠', '5s')] });
+      const p1 = player({ hand: [card(6)] });
+      const state = setupGame({ players: [p0, p1], pile: [card(13, '♦', 'top')] });
+      const r = playCards(state, 0, ['5s']); // 5 on a K — illegal
+      expect(r.state).toBe(state);
+      expect(r.events).toHaveLength(1);
+      expect(r.events[0]).toMatchObject({ type: 'playRejected', playerId: 0 });
+      expect(r.events[0].type === 'playRejected' && r.events[0].reason).toMatch(/Cannot play 5 on K/);
+    });
+
+    test('legal play emits no playRejected', () => {
+      const p0 = player({ hand: [card(5, '♠', '5s'), card(9, '♥', '9h')] });
+      const p1 = player({ hand: [card(6)] });
+      const state = setupGame({ players: [p0, p1], pile: [card(4, '♦', 'top')] });
+      const r = playCards(state, 0, ['5s']);
+      expect(r.events.some((e) => e.type === 'playRejected')).toBe(false);
+      expect(r.events.some((e) => e.type === 'cardsPlayed')).toBe(true);
+    });
+  });
+
   // ── strict card-ID resolution: no silent partial plays ──────────────────
   describe('playCards ID validation', () => {
     test('rejects the whole move if any requested ID is not in the source', () => {

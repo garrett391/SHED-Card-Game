@@ -56,7 +56,7 @@ export default function GameScreen() {
   // Game history modal
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  // Toast for tapping "Play" with nothing selected
+  // Toast: empty-selection taps and rejected-play reasons
   const [toast, setToast] = useState<string | null>(null);
   useEffect(() => {
     if (!toast) return;
@@ -160,6 +160,13 @@ export default function GameScreen() {
       playSfx('cardPickup');
     } else if (recentEvents.some((e) => e.type === 'cardsPlayed')) {
       playSfx('cardPlace');
+    }
+    // Rejected play: tell the player why, via the same toast used for
+    // empty-selection taps. Especially important under unfamiliar variants
+    // (hard 8s, restricted 10s) where "why won't it let me?" is common.
+    const rejection = recentEvents.find((e) => e.type === 'playRejected');
+    if (rejection && rejection.type === 'playRejected') {
+      setToast(rejection.reason);
     }
   }, [recentEvents]);
 
@@ -439,7 +446,7 @@ export default function GameScreen() {
         )}
       </View>
 
-      {/* Toast for empty selection */}
+      {/* Toast: empty selection / rejected play */}
       {toast && (
         <View style={styles.toast}>
           <Text style={styles.toastText}>{toast}</Text>

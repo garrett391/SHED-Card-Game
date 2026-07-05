@@ -98,10 +98,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const r = engine.playCards(game, game.currentPlayerIndex, selectedCardIds);
     // Keep hand revealed only if the SAME player still holds the turn (e.g. burn).
     const stillSamePlayer = r.state.currentPlayerIndex === prevIdx;
+    // On a rejected play, keep the selection so the player can adjust it
+    // instead of re-tapping everything from scratch.
+    const rejected = r.events.some((e) => e.type === 'playRejected');
     set({
       game: r.state,
       recentEvents: r.events,
-      selectedCardIds: [],
+      selectedCardIds: rejected ? selectedCardIds : [],
       handRevealed: stillSamePlayer ? handRevealed : false,
     });
   },

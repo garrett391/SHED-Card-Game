@@ -257,7 +257,14 @@ export function playCards(
   } else {
     // Hand / face-up: must be valid multi-card play
     const check = canPlayMultiple(cards, top, cfg);
-    if (!check.ok) return { state, events: [] };
+    if (!check.ok) {
+      // Surface WHY so the UI can tell the player — a silent no-op reads as
+      // the game being broken, especially under unfamiliar rule variants.
+      return {
+        state,
+        events: [{ type: 'playRejected', playerId: playerIdx, reason: check.reason }],
+      };
+    }
   }
 
   // ─── Normal play (hand, face-up, or successful face-down flip) ──────────
