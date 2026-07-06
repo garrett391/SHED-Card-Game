@@ -58,7 +58,7 @@ export const CHARACTERS: Record<string, Character> = {
     quips: [
       'The old rules were too soft.',
       'An 8 is not above the law.',
-      'Jake got it wrong. I can prove it.',
+      'Jake got it wrong. Only cowards would play an 8 on a 7.',
     ],
     reactions: {
       selfPickup: ['Cowards.', 'A flaw in the rules. Not in me.', 'Noted. For the revision.'],
@@ -74,15 +74,16 @@ export const CHARACTERS: Record<string, Character> = {
     portrait: require('../../assets/characters/greg.png'),
     quips: [
       'That move is legal. Trust me, I used to program.',
-      "Don't look that up.",
-      'In MY version of the rules, that works.',
+      "In MY version of the rules, I'm always right.",
       'I once wrote a compiler. This is nothing.',
       'Is anyone watching my hand? No? Good.',
+      "101 - Switching Protocols", 
+      "I'm just saying...",
     ],
     reactions: {
-      selfPickup: ['You guys are cheating.', 'This deck is rigged. I would know.', 'I demand a recount.'],
+      selfPickup: ['You guys are cheating.', 'This deck is rigged. I would know.', 'I demand a recount.', '403 - Forbidden', '404 - Not Found', '406 - Not Acceptable'],
       selfBurn: ['Ziggy zoggy ziggy zoggy oy oy oy!', 'Computer Lord wins again.'],
-      humanPickup: ['Awh, poor baby.', "Try drinking Malibu. It'll help you.", 'Skill issue. I used to program.'],
+      humanPickup: ['Awh, poor baby.', "Try drinking Malibu. It'll help you.", 'I could beat you in my sleep.'],
     },
   },
   'chaos-twin-a': {
