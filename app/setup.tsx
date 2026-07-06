@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
   Animated,
+  Image,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -17,6 +18,7 @@ import { useGameStore } from '../src/store/gameStore';
 import { PlayerConfig, RuleConfig } from '../src/engine/types';
 import { RULE_PRESETS, PRESET_ORDER } from '../src/campaign/presets';
 import { isUnlocked, useCampaignStore } from '../src/store/campaignStore';
+import { characterByName, opponentsFor } from '../src/campaign/characters';
 import { playSfx } from '../src/audio/sfx';
 
 const MIN_PLAYERS = 2;
@@ -104,11 +106,26 @@ export default function SetupScreen() {
   // above the fold. The collapsed header shows the current selection; tapping
   // it expands the full list, and choosing a mode snaps it shut again.
   const [modeExpanded, setModeExpanded] = useState(false);
-  const [players, setPlayers] = useState<PlayerConfig[]>([
-    { name: 'Player 1', isBot: false },
-    { name: 'Bot 1', isBot: true },
-    { name: 'Bot 2', isBot: true },
-  ]);
+  // Campaign nodes seed their named hosts as the bot lineup (the Chaos
+  // Twins are a two-bot table). Free play keeps the generic default. The
+  // lineup stays fully editable either way.
+  const [players, setPlayers] = useState<PlayerConfig[]>(() => {
+    const cast =
+      presetParam && RULE_PRESETS[presetParam] && isUnlocked(completed, presetParam)
+        ? opponentsFor(presetParam)
+        : [];
+    if (cast.length > 0) {
+      return [
+        { name: 'Player 1', isBot: false },
+        ...cast.map((c) => ({ name: c.name, isBot: true })),
+      ];
+    }
+    return [
+      { name: 'Player 1', isBot: false },
+      { name: 'Bot 1', isBot: true },
+      { name: 'Bot 2', isBot: true },
+    ];
+  });
 
   // ── Scroll-down affordance ──────────────────────────────────────────────
   // The mode picker can fill the whole viewport on mobile, hiding the Players
@@ -255,13 +272,24 @@ export default function SetupScreen() {
           2–6 players. Tap a row to toggle human / bot.
         </Text>
 
-        {players.map((p, i) => (
+        {players.map((p, i) => {
+          // Campaign characters show their portrait/emoji instead of the
+          // generic robot. Matched by name, so renaming the row reverts it
+          // to a plain bot (and typing an exact character name summons them).
+          const character = p.isBot ? characterByName(p.name) : null;
+          return (
           <View key={i} style={styles.row}>
             <Pressable
               style={[styles.botToggle, p.isBot && styles.botToggleActive]}
               onPress={() => toggleBot(i)}
             >
-              <Text style={styles.botEmoji}>{p.isBot ? '🤖' : '🧑'}</Text>
+              {character?.portrait ? (
+                <Image source={character.portrait} style={styles.botPortrait} />
+              ) : (
+                <Text style={styles.botEmoji}>
+                  {p.isBot ? character?.emoji ?? '🤖' : '🧑'}
+                </Text>
+              )}
               <Text style={styles.botLabel}>{p.isBot ? 'Bot' : 'Human'}</Text>
             </Pressable>
             <TextInput
@@ -278,7 +306,8 @@ export default function SetupScreen() {
               </Pressable>
             )}
           </View>
-        ))}
+          );
+        })}
 
         {players.length < MAX_PLAYERS && (
           <Button title="+ Add player" variant="ghost" onPress={addPlayer} />
@@ -491,6 +520,11 @@ const styles = StyleSheet.create({
   },
   botToggleActive: { backgroundColor: '#2a5a48' },
   botEmoji: { fontSize: 22 },
+  botPortrait: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+  },
   botLabel: {
     color: theme.color.textOnDark,
     fontSize: 11,

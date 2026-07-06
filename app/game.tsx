@@ -16,6 +16,7 @@ import {
 } from '../src/engine/engine';
 import { useGameStore } from '../src/store/gameStore';
 import { useCampaignStore } from '../src/store/campaignStore';
+import { characterByName, maybeQuip, maybeReaction } from '../src/campaign/characters';
 import { playSfx } from '../src/audio/sfx';
 import { Card, GameEvent, GameState, RuleConfig } from '../src/engine/types';
 
@@ -68,10 +69,22 @@ export default function GameScreen() {
   // Bot action interstitial: show what the bot just did for BOT_DISPLAY_MS.
   const [botAction, setBotAction] = useState<{
     botName: string;
+    playerId: number;   // which strip a follow-up speech bubble attaches to
     headline: string;   // e.g. "played K♠"
     detail?: string;    // e.g. "🔥 Burns the pile!"
+    quip?: string;      // in-character one-liner, shown as table talk after
     card?: Card;        // shown visually
     emoji: string;      // leading emoji
+  } | null>(null);
+
+  // Table talk: an ephemeral speech bubble on a player's strip. Fired when a
+  // bot's interstitial dismisses (so the line lands as a reaction at the
+  // table, not a caption over it). One at a time; nonce restarts the
+  // animation when the same character speaks twice in a row.
+  const [tableTalk, setTableTalk] = useState<{
+    playerId: number;
+    text: string;
+    nonce: number;
   } | null>(null);
 
   // Track which player we last triggered a bot action for, to avoid
@@ -149,7 +162,20 @@ export default function GameScreen() {
 
       // Capture what just happened for the interstitial display.
       const events = useGameStore.getState().recentEvents;
-      setBotAction(buildBotActionDisplay(botName, events, latest.game?.ruleConfig ?? game.ruleConfig));
+      const display = buildBotActionDisplay(botName, events, latest.game?.ruleConfig ?? game.ruleConfig);
+      const character = characterByName(botName);
+      // Situational line beats generic: their burn > their pickup > table talk.
+      let quip: string | undefined;
+      if (character) {
+        if (events.some((e) => e.type === 'pileBurned')) {
+          quip = maybeReaction(character, 'selfBurn') ?? undefined;
+        } else if (events.some((e) => e.type === 'pileTakenUp')) {
+          quip = maybeReaction(character, 'selfPickup') ?? undefined;
+        } else {
+          quip = maybeQuip(character) ?? undefined;
+        }
+      }
+      setBotAction({ ...display, playerId: cur.id, quip });
     }, BOT_THINK_MS);
     return () => clearTimeout(timer);
   }, [game, flipResult, botAction]);
@@ -174,14 +200,57 @@ export default function GameScreen() {
     if (rejection && rejection.type === 'playRejected') {
       setToast(rejection.reason);
     }
-  }, [recentEvents]);
+    // A HUMAN picking up the pile invites commentary: a random character at
+    // the table reacts after a short beat (so it reads as a response, not a
+    // simultaneous caption). Bot pickups are excluded — those characters
+    // already speak via their own interstitial dismissal.
+    const pickup = recentEvents.find((e) => e.type === 'pileTakenUp');
+    if (pickup && pickup.type === 'pileTakenUp' && game) {
+      const picker = game.players[pickup.playerId];
+      if (picker && !picker.isBot) {
+        const hecklers = game.players.filter(
+          (p) => p.isBot && !p.isFinished && characterByName(p.name),
+        );
+        if (hecklers.length > 0) {
+          const h = hecklers[Math.floor(Math.random() * hecklers.length)];
+          const line = maybeReaction(characterByName(h.name)!, 'humanPickup');
+          if (line) {
+            const t = setTimeout(
+              () => setTableTalk({ playerId: h.id, text: line, nonce: Date.now() }),
+              600,
+            );
+            return () => clearTimeout(t);
+          }
+        }
+      }
+    }
+  }, [recentEvents, game]);
 
-  // Auto-dismiss bot action interstitial after BOT_DISPLAY_MS.
+  // Auto-dismiss bot action interstitial after BOT_DISPLAY_MS. If the bot
+  // had a quip, it becomes a speech bubble on their strip as the game area
+  // returns — table talk, not a caption.
   useEffect(() => {
     if (!botAction) return;
-    const timer = setTimeout(() => setBotAction(null), BOT_DISPLAY_MS);
+    const timer = setTimeout(() => {
+      if (botAction.quip) {
+        setTableTalk({
+          playerId: botAction.playerId,
+          text: botAction.quip,
+          nonce: Date.now(),
+        });
+      }
+      setBotAction(null);
+    }, BOT_DISPLAY_MS);
     return () => clearTimeout(timer);
   }, [botAction]);
+
+  // Bubble lifetime: cleared after the fade-out completes (timings live in
+  // OpponentStrip; this just retires the state).
+  useEffect(() => {
+    if (!tableTalk) return;
+    const timer = setTimeout(() => setTableTalk(null), 3400);
+    return () => clearTimeout(timer);
+  }, [tableTalk]);
 
   // Auto-reveal hand for solo human (no pass-and-play gate needed).
   const humanCount = useMemo(
@@ -229,7 +298,11 @@ export default function GameScreen() {
       <View style={styles.container}>
         <View style={styles.botActionGate}>
           <Text style={styles.botActionEmoji}>{botAction.emoji}</Text>
-          <Text style={styles.botActionName}>{botAction.botName}</Text>
+          <Text style={styles.botActionName}>
+            {characterByName(botAction.botName)
+              ? `${characterByName(botAction.botName)!.emoji} ${botAction.botName}`
+              : botAction.botName}
+          </Text>
           <Text style={styles.botActionHeadline}>{botAction.headline}</Text>
           {botAction.card && (
             <View style={styles.botActionCardWrap}>
@@ -397,6 +470,7 @@ export default function GameScreen() {
             key={p.id}
             player={p}
             isCurrent={i === game.currentPlayerIndex}
+            bubble={tableTalk && tableTalk.playerId === p.id ? tableTalk : null}
           />
         ))}
       </View>
