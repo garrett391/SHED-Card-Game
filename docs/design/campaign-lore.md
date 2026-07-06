@@ -1,0 +1,99 @@
+# Shed — Campaign Lore Bible
+
+Working document. Canon lives here; what ships lives in `src/campaign/story.ts`
+(dialogue beats) and `src/campaign/characters.ts` (cast, quips, reactions).
+Write freely here — nothing in this file is a commitment.
+
+## The Story
+
+**Act I — The Teaching.** Erich, Nick, and Garrett are students. Jake the
+Elder comes into town and teaches them the ways of Shed, completely altering
+their lives. They become disciples.
+
+**Act II — The Spreading.** The disciples go forth and spread the teachings
+throughout the land. Things go well at first.
+
+**Act III — The Schisms.** Dissent emerges. The teachings fracture. Every
+table now plays by its own corrupted rules. The disciples set out on a
+campaign of redemption — a descent (Dante's Inferno structure, tentative)
+through each schism, confronting its author at their own table, by their own
+rules.
+
+**Act IV — The Scribe.** At the bottom of the descent sits Chris — the one
+who wrote the rules down. He holds the pen, and the pen is ultimate power:
+he can rewrite the rules at any time, even mid-game.
+
+## The Descent (boss ladder)
+
+| Node | Variant | Dissenter | The corruption |
+|------|---------------------|--------------------|----------------------------------------|
+| 1 | Jake's Classic | Jake the Elder | None — the pure teaching (tutorial/origin) |
+| 2 | Justin's Schism | Justin | The first dissenter: "the old rules were too soft" |
+| 3 | Super Tens | Greg the Computer Lord | Cheats, denies, rewrites reality verbally |
+| 4 | Chaos Shed | The Chaos Twins | Chaos for its own sake (future: the joker edition) |
+| 5 | The 69 | Nina | Inversion — reads everything upside down |
+| 6 | The OFCOM Standard | Trevor | Bureaucratization of the sacred teachings |
+| 7 | The Backpacker's Codex | The Backpacker | Syncretism — every corruption at once. The final trial. |
+| 8 | (new variant, unnamed) | **Chris the Scribe** | Holds the pen. Rewrites rules MID-GAME. |
+
+Open question: does Chris displace the Backpacker as the finale, or sit
+after them as node 8? Current lean: node 8 — the Codex ("every rule at
+once") is a fitting final exam before facing the one who wrote them.
+
+## Chris the Scribe — boss design notes
+
+The gimmick is architecturally cheap: the engine reads `state.ruleConfig` on
+every call and nothing assumes it is constant. A rewrite is: swap the config,
+emit a `ruleRewritten` event, announce it loudly in the UI.
+
+Design directions (pick one, tune in playtesting):
+- **Reactive rewrites (current favorite):** whenever a rule hurts Chris, he
+  rewrites THAT rule. Burn his pile with triple 8s → triple 8s no longer
+  burn. You exploit 7-or-lower → 7s become normal. Sore loser with a pen.
+- **Scheduled rewrites:** every N turns, one rule flips, telegraphed a turn
+  in advance ("Chris uncaps the pen...").
+- **Escalating rewrites:** starts as Jake's Classic (the original manuscript)
+  and drifts one rule per rewrite toward hostile config.
+
+Constraints to respect:
+- Every rewrite must be announced (interstitial + table-talk bubble + log
+  entry). Silent rule changes will read as bugs.
+- Rewrites should never invalidate cards already on the pile — only future
+  plays. (Engine handles this naturally; each play re-checks current config.)
+- The player should be able to open the rules sheet mid-game and see the
+  CURRENT ruleset (the rules screen already renders from ruleConfig).
+- Consider a hard cap (e.g. 3 rewrites per game) so the fight is unfair in a
+  fun way, not a fair way of being unfair.
+
+## The Protagonists
+
+Erich, Nick, and Garrett — the three students (see reference art: the
+Ancient Learners' Deck). Candidate uses:
+- Selectable player identity at campaign start (replaces "Player 1"),
+  possibly with portraits like the cast.
+- Interstitial narration voice between nodes ("Nick swore he saw Greg's
+  sleeve move").
+- Multiplayer seats when local multiplayer lands (three heroes, three seats).
+
+## Structure notes
+
+- Map direction: the current campaign map climbs UPWARD (start at bottom).
+  A Dante descent inverts this — start at the top, scroll DOWN into the
+  final table. Two-line change in app/campaign.tsx when the framing is
+  locked in.
+- Pre-game dialogue: first visit to each node plays a short
+  CharacterDialogue exchange (disciple vs. dissenter) before the deal.
+  Beats live in src/campaign/story.ts, keyed by preset id.
+- The joker edition (Twin Aek reverses direction, Twin Yee swaps hands)
+  remains foretold for Chaos Shed — Aek's quip already plants it.
+
+## Open questions
+
+- Inferno framing: full commit (circle numbers, "descend" language, map
+  inversion) or just structural inspiration?
+- Does beating Chris restore Jake's Classic as "the one true rule set", or
+  is the ending that all schisms are legitimate tables? (The second reading
+  is warmer and matches how card games actually live.)
+- Chris's variant name: The Scribe's Edict? The Manuscript? Errata?
+- Do the three protagonists have distinct roles/personalities, or are they
+  interchangeable player skins?
