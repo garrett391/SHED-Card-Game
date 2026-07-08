@@ -28,6 +28,7 @@ import { theme } from '../src/components/theme';
 import { RULE_PRESETS, PRESET_ORDER } from '../src/campaign/presets';
 import { MAP_SCENES, DEFAULT_SCENE } from '../src/campaign/mapMeta';
 import { isUnlocked, useCampaignStore } from '../src/store/campaignStore';
+import { CINEMATICS } from '../src/campaign/story';
 
 const NODE_SIZE = 76;
 const CONNECTOR_HEIGHT = 52;
@@ -40,6 +41,7 @@ type NodeState = 'completed' | 'current' | 'available' | 'locked';
 export default function CampaignScreen() {
   const router = useRouter();
   const completed = useCampaignStore((s) => s.completed);
+  const seenCinematics = useCampaignStore((s) => s.seenCinematics);
   const scrollRef = useRef<ScrollView>(null);
 
   // First unlocked-but-not-completed preset is "current".
@@ -95,7 +97,24 @@ export default function CampaignScreen() {
                 side={side}
                 unlockHint={prevName ? `Beat ${prevName} to unlock` : null}
                 isStart={orderIdx === 0}
-                onPress={() => router.push({ pathname: '/setup', params: { preset: id } })}
+                onReplayStory={
+                  CINEMATICS[id] && seenCinematics[id]
+                    ? () =>
+                        router.push({
+                          pathname: '/cinematic',
+                          params: { preset: id, replay: '1' },
+                        })
+                    : null
+                }
+                onPress={() => {
+                  // First visit plays the node's cinematic (if it has one),
+                  // which continues to setup itself. Replays skip straight in.
+                  const cinematic = CINEMATICS[id] && !seenCinematics[id];
+                  router.push({
+                    pathname: cinematic ? '/cinematic' : '/setup',
+                    params: { preset: id },
+                  });
+                }}
               />
             </View>
           );
@@ -115,6 +134,7 @@ function MapNode({
   unlockHint,
   isStart,
   onPress,
+  onReplayStory,
 }: {
   preset: (typeof RULE_PRESETS)[string];
   scene: (typeof MAP_SCENES)[string];
@@ -123,6 +143,7 @@ function MapNode({
   unlockHint: string | null;
   isStart: boolean;
   onPress: () => void;
+  onReplayStory: (() => void) | null;
 }) {
   const locked = state === 'locked';
   const pulse = useRef(new Animated.Value(1)).current;
@@ -177,6 +198,19 @@ function MapNode({
         <Text style={styles.nodeTagline} numberOfLines={2}>
           {locked ? unlockHint ?? 'Locked' : scene.tagline}
         </Text>
+        {/* Inner Pressable wins the tap in RN, so this never triggers the
+            node's own onPress. Only shown once the cinematic has played. */}
+        {onReplayStory && !locked && (
+          <Pressable
+            onPress={onReplayStory}
+            hitSlop={8}
+            style={styles.storyChip}
+            accessibilityRole="button"
+            accessibilityLabel={`Replay ${preset.name} story`}
+          >
+            <Text style={styles.storyChipText}>↺ Story</Text>
+          </Pressable>
+        )}
       </Pressable>
     </View>
   );
@@ -305,6 +339,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 2,
     maxWidth: 150,
+  },
+  storyChip: {
+    marginTop: 6,
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(244,196,48,0.4)',
+  },
+  storyChipText: {
+    color: '#f4c430',
+    fontSize: 11,
+    letterSpacing: 0.5,
   },
   connector: {
     height: CONNECTOR_HEIGHT,

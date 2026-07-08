@@ -180,6 +180,7 @@ export default function RootLayout() {
       >
         <Stack.Screen name="index" options={{ title: 'Shed' }} />
         <Stack.Screen name="campaign" options={{ title: 'Campaign' }} />
+        <Stack.Screen name="cinematic" options={{ headerShown: false }} />
         <Stack.Screen name="setup" options={{ title: 'Players' }} />
         <Stack.Screen name="tutorial" options={{ title: 'Tutorial' }} />
         <Stack.Screen name="swap" options={{ title: 'Swap cards' }} />

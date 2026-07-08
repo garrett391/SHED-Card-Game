@@ -24,11 +24,14 @@ import { PRESET_ORDER } from '../campaign/presets';
 interface CampaignStore {
   /** Preset ids a human has won at least once. */
   completed: Record<string, true>;
+  /** Cinematics that have already played (once-only). Persisted. */
+  seenCinematics: Record<string, true>;
   /** Set when a completion unlocks a NEW preset; game-over shows a banner
    *  and clears it via acknowledgeUnlock. Not persisted. */
   lastUnlockedId: string | null;
 
   markCompleted: (presetId: string) => void;
+  markCinematicSeen: (presetId: string) => void;
   acknowledgeUnlock: () => void;
   resetProgress: () => void;
 }
@@ -44,6 +47,7 @@ export const useCampaignStore = create<CampaignStore>()(
   persist(
     (set, get) => ({
       completed: {},
+      seenCinematics: {},
       lastUnlockedId: null,
 
       markCompleted: (presetId) => {
@@ -60,14 +64,18 @@ export const useCampaignStore = create<CampaignStore>()(
         });
       },
 
+      markCinematicSeen: (presetId) =>
+        set({ seenCinematics: { ...get().seenCinematics, [presetId]: true } }),
+
       acknowledgeUnlock: () => set({ lastUnlockedId: null }),
 
-      resetProgress: () => set({ completed: {}, lastUnlockedId: null }),
+      resetProgress: () =>
+        set({ completed: {}, seenCinematics: {}, lastUnlockedId: null }),
     }),
     {
       name: 'shed-campaign-v1',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (s) => ({ completed: s.completed }),
+      partialize: (s) => ({ completed: s.completed, seenCinematics: s.seenCinematics }),
     },
   ),
 );
