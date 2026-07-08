@@ -41,12 +41,13 @@ export const CHARACTERS: Record<string, Character> = {
     quips: [
       'As it was spake, so it is played.',
       'The pile provides.',
-      'I taught your teacher this game.',
+      'Remember, savor your magic cards.',
+      "A wise player considers their opponents hand."
     ],
     reactions: {
-      selfPickup: ['A lesson. The pile is also a teacher.', 'So it must be.'],
-      selfBurn: ['The pile provides. The pile removes.', 'As foretold.'],
-      humanPickup: ['Even I once carried the whole pile.', 'The teachings are hard.'],
+      selfPickup: ['A lesson. The pile is also a teacher.', 'So it must be.', "Good, you're learning.", "A wise move."],
+      selfBurn: ['The pile provides. The pile removes.', 'As foretold.', 'It is written.', "The flames of truth."],
+      humanPickup: ['Even I once carried the whole pile.', 'The teachings are hard.', 'Play your cards wisely.'],
     },
   },
   justin: {

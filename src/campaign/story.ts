@@ -35,27 +35,32 @@ export const CINEMATICS: Record<string, Cinematic> = {
     {
       image: require('../../assets/story/intro1.png'),
       caption:
-        'They enjoyed the simple things in life - games, jokes, and a pint of ale.',
+        'They enjoyed the simple things in life.\nGames, jokes, and a pint of ale.',
     },
     {
       image: require('../../assets/story/intro2.png'),
       caption:
-        'One foggy night, a stranger, Jake the Elder, blew into town\n Nothing would ever be the same.',
+        'One night, a stranger blew into town\n Nothing would ever be the same.',
     },
     {
       image: require('../../assets/story/intro3.png'),
       caption:
-        'Jake taught them the ancient ways of Shed.',
+        'Jake the Elder taught them the ancient ways of Shed.',
     },
     {
       image: require('../../assets/story/intro4.png'),
       caption:
-        'He showed them the sacred cards - 2, 7, 8 and 10.',
+        'He showed them the sacred cards.\n2, 7, 8 and 10.',
     },
     {
       image: require('../../assets/story/intro5.png'),
       caption:
-        "Jake challenges you to show what you've learned.",
+        "and instructed them on various techniques.",
+    },
+    {
+      image: require('../../assets/story/intro6.png'),
+      caption:
+        "After much strife, the ancient ways were learned,\nand the students could finally duel their master...",
     },
   ],
 
