@@ -37,7 +37,7 @@ export const CHARACTERS: Record<string, Character> = {
     name: 'Jake the Elder',
     title: 'Keeper of the holy teachings',
     emoji: '🧙',
-    portrait: null,
+    portrait: require('../../assets/characters/jake.png'),
     quips: [
       'As it was spake, so it is played.',
       'The pile provides.',

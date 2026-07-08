@@ -5,9 +5,8 @@
  * campaignStore on finish or skip, then replaces to /setup with the same
  * preset so the game flow continues seamlessly.
  *
- * Replay mode (/cinematic?preset=<id>&replay=1, from the map's "↺ Story"
- * chip): plays the same scenes but returns to the campaign map on finish
- * instead of continuing into setup.
+ * Replays (the map's "↺ Story" chip) run the same flow: after the story,
+ * you land on that node's setup, primed to play — backing out is one tap.
  *
  * Scenes fade in on entry (image + caption together). expo-image renders
  * PNGs and animated GIF/WebP alike, so "simple GIF" scenes need no special
@@ -23,8 +22,7 @@ import { useCampaignStore } from '../src/store/campaignStore';
 
 export default function CinematicScreen() {
   const router = useRouter();
-  const { preset, replay } = useLocalSearchParams<{ preset?: string; replay?: string }>();
-  const isReplay = replay === '1';
+  const { preset } = useLocalSearchParams<{ preset?: string }>();
   const scenes = preset ? CINEMATICS[preset] : undefined;
 
   const [index, setIndex] = useState(0);
@@ -46,11 +44,7 @@ export default function CinematicScreen() {
 
   const finish = () => {
     useCampaignStore.getState().markCinematicSeen(preset); // idempotent
-    if (isReplay) {
-      router.back(); // return to the map — a replay isn't the start of a run
-    } else {
-      router.replace({ pathname: '/setup', params: { preset } });
-    }
+    router.replace({ pathname: '/setup', params: { preset } });
   };
 
   // Fade the current scene out, THEN act — scene swaps happen at opacity 0,

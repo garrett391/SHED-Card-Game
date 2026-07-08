@@ -28,24 +28,44 @@ export const CINEMATICS: Record<string, Cinematic> = {
   // ── The origin — plays before your very first game ─────────────────────
   'jake-classic': [
     {
-      image: null, // assets/story/: the Ancient Learners' Deck art fits here
-      caption:
-        'Erich, Nick, and Garrett were students once. Ordinary ones.',
-    },
-    {
       image: null,
       caption:
-        'Then Jake the Elder came into town, and taught them the ways of Shed. Nothing was ever the same.',
+        'Once upon a time, in a distant land, there lived three ordinary friends.',
     },
     {
-      image: null,
+      image: require('../../assets/story/intro1.png'),
       caption:
-        'They became disciples, and carried the teachings throughout the land. And for a time, there was harmony at every table...',
+        'They enjoyed the simple things in life - games, jokes, and a pint of ale.',
+    },
+    {
+      image: require('../../assets/story/intro2.png'),
+      caption:
+        'One foggy night, a stranger, Jake the Elder, blew into town\n Nothing would ever be the same.',
+    },
+    {
+      image: require('../../assets/story/intro3.png'),
+      caption:
+        'Jake taught them the ancient ways of Shed.',
+    },
+    {
+      image: require('../../assets/story/intro4.png'),
+      caption:
+        'He showed them the sacred cards - 2, 7, 8 and 10.',
+    },
+    {
+      image: require('../../assets/story/intro5.png'),
+      caption:
+        "Jake challenges you to show what you've learned.",
     },
   ],
 
   // ── The first schism ────────────────────────────────────────────────────
   'justins-schism': [
+    {
+      image: null,
+      caption:
+        'They became disciples, and carried the teachings throughout the land. And for a time, there was harmony at every table...',
+    },
     {
       image: null,
       caption: 'Just as night must fall for a single star to pierce the veil, every golden age is tethered to the gravity of its own dark age...',

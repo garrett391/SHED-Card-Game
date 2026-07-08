@@ -102,7 +102,7 @@ export default function CampaignScreen() {
                     ? () =>
                         router.push({
                           pathname: '/cinematic',
-                          params: { preset: id, replay: '1' },
+                          params: { preset: id },
                         })
                     : null
                 }

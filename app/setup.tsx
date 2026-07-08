@@ -96,11 +96,15 @@ export default function SetupScreen() {
   const completed = useCampaignStore((s) => s.completed);
   // Preselect a variant when arriving from the campaign map. Guarded by the
   // unlock check so a stale/hand-typed param can't bypass the ladder.
+  // When set, the screen is in CAMPAIGN mode: variant and roster are fixed
+  // (you face the node's host at the node's table — no editing the story).
   const { preset: presetParam } = useLocalSearchParams<{ preset?: string }>();
-  const [selectedMode, setSelectedMode] = useState<string>(() =>
+  const campaignPreset =
     presetParam && RULE_PRESETS[presetParam] && isUnlocked(completed, presetParam)
       ? presetParam
-      : 'jake-classic',
+      : null;
+  const [selectedMode, setSelectedMode] = useState<string>(
+    () => campaignPreset ?? 'jake-classic',
   );
   // Mode picker starts collapsed so the Players section and Deal button sit
   // above the fold. The collapsed header shows the current selection; tapping
@@ -110,10 +114,7 @@ export default function SetupScreen() {
   // Twins are a two-bot table). Free play keeps the generic default. The
   // lineup stays fully editable either way.
   const [players, setPlayers] = useState<PlayerConfig[]>(() => {
-    const cast =
-      presetParam && RULE_PRESETS[presetParam] && isUnlocked(completed, presetParam)
-        ? opponentsFor(presetParam)
-        : [];
+    const cast = campaignPreset ? opponentsFor(campaignPreset) : [];
     if (cast.length > 0) {
       return [
         { name: 'Player 1', isBot: false },
@@ -216,7 +217,14 @@ export default function SetupScreen() {
           updateCue();
         }}
       >
-        {/* ── Game mode picker (collapsible) ──────────────────────────── */}
+        {/* ── Game mode: fixed banner in campaign, picker in free play ── */}
+        {campaignPreset ? (
+          <View style={styles.campaignBanner}>
+            <Text style={styles.campaignLabel}>⚔️ CAMPAIGN</Text>
+            <Text style={styles.campaignName}>{selectedPreset.name}</Text>
+            <Text style={styles.modeDesc}>{selectedPreset.description}</Text>
+          </View>
+        ) : (
         <Pressable
           onPress={() => setModeExpanded((e) => !e)}
           style={styles.modeSectionHeader}
@@ -230,18 +238,21 @@ export default function SetupScreen() {
           <Text style={styles.sectionLabel}>Game mode</Text>
           <Text style={styles.modeChevron}>{modeExpanded ? '⌄' : '›'}</Text>
         </Pressable>
+        )}
 
-        {modeExpanded ? (
+        {!campaignPreset && modeExpanded ? (
           PRESET_ORDER.map((id, i) => {
-            const locked = !isUnlocked(completed, id);
-            const prev = i > 0 ? RULE_PRESETS[PRESET_ORDER[i - 1]] : null;
+            // Free play offers only variants you've BEATEN — the campaign
+            // frontier is unlocked for the campaign, but stays exclusive to
+            // it until conquered. Jake's Classic is always open.
+            const locked = i > 0 && !completed[id];
             return (
               <ModeCard
                 key={id}
                 preset={RULE_PRESETS[id]}
                 selected={selectedMode === id}
                 locked={locked}
-                unlockHint={prev ? `Beat ${prev.name} to unlock` : null}
+                unlockHint={'Beat this table in the campaign to unlock'}
                 onPress={() => {
                   setSelectedMode(id);
                   setModeExpanded(false);
@@ -281,7 +292,8 @@ export default function SetupScreen() {
           <View key={i} style={styles.row}>
             <Pressable
               style={[styles.botToggle, p.isBot && styles.botToggleActive]}
-              onPress={() => toggleBot(i)}
+              onPress={campaignPreset ? undefined : () => toggleBot(i)}
+              disabled={!!campaignPreset}
             >
               {character?.portrait ? (
                 <Image source={character.portrait} style={styles.botPortrait} />
@@ -299,8 +311,11 @@ export default function SetupScreen() {
               placeholder="Name"
               placeholderTextColor={theme.color.textMuted}
               maxLength={16}
+              // In campaign, the host's name is canon (and the portrait
+              // lookup is by name) — humans can still name themselves.
+              editable={!campaignPreset || !p.isBot}
             />
-            {players.length > MIN_PLAYERS && (
+            {!campaignPreset && players.length > MIN_PLAYERS && (
               <Pressable onPress={() => removePlayer(i)} style={styles.removeBtn}>
                 <Text style={styles.removeText}>✕</Text>
               </Pressable>
@@ -309,7 +324,7 @@ export default function SetupScreen() {
           );
         })}
 
-        {players.length < MAX_PLAYERS && (
+        {!campaignPreset && players.length < MAX_PLAYERS && (
           <Button title="+ Add player" variant="ghost" onPress={addPlayer} />
         )}
 
@@ -403,6 +418,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  campaignBanner: {
+    borderWidth: 1,
+    borderColor: 'rgba(244,196,48,0.4)',
+    borderRadius: theme.radius.md,
+    padding: 14,
+    marginBottom: 8,
+  },
+  campaignLabel: {
+    color: theme.color.accent,
+    fontSize: 11,
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  campaignName: {
+    color: theme.color.textOnDark,
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   modeChevron: {
     color: theme.color.textOnDark,

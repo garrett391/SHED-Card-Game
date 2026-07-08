@@ -4,8 +4,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '../src/components/Button';
 import { theme } from '../src/components/theme';
 import { useGameStore } from '../src/store/gameStore';
-import { useCampaignStore } from '../src/store/campaignStore';
-import { RULE_PRESETS } from '../src/campaign/presets';
+import { isUnlocked, useCampaignStore } from '../src/store/campaignStore';
+import { RULE_PRESETS, PRESET_ORDER } from '../src/campaign/presets';
+import { CINEMATICS } from '../src/campaign/story';
 
 export default function GameOverScreen() {
   const router = useRouter();
@@ -13,7 +14,28 @@ export default function GameOverScreen() {
   const reset = useGameStore((s) => s.reset);
   const lastUnlockedId = useCampaignStore((s) => s.lastUnlockedId);
   const acknowledgeUnlock = useCampaignStore((s) => s.acknowledgeUnlock);
+  const completed = useCampaignStore((s) => s.completed);
+  const seenCinematics = useCampaignStore((s) => s.seenCinematics);
   const unlockedPreset = lastUnlockedId ? RULE_PRESETS[lastUnlockedId] : null;
+
+  // Continue the campaign: shown after a HUMAN win when a frontier (first
+  // unlocked-but-unbeaten node) exists. Routes through the frontier's
+  // cinematic on first visit, exactly like tapping it on the map.
+  const humanWon =
+    game != null && game.winnerId !== null && !game.players[game.winnerId].isBot;
+  const frontier =
+    PRESET_ORDER.find((id) => isUnlocked(completed, id) && !completed[id]) ?? null;
+  const campaignDone = PRESET_ORDER.every((id) => completed[id]);
+  const continueCampaign = () => {
+    if (!frontier) return;
+    acknowledgeUnlock();
+    reset();
+    const cinematic = CINEMATICS[frontier] && !seenCinematics[frontier];
+    router.replace({
+      pathname: cinematic ? '/cinematic' : '/setup',
+      params: { preset: frontier },
+    });
+  };
 
   // If state was wiped, bail home.
   useEffect(() => {
@@ -85,9 +107,19 @@ export default function GameOverScreen() {
         </View>
       )}
 
+      {humanWon && campaignDone && (
+        <Text style={styles.campaignDone}>
+          🏆 Campaign complete — every table redeemed
+        </Text>
+      )}
+
       <View style={styles.actions}>
+        {humanWon && frontier && (
+          <Button title="Continue campaign ▸" onPress={continueCampaign} />
+        )}
         <Button
           title="Play again"
+          variant={humanWon && frontier ? 'ghost' : undefined}
           onPress={() => {
             acknowledgeUnlock();
             reset();
@@ -144,6 +176,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   actions: { marginBottom: 30 },
+  campaignDone: {
+    color: theme.color.accent,
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
   unlockBanner: {
     alignItems: 'center',
     backgroundColor: 'rgba(255, 215, 0, 0.08)',
