@@ -42,12 +42,42 @@ export const CHARACTERS: Record<string, Character> = {
       'As it was spake, so it is played.',
       'The pile provides.',
       'Remember, savor your magic cards.',
-      "A wise player considers their opponents hand."
+      "A wise player considers their opponents hand.",
+      'Victory follows the patient.',
+      'A single card can change a lifetime.',
+      'Power is not the card but the timing.',
+      'The table remembers what the players forget.',
+      'A burned pile is a lesson well learned.',
+      'A ten is a clean slate; treat it like a blessing.',
+      'Two resets the world; use it like a prayer.',
+      'Sevens are fences; know when to jump.',
+      'Eights are shadows; sometimes skipping is mercy.',
+      'Play for the next turn, not just this one.',
+      'A good bluff is a quiet thing.',
+      'The smallest card can be the sharpest blade.'
     ],
     reactions: {
-      selfPickup: ['A lesson. The pile is also a teacher.', 'So it must be.', "Good, you're learning.", "A wise move."],
-      selfBurn: ['The pile provides. The pile removes.', 'As foretold.', 'It is written.', "The flames of truth."],
-      humanPickup: ['Even I once carried the whole pile.', 'The teachings are hard.', 'Play your cards wisely.'],
+      selfPickup: [
+      'A lesson. The pile is also a teacher.', 
+      'So it must be.',
+       "Good, you're learning.", 
+       "A wise move.",
+      'The pile humbles us all.'
+    ],
+      selfBurn: [
+        'The pile provides. The pile removes.',
+        'As foretold.',
+        'It is written.',
+        'The flames of truth.',
+        'The table forgives and forgets.'
+      ],
+      humanPickup: [
+        'Even I once carried the whole pile.',
+        'The teachings are hard.',
+        'Play your cards wisely.',
+        'A heavy hand makes a light teacher.',
+        'You will tell a better story for this.'
+      ],
     },
   },
   justin: {
