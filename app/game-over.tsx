@@ -1,17 +1,21 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../src/components/Button';
 import { GameLogModal } from '../src/components/GameLogModal';
 import { theme } from '../src/components/theme';
 import { useGameStore } from '../src/store/gameStore';
-import { useCampaignStore } from '../src/store/campaignStore';
-import { RULE_PRESETS } from '../src/campaign/presets';
+import { isUnlocked, useCampaignStore } from '../src/store/campaignStore';
+import { RULE_PRESETS, PRESET_ORDER } from '../src/campaign/presets';
+import { CINEMATICS } from '../src/campaign/story';
 
 export default function GameOverScreen() {
   const router = useRouter();
   const game = useGameStore((s) => s.game);
   const reset = useGameStore((s) => s.reset);
+  const campaignPresetId = useGameStore((s) => s.campaignPresetId);
+  const completed = useCampaignStore((s) => s.completed);
+  const seenCinematics = useCampaignStore((s) => s.seenCinematics);
   const lastUnlockedId = useCampaignStore((s) => s.lastUnlockedId);
   const acknowledgeUnlock = useCampaignStore((s) => s.acknowledgeUnlock);
   const unlockedPreset = lastUnlockedId ? RULE_PRESETS[lastUnlockedId] : null;
@@ -19,9 +23,14 @@ export default function GameOverScreen() {
   // Post-game review: same 📜 log as the in-game history button.
   const [logOpen, setLogOpen] = useState(false);
 
-  // If state was wiped, bail home.
+  // If state was wiped, bail home — but NOT when we wiped it ourselves on
+  // the way out. departTo() resets the game store before navigating, which
+  // re-fires this effect with game === null; without the guard its
+  // router.replace('/') races (and wins against) the intended destination,
+  // sending every button to the main menu.
+  const departing = useRef(false);
   useEffect(() => {
-    if (!game) router.replace('/');
+    if (!game && !departing.current) router.replace('/');
   }, [game, router]);
 
   if (!game) return null;
@@ -44,6 +53,43 @@ export default function GameOverScreen() {
   const safe = game.lastManStanding
     ? game.players.filter((p) => p.isFinished && p.id !== game.winnerId)
     : [];
+
+  // ── Campaign continuation ────────────────────────────────────────────────
+  // Only games launched from the campaign map get campaign actions — free
+  // play with the same preset keeps the generic Play again / Home.
+  //
+  // "Continue" targets the node AFTER the one just played, so the campaign
+  // reads as a linear march: replaying node 1 continues to node 2 (even if
+  // it's already beaten), never teleporting across the map to the frontier.
+  // After a win the next node is unlocked by definition; the isUnlocked
+  // check is belt-and-braces for exotic states. No next node → campaign end.
+  const humanWon =
+    game.winnerId !== null && !game.players[game.winnerId].isBot;
+  const nextNodeId = (() => {
+    if (!campaignPresetId) return null;
+    const idx = PRESET_ORDER.indexOf(campaignPresetId);
+    const next = idx >= 0 ? PRESET_ORDER[idx + 1] : undefined;
+    return next && isUnlocked(completed, next) ? next : null;
+  })();
+
+  /** Leave this screen for `route`, clearing transient state first. */
+  const departTo = (route: Parameters<typeof router.replace>[0]) => {
+    departing.current = true; // suppress the bail-home effect (see above)
+    acknowledgeUnlock();
+    reset();
+    router.replace(route);
+  };
+
+  // Mirrors the map's node onPress: first visit to the next node plays its
+  // cinematic (which flows into setup itself); replays go straight to setup.
+  const continueCampaign = () => {
+    if (!nextNodeId) return;
+    const cinematic = CINEMATICS[nextNodeId] && !seenCinematics[nextNodeId];
+    departTo({
+      pathname: cinematic ? '/cinematic' : '/setup',
+      params: { preset: nextNodeId },
+    });
+  };
 
   return (
     <View style={styles.container}>
@@ -101,23 +147,40 @@ export default function GameOverScreen() {
       )}
 
       <View style={styles.actions}>
-        <Button
-          title="Play again"
-          onPress={() => {
-            acknowledgeUnlock();
-            reset();
-            router.replace('/setup');
-          }}
-        />
-        <Button
-          title="Home"
-          variant="ghost"
-          onPress={() => {
-            acknowledgeUnlock();
-            reset();
-            router.replace('/');
-          }}
-        />
+        {campaignPresetId ? (
+          <>
+            {/* Won with a node ahead → march on. Lost → rematch this node.
+                Won the final node → back to the map. */}
+            {humanWon && nextNodeId ? (
+              <Button title="Continue campaign  ▸" onPress={continueCampaign} />
+            ) : humanWon ? (
+              <Button
+                title="Campaign complete — view map"
+                onPress={() => departTo('/campaign')}
+              />
+            ) : (
+              <Button
+                title="Try again"
+                onPress={() =>
+                  departTo({
+                    pathname: '/setup',
+                    params: { preset: campaignPresetId },
+                  })
+                }
+              />
+            )}
+            {(!humanWon || nextNodeId) && (
+              <Button
+                title="Campaign map"
+                variant="ghost"
+                onPress={() => departTo('/campaign')}
+              />
+            )}
+          </>
+        ) : (
+          <Button title="Play again" onPress={() => departTo('/setup')} />
+        )}
+        <Button title="Home" variant="ghost" onPress={() => departTo('/')} />
       </View>
 
       <GameLogModal

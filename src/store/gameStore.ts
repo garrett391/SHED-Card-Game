@@ -9,9 +9,19 @@ interface GameStore {
   selectedCardIds: string[];
   // Privacy: hand is hidden until the current human player taps "I'm ready".
   handRevealed: boolean;
+  // Set when the game was launched from the campaign map (setup passes the
+  // node's preset id). Free play leaves it null — the ruleConfig alone can't
+  // distinguish the two, since free play offers the same presets. Game-over
+  // uses this to show "Continue campaign" / "Try again" instead of the
+  // generic actions.
+  campaignPresetId: string | null;
 
   // lifecycle
-  startGame: (configs: PlayerConfig[], ruleConfig?: RuleConfig) => void;
+  startGame: (
+    configs: PlayerConfig[],
+    ruleConfig?: RuleConfig,
+    campaignPresetId?: string | null,
+  ) => void;
   reset: () => void;
 
   // swap phase
@@ -35,8 +45,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   recentEvents: [],
   selectedCardIds: [],
   handRevealed: false,
+  campaignPresetId: null,
 
-  startGame: (configs, ruleConfig) => {
+  startGame: (configs, ruleConfig, campaignPresetId = null) => {
     const config = ruleConfig ?? DEFAULT_RULES;
     const game = engine.createGame(configs, config);
     set({
@@ -44,10 +55,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
       recentEvents: [],
       selectedCardIds: [],
       handRevealed: false,
+      campaignPresetId,
     });
   },
 
-  reset: () => set({ game: null, recentEvents: [], selectedCardIds: [], handRevealed: false }),
+  reset: () =>
+    set({
+      game: null,
+      recentEvents: [],
+      selectedCardIds: [],
+      handRevealed: false,
+      campaignPresetId: null,
+    }),
 
   swap: (playerIdx, handId, faceUpId) =>
     set((s) =>
