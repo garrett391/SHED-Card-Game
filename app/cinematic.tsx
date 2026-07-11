@@ -69,6 +69,15 @@ export default function CinematicScreen() {
     fadeOutThen(() => setIndex((i) => i + 1));
   };
 
+  // Stories-style back: tapping the left edge (or the ‹ chip) steps to the
+  // previous scene through the same fade, so a too-fast tap is one tap to
+  // undo. No-op on the first scene.
+  const goBack = () => {
+    if (index === 0) return;
+    playSfx('pageTurn');
+    fadeOutThen(() => setIndex((i) => Math.max(0, i - 1)));
+  };
+
   const scene = scenes[index];
 
   return (
@@ -97,12 +106,34 @@ export default function CinematicScreen() {
         )}
       </View>
 
+      {/* Left-edge back zone (stories convention): taps in the left quarter
+          step back instead of advancing. Sits above the container Pressable,
+          below the corner chips. Disabled on the first scene so the whole
+          screen advances until there's somewhere to go back to. */}
+      {index > 0 && (
+        <Pressable
+          onPress={goBack}
+          style={styles.backZone}
+          accessibilityLabel="Previous scene"
+          accessibilityRole="button"
+        />
+      )}
+
       {/* Progress dots */}
       <View style={styles.dots} pointerEvents="none">
         {scenes.map((_, i) => (
           <View key={i} style={[styles.dot, i === index && styles.dotActive]} />
         ))}
       </View>
+
+      {/* ‹ Back mirrors Skip ▸ — only appears once there's a scene behind us,
+          making the left-edge tap zone discoverable without cluttering the
+          opening frame. */}
+      {index > 0 && (
+        <Pressable onPress={goBack} hitSlop={12} style={styles.back}>
+          <Text style={styles.skipText}>‹ Back</Text>
+        </Pressable>
+      )}
 
       <Pressable onPress={finish} hitSlop={12} style={styles.skip}>
         <Text style={styles.skipText}>Skip ▸</Text>
@@ -187,6 +218,18 @@ const styles = StyleSheet.create({
   },
   dotActive: {
     backgroundColor: '#f4c430',
+  },
+  backZone: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: '25%',
+  },
+  back: {
+    position: 'absolute',
+    top: 54,
+    left: 20,
   },
   skip: {
     position: 'absolute',

@@ -60,7 +60,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
     {
       image: require('../../assets/story/intro6.png'),
       caption:
-        "After much strife, the ancient ways were learned,\nand the students could finally duel their master...",
+        "After much strife, the game was learned,\nand the students could duel their master...",
     },
   ],
 
