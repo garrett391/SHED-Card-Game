@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../src/components/Button';
 import { Center } from '../src/components/Center';
+import { GameLogModal } from '../src/components/GameLogModal';
 import { OpponentStrip } from '../src/components/OpponentStrip';
 import { PlayingCard } from '../src/components/PlayingCard';
 import { VariantBadge } from '../src/components/VariantBadge';
@@ -20,7 +21,7 @@ import { characterByName, maybeQuip, maybeReaction } from '../src/campaign/chara
 import { playSfx } from '../src/audio/sfx';
 import { Card, GameEvent, GameState, RuleConfig } from '../src/engine/types';
 
-const BOT_THINK_MS = 400;
+const BOT_THINK_MS = 700;
 const BOT_DISPLAY_MS = 1800;
 
 /**
@@ -28,12 +29,15 @@ const BOT_DISPLAY_MS = 1800;
  *
  * Layout (top → bottom):
  *  - Player scoreboard (ALL players, fixed order, turn indicator on active)
+ *  - Action caption (ephemeral "who played what", fades after a beat)
  *  - Center area (draw / pile / burned)
  *  - Turn banner + recent events
  *  - Current player's hand area + action buttons
  *
  * Two things drive the UX:
  *  1. Bot turns auto-advance with a small delay so you can see what happened.
+ *     The played card is already visible on top of the pile; a short caption
+ *     names WHO played (the one thing the pile can't show) and then fades.
  *  2. Multi-human games gate turns with "pass device to X" for privacy.
  *     Solo human vs bots skips the gate entirely.
  */
@@ -58,6 +62,12 @@ export default function GameScreen() {
   // Game history modal
   const [historyOpen, setHistoryOpen] = useState(false);
 
+  // Hold before routing to game-over when a HUMAN's play ended the game, so
+  // their winning play shows in the caption for a beat before the podium.
+  // (Bot wins get this beat via botAction; winning face-down flips via the
+  // flipResult gate, which waits for a Continue tap.)
+  const [finalHold, setFinalHold] = useState(false);
+
   // Toast: empty-selection taps and rejected-play reasons
   const [toast, setToast] = useState<string | null>(null);
   useEffect(() => {
@@ -66,15 +76,27 @@ export default function GameScreen() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  // Bot action interstitial: show what the bot just did for BOT_DISPLAY_MS.
+  // Bot action pacing: while set, the next bot turn is held for BOT_DISPLAY_MS
+  // so plays don't blitz past faster than you can read them. Also carries the
+  // character's quip, which becomes table talk when the window closes.
   const [botAction, setBotAction] = useState<{
     botName: string;
     playerId: number;   // which strip a follow-up speech bubble attaches to
     headline: string;   // e.g. "played K♠"
     detail?: string;    // e.g. "🔥 Burns the pile!"
     quip?: string;      // in-character one-liner, shown as table talk after
-    card?: Card;        // shown visually
+    card?: Card;        // (unused in UI now; retained from the event builder)
     emoji: string;      // leading emoji
+  } | null>(null);
+
+  // Ephemeral action caption: a short "Name played X" line above the pile that
+  // fades after a few seconds. Text only — the played card is already on top of
+  // the pile, so re-showing it there just read as a confusing second pile.
+  // nonce restarts the fade for back-to-back plays with identical text.
+  const [actionCaption, setActionCaption] = useState<{
+    emoji: string;
+    text: string;
+    nonce: number;
   } | null>(null);
 
   // Table talk: an ephemeral speech bubble on a player's strip. Fired when a
@@ -96,9 +118,12 @@ export default function GameScreen() {
     if (!game) router.replace('/');
   }, [game, router]);
 
-  // Route to game-over when phase changes (wait for bot action display to clear).
+  // Route to game-over when phase changes. Wait for every "show the final play"
+  // beat to finish first: bot pacing (botAction), the human's winning-play hold
+  // (finalHold), and the face-down flip gate (flipResult — without this a
+  // winning flip would route before its card was ever shown).
   useEffect(() => {
-    if (game && game.phase === 'gameOver' && !botAction) {
+    if (game && game.phase === 'gameOver' && !botAction && !flipResult && !finalHold) {
       // Campaign progress: a HUMAN win completes this variant. markCompleted
       // is idempotent, so re-fires of this effect are harmless.
       if (game.winnerId !== null && !game.players[game.winnerId].isBot) {
@@ -106,7 +131,7 @@ export default function GameScreen() {
       }
       router.replace('/game-over');
     }
-  }, [game, router, botAction]);
+  }, [game, router, botAction, flipResult, finalHold]);
 
   // Bot autoplay.
   useEffect(() => {
@@ -176,6 +201,11 @@ export default function GameScreen() {
         }
       }
       setBotAction({ ...display, playerId: cur.id, quip });
+      setActionCaption({
+        emoji: display.emoji,
+        text: captionText(character ? `${character.emoji} ${botName}` : botName, display),
+        nonce: Date.now(),
+      });
     }, BOT_THINK_MS);
     return () => clearTimeout(timer);
   }, [game, flipResult, botAction]);
@@ -252,6 +282,22 @@ export default function GameScreen() {
     return () => clearTimeout(timer);
   }, [tableTalk]);
 
+  // Retire the action caption after a short beat so it reads as an ephemeral
+  // notification, not a permanent label. A touch longer than the bot pacing
+  // window so the line lingers briefly into the next turn before fading.
+  useEffect(() => {
+    if (!actionCaption) return;
+    const timer = setTimeout(() => setActionCaption(null), 2600);
+    return () => clearTimeout(timer);
+  }, [actionCaption]);
+
+  // Release the human's winning-play hold after the same beat bots get.
+  useEffect(() => {
+    if (!finalHold) return;
+    const timer = setTimeout(() => setFinalHold(false), BOT_DISPLAY_MS);
+    return () => clearTimeout(timer);
+  }, [finalHold]);
+
   // Auto-reveal hand for solo human (no pass-and-play gate needed).
   const humanCount = useMemo(
     () => (game ? game.players.filter((p) => !p.isBot).length : 0),
@@ -285,37 +331,15 @@ export default function GameScreen() {
     );
   }
 
-  const isHumanTurn = !currentPlayer.isBot && !currentPlayer.isFinished;
+  // Phase guard matters now: the screen stays mounted for a beat after the
+  // game ends (finalHold / botAction), and nothing should be tappable then.
+  const isHumanTurn =
+    game.phase === 'playing' && !currentPlayer.isBot && !currentPlayer.isFinished;
   const source = getPlaySource(currentPlayer);
   const playableIds = isHumanTurn
     ? getPlayableCardIds(game, game.currentPlayerIndex)
     : [];
   const canPlay = isHumanTurn && hasPlayableMove(game, game.currentPlayerIndex);
-
-  // Bot action interstitial: full-screen display of what the bot just did.
-  if (botAction) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.botActionGate}>
-          <Text style={styles.botActionEmoji}>{botAction.emoji}</Text>
-          <Text style={styles.botActionName}>
-            {characterByName(botAction.botName)
-              ? `${characterByName(botAction.botName)!.emoji} ${botAction.botName}`
-              : botAction.botName}
-          </Text>
-          <Text style={styles.botActionHeadline}>{botAction.headline}</Text>
-          {botAction.card && (
-            <View style={styles.botActionCardWrap}>
-              <PlayingCard card={botAction.card} />
-            </View>
-          )}
-          {botAction.detail && (
-            <Text style={styles.botActionDetail}>{botAction.detail}</Text>
-          )}
-        </View>
-      </View>
-    );
-  }
 
   // Pass-and-play gate: hide hand until the human taps "I'm ready".
   // Skip the gate entirely when only one human is playing (solo vs bots).
@@ -475,6 +499,18 @@ export default function GameScreen() {
         ))}
       </View>
 
+      {/* Ephemeral action caption — who just played what. Text above the pile
+          (never a card), so it can't be mistaken for a second pile. Reserved
+          height keeps the layout from jumping as it fades in and out. */}
+      <View style={styles.captionZone}>
+        {actionCaption && (
+          <ActionCaption
+            caption={actionCaption}
+            highlighted={!!botAction || finalHold}
+          />
+        )}
+      </View>
+
       {/* Center: draw / pile / burned — pile is tappable for pickup */}
       <Center
         game={game}
@@ -487,7 +523,9 @@ export default function GameScreen() {
       <View style={styles.turnBanner}>
         <View style={styles.turnInfo}>
           <Text style={styles.turnText}>
-            {currentPlayer.isBot
+            {game.phase === 'gameOver'
+              ? '🏆 Game over'
+              : currentPlayer.isBot
               ? `${currentPlayer.name} is thinking…`
               : `${currentPlayer.name}'s turn`}
           </Text>
@@ -500,8 +538,27 @@ export default function GameScreen() {
             onPress={() => {
               if (selectedCardIds.length === 0) {
                 setToast('Select a card first');
-              } else {
-                playSelected();
+                return;
+              }
+              const playerName = currentPlayer.name;
+              playSelected();
+              // If that play just ended the game, surface it in the caption and
+              // hold the game-over route for a beat — otherwise the podium
+              // appears before you ever see what you played. Set synchronously
+              // (not via effect) so the routing effect sees the hold this commit.
+              const latest = useGameStore.getState();
+              if (latest.game?.phase === 'gameOver') {
+                const d = buildBotActionDisplay(
+                  playerName,
+                  latest.recentEvents,
+                  latest.game.ruleConfig,
+                );
+                setActionCaption({
+                  emoji: d.emoji,
+                  text: captionText(playerName, d),
+                  nonce: Date.now(),
+                });
+                setFinalHold(true);
               }
             }}
             style={({ pressed }) => [
@@ -537,56 +594,80 @@ export default function GameScreen() {
       <View style={styles.playerArea}>
         {isHumanTurn ? (
           renderHandArea()
-        ) : (
+        ) : game.phase === 'gameOver' ? null : (
           <Text style={styles.dim}>Waiting for {currentPlayer.name}…</Text>
         )}
       </View>
 
       {/* Game history modal */}
-      <Modal
+      <GameLogModal
         visible={historyOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setHistoryOpen(false)}
-      >
-        <Pressable style={styles.historyBackdrop} onPress={() => setHistoryOpen(false)}>
-          <Pressable style={styles.historyCard} onPress={() => {}}>
-            <View style={styles.historyHeader}>
-              <Text style={styles.historyTitle}>Game Log</Text>
-              <View style={styles.historyActions}>
-                <Pressable
-                  onPress={() => {
-                    const text = game.log.map((e) => e.text).join('\n');
-                    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-                      navigator.clipboard.writeText(text);
-                    }
-                  }}
-                  hitSlop={8}
-                  style={styles.historyCopyBtn}
-                >
-                  <Text style={styles.historyCopyText}>📋 Copy</Text>
-                </Pressable>
-                <Pressable onPress={() => setHistoryOpen(false)} hitSlop={8}>
-                  <Text style={styles.historyClose}>✕</Text>
-                </Pressable>
-              </View>
-            </View>
-            <ScrollView style={styles.historyList} bounces={false}>
-              {game.log.map((entry) => (
-                <View key={entry.id} style={styles.historyRow}>
-                  <Text style={styles.historyNum}>{entry.id + 1}</Text>
-                  <Text style={styles.historyText}>{entry.text}</Text>
-                </View>
-              ))}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        onClose={() => setHistoryOpen(false)}
+        log={game.log}
+      />
     </ScrollView>
   );
 }
 
-/** Build a display object from bot action events for the interstitial screen. */
+/** Compose the caption line: "Name played X" plus any effect, on one line. */
+function captionText(
+  name: string,
+  display: { headline: string; detail?: string },
+): string {
+  const effect = display.detail ? ' · ' + display.detail.replace(/\n/g, ' · ') : '';
+  return `${name} ${display.headline}${effect}`;
+}
+
+/**
+ * Ephemeral caption above the pile: fades in, holds, fades out — keyed on
+ * nonce so consecutive identical lines still re-animate (mirrors the
+ * table-talk bubble timing). Text only; the played card lives on the pile.
+ */
+function ActionCaption({
+  caption,
+  highlighted,
+}: {
+  caption: { emoji: string; text: string; nonce: number };
+  highlighted: boolean;
+}) {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    anim.setValue(0);
+    const seq = Animated.sequence([
+      Animated.timing(anim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.delay(2000),
+      Animated.timing(anim, { toValue: 0, duration: 400, useNativeDriver: true }),
+    ]);
+    seq.start();
+    return () => seq.stop();
+  }, [caption.nonce, anim]);
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.caption,
+        highlighted && styles.captionActive,
+        {
+          opacity: anim,
+          transform: [
+            {
+              translateY: anim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [6, 0],
+              }),
+            },
+          ],
+        },
+      ]}
+    >
+      <Text style={styles.captionText} numberOfLines={2}>
+        {caption.emoji} {caption.text}
+      </Text>
+    </Animated.View>
+  );
+}
+
+/** Build a display object from bot action events (headline + effect + card). */
 function buildBotActionDisplay(
   botName: string,
   events: GameEvent[],
@@ -820,120 +901,29 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
   },
-  botActionGate: {
-    flex: 1,
-    marginTop: 80,
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-  botActionEmoji: {
-    fontSize: 48,
-    marginBottom: 8,
-  },
-  botActionName: {
-    color: theme.color.accent,
-    fontSize: 36,
-    fontWeight: '900',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  botActionHeadline: {
-    color: theme.color.textOnDark,
-    fontSize: 24,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  botActionCardWrap: {
-    marginVertical: 12,
-    alignItems: 'center',
-  },
-  botActionDetail: {
-    color: theme.color.accent,
-    fontSize: 18,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginTop: 12,
-  },
-  // History modal
-  historyBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+  // Ephemeral action caption above the pile
+  captionZone: {
+    height: 46,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    marginTop: 2,
   },
-  historyCard: {
-    width: '100%',
-    maxWidth: 420,
-    maxHeight: '80%',
+  caption: {
+    maxWidth: '92%',
     backgroundColor: theme.color.feltBgDark,
-    borderRadius: theme.radius.lg,
-    paddingVertical: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
   },
-  historyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255,255,255,0.12)',
+  captionActive: {
+    borderColor: theme.color.accent,
   },
-  historyTitle: {
-    color: theme.color.textMuted,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-  },
-  historyActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  historyCopyBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: theme.radius.sm,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  historyCopyText: {
-    color: theme.color.accent,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  historyClose: {
-    color: theme.color.textMuted,
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  historyList: {
-    paddingTop: 6,
-    paddingHorizontal: 16,
-  },
-  historyRow: {
-    flexDirection: 'row',
-    paddingVertical: 5,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
-  },
-  historyNum: {
-    color: theme.color.textMuted,
-    fontSize: 11,
-    width: 28,
-    textAlign: 'right',
-    marginRight: 10,
-    fontVariant: ['tabular-nums'],
-  },
-  historyText: {
+  captionText: {
     color: theme.color.textOnDark,
-    fontSize: 13,
-    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });
