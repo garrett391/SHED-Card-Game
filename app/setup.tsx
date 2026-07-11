@@ -194,7 +194,9 @@ export default function SetupScreen() {
   const start = () => {
     const preset = RULE_PRESETS[selectedMode] ?? RULE_PRESETS['jake-classic'];
     playSfx('shuffle'); // the deal — fired on the tap itself
-    startGame(players, preset);
+    // campaignPreset threads through to game-over, which uses it to offer
+    // "Continue campaign" / "Try again" instead of the free-play actions.
+    startGame(players, preset, campaignPreset);
     router.replace('/swap');
   };
 
@@ -240,7 +242,10 @@ export default function SetupScreen() {
         </Pressable>
         )}
 
-        {!campaignPreset && modeExpanded ? (
+        {/* Picker and its collapsed summary exist only in free play — in
+            campaign the banner above is the whole story (the variant is
+            fixed; offering "Change" would contradict it). */}
+        {!campaignPreset && (modeExpanded ? (
           PRESET_ORDER.map((id, i) => {
             // Free play offers only variants you've BEATEN — the campaign
             // frontier is unlocked for the campaign, but stays exclusive to
@@ -275,13 +280,17 @@ export default function SetupScreen() {
             </View>
             <Text style={styles.modeChange}>Change</Text>
           </Pressable>
-        )}
+        ))}
 
         {/* ── Player config ───────────────────────────────────────────── */}
         <Text style={[styles.sectionLabel, { marginTop: 24 }]}>Players</Text>
-        <Text style={styles.intro}>
-          2–6 players. Tap a row to toggle human / bot.
-        </Text>
+        {/* The hint describes free-play editing (toggle/add/remove) — in
+            campaign the roster is fixed, so the instruction would be false. */}
+        {!campaignPreset && (
+          <Text style={styles.intro}>
+            2–6 players. Tap a row to toggle human / bot.
+          </Text>
+        )}
 
         {players.map((p, i) => {
           // Campaign characters show their portrait/emoji instead of the
