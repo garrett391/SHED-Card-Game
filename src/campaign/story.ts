@@ -67,9 +67,24 @@ export const CINEMATICS: Record<string, Cinematic> = {
   // ── The first schism ────────────────────────────────────────────────────
   'justins-schism': [
     {
+      image: require('../../assets/story/teaching1.png'),
+      caption:
+        'After they mastered the craft, Jake the elder instructed them to spread the teachings throughout the land.',
+    },
+    {
+      image: require('../../assets/story/teaching2.png'),
+      caption:
+        'So they set out beneath the full moon,\ntoward a town that had never known the game.',
+    },
+    {
+      image: require('../../assets/story/teaching3.png'),
+      caption:
+        'They taught all who would sit.\nFarmhand and noble alike rose from the table changed.',
+    },
+    {
       image: null,
       caption:
-        'They became disciples, and carried the teachings throughout the land. And for a time, there was harmony at every table...',
+        'For a time, there was harmony at every table...',
     },
     {
       image: null,
