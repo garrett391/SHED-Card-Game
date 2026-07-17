@@ -80,6 +80,32 @@ export const CHARACTERS: Record<string, Character> = {
       ],
     },
   },
+  farmhand: {
+    id: 'farmhand',
+    name: 'The Farmhand',
+    title: 'Your first pupil',
+    emoji: '🌾',
+    portrait: null,
+    quips: [
+      'Wait — the 8 goes on ANYTHING?',
+      'So the 10 burns the whole pile? The WHOLE pile?',
+      'Back home we mostly play snap.',
+      'Is it my turn? It feels like my turn.',
+      'The noble says this game will never catch on.',
+    ],
+    reactions: {
+      selfPickup: [
+        'The pile is... also mine now?',
+        'A lesson, like you said. A big heavy lesson.',
+        "I'll treasure every one of them.",
+      ],
+      selfBurn: ['I did the fire one! Did you see?', 'Just like you taught me!'],
+      humanPickup: [
+        'Even the teacher carries the pile?',
+        'Should... should I not have played that?',
+      ],
+    },
+  },
   justin: {
     id: 'justin',
     name: 'Justin',
@@ -211,6 +237,7 @@ export const CHARACTERS: Record<string, Character> = {
  */
 export const VARIANT_OPPONENTS: Record<string, string[]> = {
   'jake-classic': ['jake'],
+  'the-spreading': ['farmhand'],
   'justins-schism': ['justin'],
   'super-tens': ['greg'],
   'chaos-shed': ['chaos-twin-a', 'chaos-twin-b'],

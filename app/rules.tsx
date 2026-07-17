@@ -20,7 +20,10 @@ export default function RulesScreen() {
 
   const preset = getPreset(variantId);
   const diff = variantDiff(preset);
-  const isClassic = variantId === 'jake-classic';
+  // Zero diffs means the preset plays exactly like Jake's Classic (e.g. The
+  // Spreading, which reskins classic for the teaching beat) — show the
+  // "original ruleset" note rather than an empty "What's different" list.
+  const isClassic = diff.length === 0;
 
   return (
     <>

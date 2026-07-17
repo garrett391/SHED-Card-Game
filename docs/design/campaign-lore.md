@@ -28,16 +28,17 @@ he can rewrite the rules at any time, even mid-game.
 | Node | Variant | Dissenter | The corruption |
 |------|---------------------|--------------------|----------------------------------------|
 | 1 | Jake's Classic | Jake the Elder | None — the pure teaching (tutorial/origin) |
-| 2 | Justin's Schism | Justin | The first dissenter: "the old rules were too soft" |
-| 3 | Super Tens | Greg the Computer Lord | Cheats, denies, rewrites reality verbally |
-| 4 | Chaos Shed | The Chaos Twins | Chaos for its own sake (future: the joker edition) |
-| 5 | The 69 | Nina | Inversion — reads everything upside down |
-| 6 | The OFCOM Standard | Trevor | Bureaucratization of the sacred teachings |
-| 7 | The Backpacker's Codex | The Backpacker | Syncretism — every corruption at once. The final trial. |
-| 8 | (new variant, unnamed) | **Chris the Scribe** | Holds the pen. Rewrites rules MID-GAME. |
+| 2 | The Spreading | The Farmhand | None — Act II made playable: you're the teacher now |
+| 3 | Justin's Schism | Justin | The first dissenter: "the old rules were too soft" |
+| 4 | Super Tens | Greg the Computer Lord | Cheats, denies, rewrites reality verbally |
+| 5 | Chaos Shed | The Chaos Twins | Chaos for its own sake (future: the joker edition) |
+| 6 | The 69 | Nina | Inversion — reads everything upside down |
+| 7 | The OFCOM Standard | Trevor | Bureaucratization of the sacred teachings |
+| 8 | The Backpacker's Codex | The Backpacker | Syncretism — every corruption at once. The final trial. |
+| 9 | (new variant, unnamed) | **Chris the Scribe** | Holds the pen. Rewrites rules MID-GAME. |
 
 Open question: does Chris displace the Backpacker as the finale, or sit
-after them as node 8? Current lean: node 8 — the Codex ("every rule at
+after them as node 9? Current lean: node 9 — the Codex ("every rule at
 once") is a fitting final exam before facing the one who wrote them.
 
 ## Chris the Scribe — boss design notes

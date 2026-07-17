@@ -25,6 +25,11 @@ export const MAP_SCENES: Record<string, MapScene> = {
     color: '#f4c430', // table gold — where it all began
     tagline: 'The table where it all began.',
   },
+  'the-spreading': {
+    emoji: '🌕',
+    color: '#8fa9c9', // moonlit road — the disciples set out
+    tagline: 'Carry the teachings to a town that has never known the game.',
+  },
   'justins-schism': {
     emoji: '⛪',
     color: '#8e6fc0',

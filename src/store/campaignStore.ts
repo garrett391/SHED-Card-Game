@@ -59,8 +59,10 @@ export const useCampaignStore = create<CampaignStore>()(
           completed: { ...completed, [presetId]: true },
           // Completing presetId is exactly what unlocks `next`, so if a next
           // exists it is newly unlocked (idempotence above guarantees we
-          // weren't completed before).
-          lastUnlockedId: next,
+          // weren't completed before). Exception: saves from before a preset
+          // was inserted mid-ladder may already have `next` completed — no
+          // banner for a node the player has already beaten.
+          lastUnlockedId: next && !completed[next] ? next : null,
         });
       },
 

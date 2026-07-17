@@ -64,8 +64,8 @@ export const CINEMATICS: Record<string, Cinematic> = {
     },
   ],
 
-  // ── The first schism ────────────────────────────────────────────────────
-  'justins-schism': [
+  // ── The spreading — Act II, the disciples become teachers ──────────────
+  'the-spreading': [
     {
       image: require('../../assets/story/teaching1.png'),
       caption:
@@ -86,6 +86,10 @@ export const CINEMATICS: Record<string, Cinematic> = {
       caption:
         'For a time, there was harmony at every table...',
     },
+  ],
+
+  // ── The first schism ────────────────────────────────────────────────────
+  'justins-schism': [
     {
       image: null,
       caption: 'Just as night must fall for a single star to pierce the veil, every golden age is tethered to the gravity of its own dark age...',

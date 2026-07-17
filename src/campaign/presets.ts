@@ -23,6 +23,17 @@ export const RULE_PRESETS: Record<string, RuleConfig> = {
     flavorText: 'The rules passed from Jake the Elder to his disciples.',
   },
 
+  // Act II — the disciples carry the PURE teaching to a new town, so the
+  // rules are identical to Jake's Classic; only the framing changes (you're
+  // the teacher now). Sits between the origin and the first schism.
+  'the-spreading': {
+    ...DEFAULT_RULES,
+    id: 'the-spreading',
+    name: 'The Spreading',
+    description: 'Classic rules, unchanged. You are the teacher now — show a new town how the game is played.',
+    flavorText: 'Jake the Elder instructed his disciples to spread the teachings throughout the land.',
+  },
+
   'justins-schism': {
     ...DEFAULT_RULES,
     id: 'justins-schism',
@@ -94,6 +105,7 @@ export function getPreset(id: string): RuleConfig {
 /** All preset IDs in display order. */
 export const PRESET_ORDER: string[] = [
   'jake-classic',
+  'the-spreading',
   'justins-schism',
   'super-tens',
   'chaos-shed',
