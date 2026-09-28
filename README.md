@@ -22,8 +22,7 @@ A cross-platform (iOS / Android / Web) mobile app for the card game
   and an auto-generated rules summary
 - Interactive **tutorial** and rules reference screen
 - Background **jazz radio** (streamed, HTTPS on native)
-- Pure, fully tested **game engine** (57 engine unit tests, plus a fuzz
-  simulation, no UI dependency)
+- Pure, fully tested **game engine** (61 engine unit tests, no UI dependency)
 
 ### Not yet (deliberate)
 
@@ -52,11 +51,10 @@ Then:
 npm test
 ```
 
-The engine has 57 unit tests covering all power cards, rule variants (reverse
+The engine has 61 unit tests covering all power cards, rule variants (reverse
 rank ordered vs wild, Super Tens, Hard Eights, OFCOM triple-8 burn), edge cases
 (8 in four-of-a-kind, 10 on 7, face-down failed flips), starting-player logic,
-and full integration scenarios — plus a fuzz simulation that plays thousands of
-random games across every preset to check card conservation and termination.
+and full integration scenarios.
 
 ## Project layout
 

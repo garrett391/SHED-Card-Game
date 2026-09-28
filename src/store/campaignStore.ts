@@ -4,12 +4,13 @@
  * Rules:
  *   - The first preset (Jake's Classic) is always unlocked.
  *   - A preset unlocks when the one before it in PRESET_ORDER is completed.
- *   - A preset is completed when a HUMAN player wins a game of it.
+ *   - A preset is completed when a HUMAN player wins it from the campaign
+ *     map. Free-play wins don't count.
  *
  * Persistence: zustand/persist over AsyncStorage (device-local key-value —
  * no server or database involved; on web it's localStorage under the hood).
- * Only `completed` is persisted; `lastUnlockedId` is a transient UI signal
- * for the game-over screen's "new variant unlocked" banner.
+ * `completed` and `seenCinematics` are persisted; `lastUnlockedId` is a
+ * transient UI signal for the game-over screen's "new variant unlocked" banner.
  *
  * Hydration note: AsyncStorage is async, so for one frame after cold start
  * `completed` is {} and everything beyond the first preset reads as locked,

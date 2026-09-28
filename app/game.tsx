@@ -52,6 +52,7 @@ export default function GameScreen() {
   const pickup = useGameStore((s) => s.pickup);
   const revealHand = useGameStore((s) => s.revealHand);
   const recentEvents = useGameStore((s) => s.recentEvents);
+  const campaignPresetId = useGameStore((s) => s.campaignPresetId);
 
   // Face-down flip result: pause to show what was flipped before bots continue.
   const [flipResult, setFlipResult] = useState<{
@@ -124,14 +125,19 @@ export default function GameScreen() {
   // winning flip would route before its card was ever shown).
   useEffect(() => {
     if (game && game.phase === 'gameOver' && !botAction && !flipResult && !finalHold) {
-      // Campaign progress: a HUMAN win completes this variant. markCompleted
-      // is idempotent, so re-fires of this effect are harmless.
-      if (game.winnerId !== null && !game.players[game.winnerId].isBot) {
-        useCampaignStore.getState().markCompleted(game.ruleConfig.id);
+      // A human win of a game launched from the campaign map completes that
+      // node; free-play wins never count. markCompleted is idempotent, so
+      // re-fires of this effect are harmless.
+      if (
+        campaignPresetId &&
+        game.winnerId !== null &&
+        !game.players[game.winnerId].isBot
+      ) {
+        useCampaignStore.getState().markCompleted(campaignPresetId);
       }
       router.replace('/game-over');
     }
-  }, [game, router, botAction, flipResult, finalHold]);
+  }, [game, router, botAction, flipResult, finalHold, campaignPresetId]);
 
   // Bot autoplay.
   useEffect(() => {
