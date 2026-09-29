@@ -17,7 +17,12 @@ import {
 } from '../src/engine/engine';
 import { useGameStore } from '../src/store/gameStore';
 import { useCampaignStore } from '../src/store/campaignStore';
-import { characterByName, maybeQuip, maybeReaction } from '../src/campaign/characters';
+import {
+  characterByName,
+  maybeQuip,
+  maybeReaction,
+  powerReaction,
+} from '../src/campaign/characters';
 import { playSfx } from '../src/audio/sfx';
 import { Card, GameEvent, GameState, RuleConfig } from '../src/engine/types';
 
@@ -193,15 +198,24 @@ export default function GameScreen() {
 
       // Capture what just happened for the interstitial display.
       const events = useGameStore.getState().recentEvents;
-      const display = buildBotActionDisplay(botName, events, latest.game?.ruleConfig ?? game.ruleConfig);
+      const cfg = latest.game?.ruleConfig ?? game.ruleConfig;
+      const display = buildBotActionDisplay(botName, events, cfg);
       const character = characterByName(botName);
-      // Situational line beats generic: their burn > their pickup > table talk.
+      // Situational line beats generic: their burn > their pickup > their
+      // power card > table talk.
       let quip: string | undefined;
       if (character) {
+        const played = events.find((e) => e.type === 'cardsPlayed');
+        const power =
+          played && played.type === 'cardsPlayed'
+            ? powerReaction(played.cards[0].rank, cfg)
+            : null;
         if (events.some((e) => e.type === 'pileBurned')) {
           quip = maybeReaction(character, 'selfBurn') ?? undefined;
         } else if (events.some((e) => e.type === 'pileTakenUp')) {
           quip = maybeReaction(character, 'selfPickup') ?? undefined;
+        } else if (power) {
+          quip = maybeReaction(character, power) ?? undefined;
         } else {
           quip = maybeQuip(character) ?? undefined;
         }
@@ -236,30 +250,42 @@ export default function GameScreen() {
     if (rejection && rejection.type === 'playRejected') {
       setToast(rejection.reason);
     }
-    // A HUMAN picking up the pile invites commentary: a random character at
-    // the table reacts after a short beat (so it reads as a response, not a
-    // simultaneous caption). Bot pickups are excluded — those characters
-    // already speak via their own interstitial dismissal.
+    // A HUMAN picking up or burning the pile invites commentary: a random
+    // character at the table reacts after a short beat (so it reads as a
+    // response, not a simultaneous caption). Bot pickups and burns are
+    // excluded — those characters already speak via their own interstitial
+    // dismissal. Burns only draw lines from characters written to react to
+    // them; everyone else stays quiet.
+    if (!game) return;
+    const isHuman = (id: number) => game.players[id] ? !game.players[id].isBot : false;
     const pickup = recentEvents.find((e) => e.type === 'pileTakenUp');
-    if (pickup && pickup.type === 'pileTakenUp' && game) {
-      const picker = game.players[pickup.playerId];
-      if (picker && !picker.isBot) {
-        const hecklers = game.players.filter(
-          (p) => p.isBot && !p.isFinished && characterByName(p.name),
-        );
-        if (hecklers.length > 0) {
-          const h = hecklers[Math.floor(Math.random() * hecklers.length)];
-          const line = maybeReaction(characterByName(h.name)!, 'humanPickup');
-          if (line) {
-            const t = setTimeout(
-              () => setTableTalk({ playerId: h.id, text: line, nonce: Date.now() }),
-              600,
-            );
-            return () => clearTimeout(t);
-          }
-        }
-      }
+    const played = recentEvents.find((e) => e.type === 'cardsPlayed');
+    let kind: 'humanPickup' | 'humanBurn' | null = null;
+    if (pickup && pickup.type === 'pileTakenUp' && isHuman(pickup.playerId)) {
+      kind = 'humanPickup';
+    } else if (
+      recentEvents.some((e) => e.type === 'pileBurned') &&
+      played && played.type === 'cardsPlayed' &&
+      isHuman(played.playerId)
+    ) {
+      kind = 'humanBurn';
     }
+    if (!kind) return;
+    const hecklers = game.players.filter((p) => {
+      if (!p.isBot || p.isFinished) return false;
+      const c = characterByName(p.name);
+      if (!c) return false;
+      return kind === 'humanPickup' || (c.reactions.humanBurn?.length ?? 0) > 0;
+    });
+    if (hecklers.length === 0) return;
+    const h = hecklers[Math.floor(Math.random() * hecklers.length)];
+    const line = maybeReaction(characterByName(h.name)!, kind);
+    if (!line) return;
+    const t = setTimeout(
+      () => setTableTalk({ playerId: h.id, text: line, nonce: Date.now() }),
+      600,
+    );
+    return () => clearTimeout(t);
   }, [recentEvents, game]);
 
   // Auto-dismiss bot action interstitial after BOT_DISPLAY_MS. If the bot

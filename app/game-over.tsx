@@ -8,6 +8,8 @@ import { useGameStore } from '../src/store/gameStore';
 import { isUnlocked, useCampaignStore } from '../src/store/campaignStore';
 import { RULE_PRESETS, PRESET_ORDER } from '../src/campaign/presets';
 import { CINEMATICS } from '../src/campaign/story';
+import { characterByName, endLine, opponentsFor } from '../src/campaign/characters';
+import { CharacterDialogue } from '../src/components/CharacterDialogue';
 
 export default function GameOverScreen() {
   const router = useRouter();
@@ -22,6 +24,18 @@ export default function GameOverScreen() {
 
   // Post-game review: same 📜 log as the in-game history button.
   const [logOpen, setLogOpen] = useState(false);
+
+  // The campaign host's parting words. Picked once so re-renders don't
+  // swap the line mid-read.
+  const [hostLine] = useState(() => {
+    if (!game || !campaignPresetId) return null;
+    const host = opponentsFor(campaignPresetId).find((c) => c.endLines);
+    if (!host) return null;
+    const playerWon =
+      game.winnerId !== null && !game.players[game.winnerId].isBot;
+    const text = endLine(host, playerWon);
+    return text ? { host, text } : null;
+  });
 
   // If state was wiped, bail home — but NOT when we wiped it ourselves on
   // the way out. departTo() resets the game store before navigating, which
@@ -108,7 +122,7 @@ export default function GameOverScreen() {
         <Text style={styles.label}>🏆 Winner</Text>
         <Text style={styles.winner}>
           {winner ? winner.name : '—'}
-          {winner?.isBot ? ' 🤖' : ''}
+          {winner ? botTag(winner) : ''}
         </Text>
 
         {safe.length > 0 && (
@@ -117,7 +131,7 @@ export default function GameOverScreen() {
             {safe.map((p) => (
               <Text key={p.id} style={styles.safe}>
                 {p.name}
-                {p.isBot ? ' 🤖' : ''}
+                {botTag(p)}
               </Text>
             ))}
           </>
@@ -131,20 +145,32 @@ export default function GameOverScreen() {
             {shitheads.map((p) => (
               <Text key={p.id} style={styles.shithead}>
                 {p.name}
-                {p.isBot ? ' 🤖' : ''}
+                {botTag(p)}
               </Text>
             ))}
           </>
         )}
       </View>
 
-      {unlockedPreset && (
-        <View style={styles.unlockBanner}>
-          <Text style={styles.unlockTitle}>🔓 New variant unlocked</Text>
-          <Text style={styles.unlockName}>{unlockedPreset.name}</Text>
-          <Text style={styles.unlockFlavor}>"{unlockedPreset.flavorText}"</Text>
-        </View>
-      )}
+      <View>
+        {hostLine && (
+          <View style={styles.hostLine}>
+            <CharacterDialogue
+              name={hostLine.host.name}
+              text={hostLine.text}
+              portrait={hostLine.host.portrait}
+              emoji={hostLine.host.emoji}
+            />
+          </View>
+        )}
+        {unlockedPreset && (
+          <View style={styles.unlockBanner}>
+            <Text style={styles.unlockTitle}>🔓 New variant unlocked</Text>
+            <Text style={styles.unlockName}>{unlockedPreset.name}</Text>
+            <Text style={styles.unlockFlavor}>"{unlockedPreset.flavorText}"</Text>
+          </View>
+        )}
+      </View>
 
       <View style={styles.actions}>
         {campaignPresetId ? (
@@ -192,6 +218,11 @@ export default function GameOverScreen() {
   );
 }
 
+/** Generic bots get a 🤖 suffix; named campaign characters don't. */
+function botTag(p: { name: string; isBot: boolean }): string {
+  return p.isBot && !characterByName(p.name) ? ' 🤖' : '';
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -236,6 +267,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   actions: { marginBottom: 30 },
+  hostLine: { marginBottom: 16 },
   unlockBanner: {
     alignItems: 'center',
     backgroundColor: 'rgba(255, 215, 0, 0.08)',

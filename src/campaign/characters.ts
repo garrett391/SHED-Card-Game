@@ -10,12 +10,24 @@
  *
  * QUIPS & REACTIONS: short in-character lines shown as table-talk speech
  * bubbles on the character's strip. `quips` fire after unremarkable turns;
- * `reactions` fire situationally (their pickup, their burn, YOUR pickup).
- * Keep them one-liners — bubbles clamp to two lines.
+ * `reactions` fire situationally (their pickup, their burn, their power
+ * cards, the human's pickup or burn). Keep them one-liners — bubbles clamp
+ * to two lines.
+ *
+ * END LINES: spoken on the campaign results screen, one pool for when the
+ * player beats this character and one for when the character wins.
  */
 import { ImageSourcePropType } from 'react-native';
+import { Rank, RuleConfig } from '../engine/types';
 
-export type ReactionKind = 'selfPickup' | 'selfBurn' | 'humanPickup';
+export type ReactionKind =
+  | 'selfPickup'
+  | 'selfBurn'
+  | 'selfReset'
+  | 'selfLowerThan'
+  | 'selfTransparent'
+  | 'humanPickup'
+  | 'humanBurn';
 
 export interface Character {
   id: string;
@@ -27,8 +39,10 @@ export interface Character {
   portrait: ImageSourcePropType | null;
   /** Generic table talk after their own unremarkable turns. */
   quips: string[];
-  /** Situational lines. Empty pools fall back to generic quips. */
+  /** Situational lines. Empty pools fall back to generic quips, except
+   *  humanBurn, which only fires for characters that have lines for it. */
   reactions: Partial<Record<ReactionKind, string[]>>;
+  endLines?: { playerWon: string[]; playerLost: string[] };
 }
 
 export const CHARACTERS: Record<string, Character> = {
@@ -41,42 +55,67 @@ export const CHARACTERS: Record<string, Character> = {
     quips: [
       'As it was spake, so it is played.',
       'The pile provides.',
-      'Remember, savor your magic cards.',
-      "A wise player considers their opponents hand.",
-      'Victory follows the patient.',
-      'A single card can change a lifetime.',
-      'Power is not the card but the timing.',
-      'The table remembers what the players forget.',
-      'A burned pile is a lesson well learned.',
-      'A ten is a clean slate; treat it like a blessing.',
-      'Two resets the world; use it like a prayer.',
-      'Sevens are fences; know when to jump.',
-      'Eights are shadows; sometimes skipping is mercy.',
-      'Play for the next turn, not just this one.',
-      'A good bluff is a quiet thing.',
-      'The smallest card can be the sharpest blade.'
+      'Meets or beats. It was always meets or beats.',
+      'Shed your low cards while the pile still allows it.',
+      'Save your 10 for a pile worth burning.',
+      'Never waste a 2 on a 3.',
+      'Mind your face-up cards. The whole table can see them.',
+      'I count your cards. You should be counting mine.',
+      'Hmm. I would not have played that. Continue.',
+      'In my day, we played by lantern light.',
+      'Every Shithead thinks they are one card from winning.',
+      'I have been the Shithead. It builds character.',
     ],
     reactions: {
       selfPickup: [
-      'A lesson. The pile is also a teacher.', 
-      'So it must be.',
-       "Good, you're learning.", 
-       "A wise move.",
-      'The pile humbles us all.'
-    ],
+        'The pile is also a teacher.',
+        'The pile humbles us all.',
+        'Even the Elder must carry the pile.',
+        'Well played. Do not let it go to your head.',
+        'I meant to do that. It was a lesson.',
+      ],
       selfBurn: [
         'The pile provides. The pile removes.',
         'As foretold.',
-        'It is written.',
-        'The flames of truth.',
-        'The table forgives and forgets.'
+        'Burned, and I go again. Remember that.',
+        'To ash. My turn again.',
+      ],
+      selfReset: [
+        'A 2. The pile starts over. Play what you like.',
+        'Two. Back to the beginning.',
+        'The 2 wipes the slate clean.',
+      ],
+      selfLowerThan: [
+        'A 7. Seven or lower, student.',
+        'Stay low. Seven or under.',
+        'The 7 keeps it low. Have you anything small?',
+      ],
+      selfTransparent: [
+        'An 8. Look through it, and beat what lies beneath.',
+        'You see the 8. The pile does not.',
+        'The 8 is invisible. Play on what is under it.',
       ],
       humanPickup: [
         'Even I once carried the whole pile.',
-        'The teachings are hard.',
-        'Play your cards wisely.',
-        'A heavy hand makes a light teacher.',
-        'You will tell a better story for this.'
+        'Heavy, is it not? Carry it anyway.',
+        'Pick it up. We have all been there.',
+        'You will tell a better story for this.',
+      ],
+      humanBurn: [
+        'Good. You are learning.',
+        'Now play again. The burner always does.',
+        "The student burns the master's pile. Good.",
+      ],
+    },
+    endLines: {
+      playerWon: [
+        'Well played. Now go, and teach it exactly as I taught you. Word for word.',
+        'The student has beaten the master. Go. Carry Shed to every table in the land.',
+      ],
+      playerLost: [
+        'You are the Shithead. For now. Deal again.',
+        'Every master was once a Shithead. Deal again.',
+        'No one beats the Elder on their first night. Again.',
       ],
     },
   },
@@ -272,7 +311,11 @@ export function maybeQuip(c: Character, chance = 0.45): string | null {
 const REACTION_CHANCE: Record<ReactionKind, number> = {
   selfBurn: 0.9,
   selfPickup: 0.90,
+  selfReset: 0.7,
+  selfLowerThan: 0.7,
+  selfTransparent: 0.7,
   humanPickup: 0.6,
+  humanBurn: 0.8,
 };
 
 /**
@@ -284,4 +327,47 @@ export function maybeReaction(c: Character, kind: ReactionKind): string | null {
   if (!pool || pool.length === 0) return maybeQuip(c);
   if (Math.random() > REACTION_CHANCE[kind]) return null;
   return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/** The reaction for a character playing `rank`, if it's a power card with
+ *  its own lines (burns are handled separately via selfBurn). */
+export function powerReaction(rank: Rank, cfg: RuleConfig): ReactionKind | null {
+  if (rank === cfg.resetRank) return 'selfReset';
+  if (rank === cfg.lowerThanRank) return 'selfLowerThan';
+  if (rank === cfg.transparentRank) return 'selfTransparent';
+  return null;
+}
+
+/** A random end-of-game line, or null if the character has none. */
+export function endLine(c: Character, playerWon: boolean): string | null {
+  const pool = playerWon ? c.endLines?.playerWon : c.endLines?.playerLost;
+  if (!pool || pool.length === 0) return null;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// ─── The disciples ───────────────────────────────────────────────────────────
+
+/**
+ * The three friends Jake taught. In the campaign the human plays as one of
+ * them; the choice is stored in campaignStore and used as the player's name.
+ * Portraits are null until art exists (rendered as an initial instead).
+ */
+export interface Hero {
+  id: string;
+  name: string;
+  portrait: ImageSourcePropType | null;
+}
+
+export const HEROES: Hero[] = [
+  { id: 'erich', name: 'Erich', portrait: null },
+  { id: 'nick', name: 'Nick', portrait: null },
+  { id: 'garrett', name: 'Garrett', portrait: null },
+];
+
+export function heroById(id: string | null): Hero | null {
+  return HEROES.find((h) => h.id === id) ?? null;
+}
+
+export function heroByName(name: string): Hero | null {
+  return HEROES.find((h) => h.name === name) ?? null;
 }

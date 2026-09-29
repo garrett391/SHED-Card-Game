@@ -11,6 +11,10 @@ Expected filenames (match character ids in src/campaign/characters.ts):
     chaos-twin-a.png  chaos-twin-b.png
     nina.png  trevor.png  backpacker.png
 
+The three disciples (the player's side, `HEROES` in characters.ts):
+
+    erich.png  nick.png  garrett.png
+
 To wire one in, set its entry in src/campaign/characters.ts:
 
     portrait: require('../../assets/characters/greg.png'),

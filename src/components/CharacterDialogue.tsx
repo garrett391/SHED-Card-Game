@@ -12,7 +12,9 @@ import { theme } from './theme';
 interface Props {
   name: string;
   text: string;
-  portrait: ImageSourcePropType;
+  /** Null renders `emoji` in the frame instead. */
+  portrait: ImageSourcePropType | null;
+  emoji?: string;
   /** Called when the player taps to advance. Omit / set canAdvance false to disable. */
   onAdvance?: () => void;
   canAdvance?: boolean;
@@ -23,13 +25,14 @@ interface Props {
 /**
  * A character speaking from the bottom of the screen: a framed pixel portrait
  * beside a parchment "scroll" of text. Tapping the scroll advances the dialogue
- * when `canAdvance` is set. Generic enough to drive any character — Chris is the
- * first, but the campaign can reuse it.
+ * when `canAdvance` is set. Used by Chris in the tutorial and by campaign hosts
+ * on the results screen.
  */
 export function CharacterDialogue({
   name,
   text,
   portrait,
+  emoji,
   onAdvance,
   canAdvance,
   footer,
@@ -37,7 +40,11 @@ export function CharacterDialogue({
   const body = (
     <View style={styles.row}>
       <View style={styles.portraitFrame}>
-        <Image source={portrait} style={styles.portrait} resizeMode="cover" />
+        {portrait ? (
+          <Image source={portrait} style={styles.portrait} resizeMode="cover" />
+        ) : (
+          <Text style={styles.emoji}>{emoji}</Text>
+        )}
       </View>
 
       <View style={styles.scroll}>
@@ -93,6 +100,11 @@ const styles = StyleSheet.create({
   portrait: {
     width: '100%',
     height: '100%',
+  },
+  emoji: {
+    fontSize: 40,
+    lineHeight: 80,
+    textAlign: 'center',
   },
   scroll: {
     flex: 1,

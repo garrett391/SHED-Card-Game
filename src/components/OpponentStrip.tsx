@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Image, StyleSheet, Text, View } from 'react-native';
 import { Player } from '../engine/types';
-import { characterByName } from '../campaign/characters';
+import { characterByName, heroByName } from '../campaign/characters';
 import { PlayingCard } from './PlayingCard';
 import { theme } from './theme';
 
@@ -33,8 +33,10 @@ export function OpponentStrip({ player, isCurrent, bubble }: Props) {
     return () => seq.stop();
   }, [bubble?.nonce, bubbleAnim]);
   // Campaign characters get an avatar (PNG portrait once art exists, emoji
-  // until then). Generic bots keep the plain 🤖 name suffix.
+  // until then). Generic bots keep the plain 🤖 name suffix. A human playing
+  // as a disciple shows that disciple's portrait once it exists.
   const character = player.isBot ? characterByName(player.name) : null;
+  const heroPortrait = player.isBot ? null : heroByName(player.name)?.portrait ?? null;
 
   useEffect(() => {
     if (isCurrent) {
@@ -97,6 +99,11 @@ export function OpponentStrip({ player, isCurrent, bubble }: Props) {
           ) : (
             <Text style={styles.avatarEmoji}>{character.emoji}</Text>
           )}
+        </View>
+      )}
+      {heroPortrait && (
+        <View style={styles.avatar}>
+          <Image source={heroPortrait} style={styles.avatarImg} />
         </View>
       )}
       <View style={styles.nameCol}>

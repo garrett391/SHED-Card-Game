@@ -9,8 +9,9 @@
  *
  * Persistence: zustand/persist over AsyncStorage (device-local key-value —
  * no server or database involved; on web it's localStorage under the hood).
- * `completed` and `seenCinematics` are persisted; `lastUnlockedId` is a
- * transient UI signal for the game-over screen's "new variant unlocked" banner.
+ * `completed`, `seenCinematics` and `heroId` are persisted; `lastUnlockedId`
+ * is a transient UI signal for the game-over screen's "new variant unlocked"
+ * banner.
  *
  * Hydration note: AsyncStorage is async, so for one frame after cold start
  * `completed` is {} and everything beyond the first preset reads as locked,
@@ -27,12 +28,15 @@ interface CampaignStore {
   completed: Record<string, true>;
   /** Cinematics that have already played (once-only). Persisted. */
   seenCinematics: Record<string, true>;
+  /** Which disciple (HEROES id) the player plays as. Null until chosen. */
+  heroId: string | null;
   /** Set when a completion unlocks a NEW preset; game-over shows a banner
    *  and clears it via acknowledgeUnlock. Not persisted. */
   lastUnlockedId: string | null;
 
   markCompleted: (presetId: string) => void;
   markCinematicSeen: (presetId: string) => void;
+  setHero: (heroId: string) => void;
   acknowledgeUnlock: () => void;
   resetProgress: () => void;
 }
@@ -49,6 +53,7 @@ export const useCampaignStore = create<CampaignStore>()(
     (set, get) => ({
       completed: {},
       seenCinematics: {},
+      heroId: null,
       lastUnlockedId: null,
 
       markCompleted: (presetId) => {
@@ -70,15 +75,21 @@ export const useCampaignStore = create<CampaignStore>()(
       markCinematicSeen: (presetId) =>
         set({ seenCinematics: { ...get().seenCinematics, [presetId]: true } }),
 
+      setHero: (heroId) => set({ heroId }),
+
       acknowledgeUnlock: () => set({ lastUnlockedId: null }),
 
       resetProgress: () =>
-        set({ completed: {}, seenCinematics: {}, lastUnlockedId: null }),
+        set({ completed: {}, seenCinematics: {}, heroId: null, lastUnlockedId: null }),
     }),
     {
       name: 'shed-campaign-v1',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (s) => ({ completed: s.completed, seenCinematics: s.seenCinematics }),
+      partialize: (s) => ({
+        completed: s.completed,
+        seenCinematics: s.seenCinematics,
+        heroId: s.heroId,
+      }),
     },
   ),
 );

@@ -11,8 +11,6 @@
  * GIF/WebP (drop a GIF in assets/story/ and require it exactly like a PNG;
  * no code change). Scenes with image: null render as caption-only title
  * cards on the felt, so beats can be written before art exists.
- *
- * All captions are first drafts — edit freely, this is your story.
  */
 import { ImageSourcePropType } from 'react-native';
 
@@ -35,32 +33,38 @@ export const CINEMATICS: Record<string, Cinematic> = {
     {
       image: require('../../assets/story/intro1.png'),
       caption:
-        'They enjoyed the simple things in life.\nGames, jokes, and a pint of ale.',
+        'Erich, Nick and Garrett.\nThey loved games, jokes, and a pint of ale.',
     },
     {
       image: require('../../assets/story/intro2.png'),
       caption:
-        'One night, a stranger blew into town\n Nothing would ever be the same.',
+        'One night, a stranger burst in.\nNothing would ever be the same.',
     },
     {
       image: require('../../assets/story/intro3.png'),
       caption:
-        'Jake the Elder taught them the ancient ways of Shed.',
+        'He called himself Jake the Elder.\nIn the old wood, he taught them\nthe ancient ways of Shed.',
     },
     {
       image: require('../../assets/story/intro4.png'),
       caption:
-        'He showed them the sacred cards.\n2, 7, 8 and 10.',
+        'First, the one law: meets or beats.\nThen he revealed the four sacred cards.',
     },
     {
+      // The art shows only the 2, 7 and 10; the missing 8 is the joke.
       image: require('../../assets/story/intro5.png'),
       caption:
-        "and instructed them on various techniques.",
+        'The 2 resets. The 7 keeps it low.\nThe 10 burns it all.\nAnd the 8? The 8 you never see.',
+    },
+    {
+      image: null,
+      caption:
+        'Jake wrote none of it down.\nThe rules lived only in the telling.',
     },
     {
       image: require('../../assets/story/intro6.png'),
       caption:
-        "After much strife, the game was learned,\nand the students could duel their master...",
+        'Night after night, they lost and learned,\nuntil each could face the master alone.',
     },
   ],
 

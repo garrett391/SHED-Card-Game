@@ -18,7 +18,12 @@ import { useGameStore } from '../src/store/gameStore';
 import { PlayerConfig, RuleConfig } from '../src/engine/types';
 import { RULE_PRESETS, PRESET_ORDER } from '../src/campaign/presets';
 import { isUnlocked, useCampaignStore } from '../src/store/campaignStore';
-import { characterByName, opponentsFor } from '../src/campaign/characters';
+import {
+  characterByName,
+  HEROES,
+  heroById,
+  opponentsFor,
+} from '../src/campaign/characters';
 import { playSfx } from '../src/audio/sfx';
 
 const MIN_PLAYERS = 2;
@@ -87,6 +92,45 @@ function ModeCard({
   );
 }
 
+// ─── Hero picker (campaign) ─────────────────────────────────────────────────────
+
+function HeroPicker({
+  selectedId,
+  onSelect,
+}: {
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <View style={styles.heroRow}>
+      {HEROES.map((h) => {
+        const selected = h.id === selectedId;
+        return (
+          <Pressable
+            key={h.id}
+            onPress={() => onSelect(h.id)}
+            style={[styles.heroChip, selected && styles.heroChipSelected]}
+            accessibilityRole="button"
+            accessibilityState={{ selected }}
+            accessibilityLabel={`Play as ${h.name}`}
+          >
+            <View style={styles.heroAvatar}>
+              {h.portrait ? (
+                <Image source={h.portrait} style={styles.heroPortrait} />
+              ) : (
+                <Text style={styles.heroInitial}>{h.name[0]}</Text>
+              )}
+            </View>
+            <Text style={[styles.heroName, selected && styles.modeNameSelected]}>
+              {h.name}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 // ─── Setup screen ───────────────────────────────────────────────────────────────
 
 export default function SetupScreen() {
@@ -94,6 +138,8 @@ export default function SetupScreen() {
   const startGame = useGameStore((s) => s.startGame);
 
   const completed = useCampaignStore((s) => s.completed);
+  const hero = heroById(useCampaignStore((s) => s.heroId));
+  const setHero = useCampaignStore((s) => s.setHero);
   // Preselect a variant when arriving from the campaign map. Guarded by the
   // unlock check so a stale/hand-typed param can't bypass the ladder.
   // When set, the screen is in CAMPAIGN mode: variant and roster are fixed
@@ -194,9 +240,14 @@ export default function SetupScreen() {
   const start = () => {
     const preset = RULE_PRESETS[selectedMode] ?? RULE_PRESETS['jake-classic'];
     playSfx('shuffle'); // the deal — fired on the tap itself
+    // In campaign the human seat is the chosen disciple.
+    const lineup =
+      campaignPreset && hero
+        ? players.map((p) => (p.isBot ? p : { ...p, name: hero.name }))
+        : players;
     // campaignPreset threads through to game-over, which uses it to offer
     // "Continue campaign" / "Try again" instead of the free-play actions.
-    startGame(players, preset, campaignPreset);
+    startGame(lineup, preset, campaignPreset);
     router.replace('/swap');
   };
 
@@ -283,7 +334,20 @@ export default function SetupScreen() {
         ))}
 
         {/* ── Player config ───────────────────────────────────────────── */}
-        <Text style={[styles.sectionLabel, { marginTop: 24 }]}>Players</Text>
+        {/* Campaign: the human seat is one of the three disciples, chosen
+            here and remembered across nodes. */}
+        {campaignPreset && (
+          <>
+            <Text style={[styles.sectionLabel, { marginTop: 24 }]}>Play as</Text>
+            {!hero && (
+              <Text style={styles.intro}>Which disciple takes the seat?</Text>
+            )}
+            <HeroPicker selectedId={hero?.id ?? null} onSelect={setHero} />
+          </>
+        )}
+        <Text style={[styles.sectionLabel, { marginTop: 24 }]}>
+          {campaignPreset ? 'Across the table' : 'Players'}
+        </Text>
         {/* The hint describes free-play editing (toggle/add/remove) — in
             campaign the roster is fixed, so the instruction would be false. */}
         {!campaignPreset && (
@@ -293,6 +357,7 @@ export default function SetupScreen() {
         )}
 
         {players.map((p, i) => {
+          if (campaignPreset && !p.isBot) return null;
           // Campaign characters show their portrait/emoji instead of the
           // generic robot. Matched by name, so renaming the row reverts it
           // to a plain bot (and typing an exact character name summons them).
@@ -321,8 +386,8 @@ export default function SetupScreen() {
               placeholderTextColor={theme.color.textMuted}
               maxLength={16}
               // In campaign, the host's name is canon (and the portrait
-              // lookup is by name) — humans can still name themselves.
-              editable={!campaignPreset || !p.isBot}
+              // lookup is by name).
+              editable={!campaignPreset}
             />
             {!campaignPreset && players.length > MIN_PLAYERS && (
               <Pressable onPress={() => removePlayer(i)} style={styles.removeBtn}>
@@ -338,7 +403,11 @@ export default function SetupScreen() {
         )}
 
         <View style={styles.footer}>
-          <Button title="Deal cards" onPress={start} />
+          <Button
+            title="Deal cards"
+            onPress={start}
+            disabled={!!campaignPreset && !hero}
+          />
         </View>
       </ScrollView>
 
@@ -537,6 +606,49 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 6,
     marginLeft: 28,
+  },
+
+  // Hero picker
+  heroRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  heroChip: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderRadius: theme.radius.md,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    backgroundColor: theme.color.feltBgDark,
+  },
+  heroChipSelected: {
+    borderColor: '#d4a843',
+    backgroundColor: '#1a3e2e',
+  },
+  heroAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroPortrait: {
+    width: 52,
+    height: 52,
+  },
+  heroInitial: {
+    color: theme.color.textOnDark,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  heroName: {
+    color: theme.color.textOnDark,
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 6,
   },
 
   // Player config
