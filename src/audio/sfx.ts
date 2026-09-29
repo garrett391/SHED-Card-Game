@@ -23,19 +23,16 @@ import { AudioPlayer, createAudioPlayer } from 'expo-audio';
 // require() calls must be static string literals for Metro to bundle them.
 
 const POOLS = {
-  /** Tutorial dialogue advance — soft slides + pack-open sounds read as
-   *  page turns. Large pool since this fires on every line of dialogue. */
+  /** Dialogue / cinematic advance — card slides trimmed to 250 ms and
+   *  low-passed so they read as a soft paper flick rather than a swoosh.
+   *  Fires on every line of dialogue, so it has to stay understated. */
   pageTurn: [
-    require('../../assets/audio/card-slide-1.m4a'),
-    require('../../assets/audio/card-slide-2.m4a'),
-    require('../../assets/audio/card-slide-3.m4a'),
-    require('../../assets/audio/card-slide-4.m4a'),
-    require('../../assets/audio/card-slide-5.m4a'),
-    require('../../assets/audio/card-slide-6.m4a'),
-    require('../../assets/audio/card-slide-7.m4a'),
-    require('../../assets/audio/card-slide-8.m4a'),
-    require('../../assets/audio/cards-pack-open-1.m4a'),
-    require('../../assets/audio/cards-pack-open-2.m4a'),
+    require('../../assets/audio/page-flick-1.m4a'),
+    require('../../assets/audio/page-flick-2.m4a'),
+    require('../../assets/audio/page-flick-3.m4a'),
+    require('../../assets/audio/page-flick-4.m4a'),
+    require('../../assets/audio/page-flick-5.m4a'),
+    require('../../assets/audio/page-flick-6.m4a'),
   ],
   /** Game start / deal. Was a single long shuffle sample — swapped for the
    *  shorter card-fan sounds so it doesn't drag out the start-game tap. */
@@ -64,9 +61,10 @@ export type SfxName = keyof typeof POOLS;
 
 /** Per-sound volume, relative to the radio. Tune to taste: the pickup is a
  *  frequent incidental sound so it sits lower; the shuffle is a once-per-game
- *  moment so it can be more present. */
+ *  moment so it can be more present; the page turn is the most repetitive
+ *  sound outside gameplay, so it sits lowest. */
 const VOLUME: Record<SfxName, number> = {
-  pageTurn: 0.5,
+  pageTurn: 0.25,
   shuffle: 0.8,
   cardPlace: 0.45,
   cardPickup: 0.6,

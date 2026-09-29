@@ -65,11 +65,34 @@ LICENSE.txt) into this directory. Expected files:
     card-shove-1.m4a   card-shove-2.m4a   card-shove-3.m4a   card-shove-4.m4a
     LICENSE.txt
 
+## Page flicks (derived)
+
+`page-flick-1..6.m4a` are made from the cleaned `card-slide-1..6.m4a` above.
+The raw slides read as a cartoony swoosh when used as a page turn, so they're
+cut down to a short, muffled flick. Run from this directory:
+
+    for i in 1 2 3 4 5 6; do
+      ffmpeg -y -i "card-slide-$i.m4a" -af "\
+    silenceremove=start_periods=1:start_threshold=-35dB,\
+    afade=t=in:d=0.01,\
+    lowpass=f=3500,\
+    atrim=end=0.25,\
+    afade=t=out:st=0.1:d=0.15" \
+        -ar 44100 -c:a aac -b:a 96k "page-flick-$i.m4a"
+    done
+
+Filter chain: skip the soft lead-in straight to the flick → 10 ms de-click
+fade-in → low-pass at 3.5 kHz to take the bright plastic hiss off (paper, not
+card stock) → hard cap at 250 ms → fade the last 150 ms so the tail dies fast.
+Slides 7–8 and the pack-open sounds aren't used: each builds up for
+200–250 ms before its peak, and that build-up is what makes them sound like
+a swoosh.
+
 ## Mapping (see src/audio/sfx.ts)
 
 | Sound      | Files            | Trigger                                   |
 |------------|------------------|-------------------------------------------|
-| pageTurn   | card-slide-1..8, cards-pack-open-1..2 | Tutorial dialogue advance (random variant) |
+| pageTurn   | page-flick-1..6                        | Dialogue / cinematic advance (random)      |
 | shuffle    | card-fan-1..2                          | Dealing a new game (random variant)        |
 | cardPlace  | card-place-1..4                        | Any cards played, incl. bots (random)      |
 | cardPickup | card-shove-1..4                        | Any pile pickup, incl. bots (random)       |
