@@ -350,7 +350,7 @@ export function endLine(c: Character, playerWon: boolean): string | null {
 /**
  * The three friends Jake taught. In the campaign the human plays as one of
  * them; the choice is stored in campaignStore and used as the player's name.
- * Portraits are null until art exists (rendered as an initial instead).
+ * A null portrait renders as the name's initial.
  */
 export interface Hero {
   id: string;
@@ -359,9 +359,9 @@ export interface Hero {
 }
 
 export const HEROES: Hero[] = [
-  { id: 'erich', name: 'Erich', portrait: null },
-  { id: 'nick', name: 'Nick', portrait: null },
-  { id: 'garrett', name: 'Garrett', portrait: null },
+  { id: 'erich', name: 'Erich', portrait: require('../../assets/characters/erich.png') },
+  { id: 'nick', name: 'Nick', portrait: require('../../assets/characters/nick.png') },
+  { id: 'garrett', name: 'Garrett', portrait: require('../../assets/characters/garrett.png') },
 ];
 
 export function heroById(id: string | null): Hero | null {

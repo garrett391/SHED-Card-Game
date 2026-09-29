@@ -91,7 +91,8 @@ has all three learn from Jake because it reads better.
 
 Shipped: the player chooses which disciple to play as on the campaign setup
 screen (`HEROES` in characters.ts, `heroId` in campaignStore). It replaces
-"Player 1" as the human's name in campaign games. Portraits are pending.
+"Player 1" as the human's name in campaign games, with portraits in
+assets/characters/ (erich.png, nick.png, garrett.png).
 
 Other candidate uses:
 - Interstitial narration voice between nodes ("Nick swore he saw Greg's

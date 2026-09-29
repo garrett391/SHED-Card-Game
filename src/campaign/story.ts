@@ -57,12 +57,12 @@ export const CINEMATICS: Record<string, Cinematic> = {
         'The 2 resets. The 7 keeps it low.\nThe 10 burns it all.\nAnd the 8? The 8 you never see.',
     },
     {
-      image: null,
+      image: require('../../assets/story/its_all_up_here.png'),
       caption:
         'Jake wrote none of it down.\nThe rules lived only in the telling.',
     },
     {
-      image: require('../../assets/story/intro6.png'),
+      image: require('../../assets/story/the_duel.png'),
       caption:
         'Night after night, they lost and learned,\nuntil each could face the master alone.',
     },
