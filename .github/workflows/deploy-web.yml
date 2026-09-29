@@ -1,0 +1,60 @@
+name: Deploy web to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; a newer push supersedes one still in flight.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # Babel strips types without checking them, so a type error would
+      # otherwise still export and deploy.
+      - name: Type check and test
+        run: |
+          npx tsc --noEmit
+          npm test
+
+      - name: Export web build
+        run: npx expo export -p web
+        env:
+          WEB_BASE_URL: /${{ github.event.repository.name }}
+
+      # The export is a single-page app with one index.html. Pages serves
+      # 404.html for any unknown path, so a copy of the app there lets a
+      # refresh or shared link on /game boot the app and route client-side.
+      - run: cp dist/index.html dist/404.html
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
