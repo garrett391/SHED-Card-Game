@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../src/components/Button';
 import { PlayingCard } from '../src/components/PlayingCard';
+import { VariantBadge } from '../src/components/VariantBadge';
 import { theme } from '../src/components/theme';
 import { useGameStore } from '../src/store/gameStore';
 
@@ -67,6 +68,15 @@ export default function SwapScreen() {
     return game.players[activeIdx];
   }, [game, activeIdx]);
 
+  // Auto-reveal for solo human (no pass-and-play privacy needed).
+  const humanCount = game ? game.players.filter((p) => !p.isBot).length : 0;
+
+  useEffect(() => {
+    if (!handRevealed && humanCount <= 1) {
+      revealHand();
+    }
+  }, [handRevealed, humanCount, revealHand]);
+
   if (!game || !activePlayer) {
     return (
       <View style={styles.container}>
@@ -76,7 +86,8 @@ export default function SwapScreen() {
   }
 
   // Show "pass device" gate until current human taps to reveal.
-  if (!handRevealed) {
+  // Skip for solo human vs bots — no one to hide cards from.
+  if (!handRevealed && humanCount > 1) {
     return (
       <View style={styles.container}>
         <View style={styles.gate}>
@@ -135,8 +146,10 @@ export default function SwapScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.who}>{activePlayer.name}'s swap</Text>
+      <VariantBadge config={game.ruleConfig} />
       <Text style={styles.hint}>
         Tap one hand card + one face-up card to swap them. Repeat as needed.
+        {'\n'}This is your only chance before play begins — choose wisely!
       </Text>
 
       <Text style={styles.section}>Face-up (mid-game)</Text>
@@ -158,7 +171,7 @@ export default function SwapScreen() {
         ))}
       </View>
 
-      <Text style={styles.section}>Your hand</Text>
+      <Text style={styles.section}>{activePlayer.name}'s hand</Text>
       <View style={styles.row}>
         {activePlayer.hand.map((c) => (
           <PlayingCard

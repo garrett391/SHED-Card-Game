@@ -19,11 +19,24 @@ export default function HomeScreen() {
 
       <View style={styles.actions}>
         <Button
-          title="New game"
+          title="Campaign"
+          onPress={() => {
+            reset();
+            router.push('/campaign');
+          }}
+        />
+        <Button
+          title="Free play"
+          variant="ghost"
           onPress={() => {
             reset();
             router.push('/setup');
           }}
+        />
+        <Button
+          title="Tutorial"
+          variant="ghost"
+          onPress={() => router.push('/tutorial')}
         />
         <Link href="/rules" asChild>
           <Button title="Rules" variant="ghost" onPress={() => {}} />
@@ -32,7 +45,7 @@ export default function HomeScreen() {
 
       <View style={styles.footerContainer}>
         <Text style={styles.footer}>
-          Long live Jake the Elder.
+          Long live Jake the Elder. 🔒
         </Text>
         <Text style={styles.version}>
           v{appVersion}

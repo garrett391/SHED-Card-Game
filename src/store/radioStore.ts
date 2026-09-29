@@ -2,11 +2,8 @@
  * Radio store — multi-station internet radio.
  *
  * Behavior:
- *   - On native (iOS / Android): autoplay works immediately.
- *   - On web: browsers block autoplay before any user gesture.
- *     We attempt autoplay on init, and if it fails, we register
- *     a one-time click/keydown listener so the very first tap
- *     anywhere on the page (e.g. "New game") starts the stream.
+ *   - Audio starts PAUSED — the user must click play to hear anything.
+ *     This avoids jarring autoplay when someone's volume is up.
  *   - The saxophone toggle in the header controls play/pause on every screen.
  *   - The station name + ▾ opens a picker; tapping a station switches to it
  *     and starts playing (see `setStation`).
@@ -58,12 +55,18 @@ export const STATIONS: Station[] = [
     ],
   },
   {
-    id: 'relaxing-jazz',
-    name: 'Relaxing Jazz',
-    emoji: '🎵',
-    urls: [
-      'http://stream-02-eu.relaxingjazz.com/stream/1/',    
-    ],
+    // Jazz Radio (infomaniak.ch) — Classic jazz.
+    id: 'jazz-radio-classic',
+    name: 'Classic Jazz',
+    emoji: '🎹',
+    urls: ['https://jazz-wr01.ice.infomaniak.ch/jazz-wr01-128.mp3'],
+  },
+  {
+    // Jazz Radio — Cocktail / Happy Hour channel.
+    id: 'jazz-radio-cocktail',
+    name: 'Cocktail Jazz',
+    emoji: '🍸',
+    urls: ['https://jazz-wr14.ice.infomaniak.ch/jazz-wr14-128.mp3'],
   },
   {
     // Radio Paradise "Mellow Mix" — rock-solid, eclectic, perfect background.
@@ -85,20 +88,6 @@ export const STATIONS: Station[] = [
     name: 'Classic Lounge',
     emoji: '🃏',
     urls: ['https://stream.srg-ssr.ch/m/rsj/mp3_128'],
-  },
-  {
-    // Jazz Radio (infomaniak.ch) — Classic jazz.
-    id: 'jazz-radio-classic',
-    name: 'Classic Jazz',
-    emoji: '🎹',
-    urls: ['https://jazz-wr01.ice.infomaniak.ch/jazz-wr01-128.mp3'],
-  },
-  {
-    // Jazz Radio — Cocktail / Happy Hour channel.
-    id: 'jazz-radio-cocktail',
-    name: 'Cocktail Jazz',
-    emoji: '🍸',
-    urls: ['https://jazz-wr14.ice.infomaniak.ch/jazz-wr14-128.mp3'],
   },
   {
     // Jazz Radio — Lounge channel.
@@ -129,16 +118,35 @@ export const STATIONS: Station[] = [
 
 let _sound: Audio.Sound | null = null;
 let _initialized = false;
-/** Tracks the user's *intent* — true means "I want music on". */
-let _wantsToPlay = true;
+/**
+ * Tracks the user's *intent* — true means "I want music on".
+ * The playback-status listener reads it to decide whether to
+ * auto-recover a dropped live stream (see attachRecovery / recoverStream).
+ */
+let _wantsToPlay = false;
+/** Guard so overlapping status callbacks can't kick off parallel reloads. */
+let _recovering = false;
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Try each URL in order; return the first Sound that loads, or null. */
+/**
+ * Try each URL in order; return the first Sound that loads, or null.
+ *
+ * Enforces the HTTPS-on-native invariant in code:
+ * iOS ATS and Android 9+ block cleartext, so a stray http:// URL would fail
+ * with an opaque native error partway through the fallback walk. We skip those
+ * up front on native with a clear log line. (Web is left to the browser, which
+ * applies its own mixed-content policy.)
+ */
 async function loadSound(urls: string[]): Promise<Audio.Sound | null> {
+  const isNative = Platform.OS !== 'web';
   for (const uri of urls) {
+    if (isNative && !uri.startsWith('https://')) {
+      console.warn(`[radio] skipping non-HTTPS stream on ${Platform.OS}: ${uri}`);
+      continue;
+    }
     try {
       const { sound } = await Audio.Sound.createAsync(
         { uri },
@@ -150,6 +158,64 @@ async function loadSound(urls: string[]): Promise<Audio.Sound | null> {
     }
   }
   return null;
+}
+
+/**
+ * Attach a playback-status listener that (a) keeps the store's isPlaying honest
+ * and (b) auto-recovers a dropped live stream. Live radio never ends normally,
+ * so an unloaded+error status while the user still wants sound means the stream
+ * rotted mid-play. Re-attach this every time a new Sound is assigned to _sound.
+ */
+function attachRecovery(
+  sound: Audio.Sound,
+  set: (partial: Partial<RadioStore>) => void,
+  get: () => RadioStore,
+) {
+  sound.setOnPlaybackStatusUpdate((status) => {
+    if (status.isLoaded) {
+      // Correct false→true drift (e.g. after a buffering stall) without
+      // churning state on every progress tick.
+      if (status.isPlaying && !get().isPlaying) set({ isPlaying: true });
+      return;
+    }
+    // Unloaded with an error while the user wanted sound → the stream dropped.
+    if (status.error && _wantsToPlay && !_recovering) {
+      void recoverStream(set, get);
+    }
+  });
+}
+
+/**
+ * One guarded reload+resume of the current station. A single attempt per drop
+ * avoids retry storms on a permanently dead URL: on failure we surface an error
+ * and clear intent, so we won't loop until the user acts again. On success,
+ * normal listening resumes and a *future* drop triggers a fresh single attempt.
+ */
+async function recoverStream(
+  set: (partial: Partial<RadioStore>) => void,
+  get: () => RadioStore,
+) {
+  if (_recovering) return;
+  _recovering = true;
+  const { stationIndex } = get();
+  set({ isLoading: true });
+  try {
+    try { await _sound?.unloadAsync(); } catch { /* already gone */ }
+    _sound = await loadSound(STATIONS[stationIndex].urls);
+    if (_sound && _wantsToPlay) {
+      attachRecovery(_sound, set, get);
+      await _sound.playAsync();
+      set({ isPlaying: true, isLoading: false, loadError: null });
+    } else {
+      _wantsToPlay = false;
+      set({ isPlaying: false, isLoading: false, loadError: 'Stream dropped' });
+    }
+  } catch {
+    _wantsToPlay = false;
+    set({ isPlaying: false, isLoading: false, loadError: 'Stream dropped' });
+  } finally {
+    _recovering = false;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -190,32 +256,10 @@ export const useRadioStore = create<RadioStore>((set, get) => ({
         set({ isLoading: false });
         return;
       }
+      attachRecovery(_sound, set, get);
 
-      // Attempt autoplay.
-      try {
-        await _sound.playAsync();
-        set({ isPlaying: true, isLoading: false });
-      } catch {
-        // Autoplay blocked (expected on web before user gesture).
-        set({ isPlaying: false, isLoading: false });
-
-        if (Platform.OS === 'web') {
-          const resume = async () => {
-            document.removeEventListener('click', resume);
-            document.removeEventListener('keydown', resume);
-            if (_sound && _wantsToPlay) {
-              try {
-                await _sound.playAsync();
-                set({ isPlaying: true });
-              } catch {
-                // Stream may have timed out; silent fail is fine.
-              }
-            }
-          };
-          document.addEventListener('click', resume);
-          document.addEventListener('keydown', resume);
-        }
-      }
+      // Don't autoplay — wait for the user to click play.
+      set({ isPlaying: false, isLoading: false });
     } catch {
       set({ isLoading: false });
     }
@@ -241,6 +285,7 @@ export const useRadioStore = create<RadioStore>((set, get) => ({
         await _sound.unloadAsync();
         _sound = await loadSound(STATIONS[stationIndex].urls);
         if (_sound) {
+          attachRecovery(_sound, set, get);
           await _sound.playAsync();
           _wantsToPlay = true;
           set({ isPlaying: true, isLoading: false, loadError: null });
@@ -283,6 +328,7 @@ export const useRadioStore = create<RadioStore>((set, get) => ({
     try {
       _sound = await loadSound(STATIONS[index].urls);
       if (_sound) {
+        attachRecovery(_sound, set, get);
         await _sound.playAsync();
         _wantsToPlay = true;
         set({ isPlaying: true, isLoading: false });

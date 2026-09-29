@@ -1,13 +1,14 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useEffect, useState } from 'react';
 import { theme } from '../src/components/theme';
 import { useRadioStore, STATIONS } from '../src/store/radioStore';
+import { preloadSfx, setSfxMuted, isSfxMuted } from '../src/audio/sfx';
 
 // ---------------------------------------------------------------------------
-// RadioToggle  (lives in the header of every screen)
+// SettingsButton  (lives in the header of every screen)
 // ---------------------------------------------------------------------------
 //
 //   [🎷]  Relaxing Jazz ▾
@@ -19,98 +20,51 @@ import { useRadioStore, STATIONS } from '../src/store/radioStore';
 // it and starts playing. (Replaces the old janky ⏭ "next station" button.)
 // ---------------------------------------------------------------------------
 
-function RadioToggle() {
+function SettingsButton() {
   const isPlaying = useRadioStore((s) => s.isPlaying);
-  const isLoading = useRadioStore((s) => s.isLoading);
-  const stationIndex = useRadioStore((s) => s.stationIndex);
-  const loadError = useRadioStore((s) => s.loadError);
-  const toggle = useRadioStore((s) => s.toggle);
-  const setStation = useRadioStore((s) => s.setStation);
-
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const station = STATIONS[stationIndex];
-  const isWeb = Platform.OS === 'web';
+  const [open, setOpen] = useState(false);
 
   return (
     <View style={styles.headerRow}>
-      {/* Emoji tap: mobile = open picker, web = play/pause */}
       <Pressable
-        onPress={isWeb ? toggle : () => setPickerOpen(true)}
-        hitSlop={isWeb ? 8 : 12}
+        onPress={() => setOpen(true)}
+        hitSlop={12}
         style={styles.toggleBtn}
-        accessibilityLabel={
-          isWeb
-            ? isPlaying ? `Pause ${station.name}` : `Play ${station.name}`
-            : 'Open radio controls'
-        }
+        accessibilityLabel="Open settings"
         accessibilityRole="button"
       >
-        <Text style={{ fontSize: 20, opacity: isPlaying ? 1 : 0.35 }}>
-          {station.emoji}
-        </Text>
+        <Text style={{ fontSize: 20 }}>⚙️</Text>
+        {/* Tiny now-playing dot keeps radio state glanceable without a
+            second sound button in the header. */}
+        {isPlaying && <Text style={styles.nowPlayingNote}>♪</Text>}
       </Pressable>
-
-      {/* Station name + caret: web only */}
-      {isWeb && (
-        <Pressable
-          onPress={() => setPickerOpen(true)}
-          hitSlop={8}
-          style={styles.pickerBtn}
-          accessibilityLabel="Choose radio station"
-          accessibilityRole="button"
-        >
-          <Text
-            style={[styles.stationName, !isPlaying && styles.stationNameDim]}
-            numberOfLines={1}
-          >
-            {station.name}
-          </Text>
-          <Text style={styles.caret}>▾</Text>
-        </Pressable>
-      )}
-
-      <StationPicker
-        visible={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        currentIndex={stationIndex}
-        isPlaying={isPlaying}
-        isLoading={isLoading}
-        loadError={loadError}
-        onSelect={(i) => {
-          setStation(i);
-          setPickerOpen(false);
-        }}
-        onToggle={toggle}
-      />
+      <SettingsSheet visible={open} onClose={() => setOpen(false)} />
     </View>
   );
 }
 
 // ---------------------------------------------------------------------------
-// StationPicker  (the popout)
+// SettingsSheet  (the popout: sound effects + radio in one place)
 // ---------------------------------------------------------------------------
 
-interface StationPickerProps {
+interface SettingsSheetProps {
   visible: boolean;
   onClose: () => void;
-  currentIndex: number;
-  isPlaying: boolean;
-  isLoading: boolean;
-  loadError: string | null;
-  onSelect: (index: number) => void;
-  onToggle: () => void;
 }
 
-function StationPicker({
-  visible,
-  onClose,
-  currentIndex,
-  isPlaying,
-  isLoading,
-  loadError,
-  onSelect,
-  onToggle,
-}: StationPickerProps) {
+function SettingsSheet({ visible, onClose }: SettingsSheetProps) {
+  const isPlaying = useRadioStore((s) => s.isPlaying);
+  const isLoading = useRadioStore((s) => s.isLoading);
+  const currentIndex = useRadioStore((s) => s.stationIndex);
+  const loadError = useRadioStore((s) => s.loadError);
+  const onToggle = useRadioStore((s) => s.toggle);
+  const setStation = useRadioStore((s) => s.setStation);
+  const onSelect = (i: number) => setStation(i);
+
+  // SFX mute mirrors the module-level flag in sfx.ts; the initial read keeps
+  // it in sync when the sheet remounts.
+  const [sfxMuted, setSfxMutedState] = useState(isSfxMuted());
+
   return (
     <Modal
       visible={visible}
@@ -123,7 +77,32 @@ function StationPicker({
         {/* Inner Pressable swallows taps so they don't hit the backdrop. */}
         <Pressable style={styles.card} onPress={() => {}}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Radio</Text>
+            <Text style={styles.cardTitle}>Settings</Text>
+          </View>
+
+          {/* ── Sound effects ─────────────────────────────────────────── */}
+          <Text style={styles.sectionLabel}>Sound effects</Text>
+          <Pressable
+            onPress={() => {
+              const next = !sfxMuted;
+              setSfxMuted(next);
+              setSfxMutedState(next);
+            }}
+            style={styles.sfxRow}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: !sfxMuted }}
+            accessibilityLabel="Game sound effects"
+          >
+            <Text style={styles.stationEmoji}>{sfxMuted ? '🔇' : '🔊'}</Text>
+            <Text style={styles.sfxLabel}>Card & game sounds</Text>
+            <Text style={[styles.sfxState, !sfxMuted && styles.sfxStateOn]}>
+              {sfxMuted ? 'Off' : 'On'}
+            </Text>
+          </Pressable>
+
+          {/* ── Radio ─────────────────────────────────────────────────── */}
+          <View style={styles.sectionRow}>
+            <Text style={styles.sectionLabel}>Radio</Text>
             <Pressable onPress={onToggle} hitSlop={8} style={styles.playPause}>
               <Text style={styles.playPauseText}>
                 {isLoading ? '…' : isPlaying ? '⏸  Pause' : '▶  Play'}
@@ -182,6 +161,10 @@ export default function RootLayout() {
 
   useEffect(() => {
     init();
+    // Create SFX players up front so the first sound has no load latency.
+    // (Playback itself only ever happens after a user tap, which keeps web
+    // autoplay policies happy.)
+    preloadSfx();
   }, [init]);
 
   return (
@@ -192,11 +175,14 @@ export default function RootLayout() {
           headerStyle: { backgroundColor: theme.color.feltBgDark },
           headerTintColor: theme.color.textOnDark,
           contentStyle: { backgroundColor: theme.color.feltBg },
-          headerRight: () => <RadioToggle />,
+          headerRight: () => <SettingsButton />,
         }}
       >
         <Stack.Screen name="index" options={{ title: 'Shed' }} />
+        <Stack.Screen name="campaign" options={{ title: 'Campaign' }} />
+        <Stack.Screen name="cinematic" options={{ headerShown: false }} />
         <Stack.Screen name="setup" options={{ title: 'Players' }} />
+        <Stack.Screen name="tutorial" options={{ title: 'Tutorial' }} />
         <Stack.Screen name="swap" options={{ title: 'Swap cards' }} />
         <Stack.Screen name="game" options={{ title: 'Shed', headerBackVisible: false }} />
         <Stack.Screen name="game-over" options={{ title: 'Game over', headerBackVisible: false }} />
@@ -216,27 +202,6 @@ const styles = StyleSheet.create({
   toggleBtn: {
     paddingHorizontal: 6,
     paddingVertical: 4,
-  },
-  pickerBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    maxWidth: 150,
-  },
-  stationName: {
-    color: theme.color.accent,
-    fontSize: 12,
-    fontWeight: '600',
-    maxWidth: 120,
-  },
-  stationNameDim: {
-    color: theme.color.textMuted,
-  },
-  caret: {
-    color: theme.color.textMuted,
-    fontSize: 12,
-    marginLeft: 3,
   },
 
   // Popout
@@ -270,6 +235,51 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(255,255,255,0.12)',
+  },
+  nowPlayingNote: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    color: '#f4c430',
+    fontSize: 11,
+  },
+  sectionLabel: {
+    color: '#9aa5a0',
+    fontSize: 12,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginTop: 12,
+    marginBottom: 6,
+    paddingHorizontal: 4,
+  },
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    marginBottom: 6,
+  },
+  sfxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  sfxLabel: {
+    color: '#f5f5f5',
+    fontSize: 15,
+    flex: 1,
+    marginLeft: 10,
+  },
+  sfxState: {
+    color: '#9aa5a0',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  sfxStateOn: {
+    color: '#f4c430',
   },
   cardTitle: {
     color: theme.color.textMuted,

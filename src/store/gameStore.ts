@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { GameEvent, GameState, PlayerConfig } from '../engine/types';
+import { GameEvent, GameState, PlayerConfig, RuleConfig } from '../engine/types';
+import { DEFAULT_RULES } from '../engine/rules';
 import * as engine from '../engine/engine';
 
 interface GameStore {
@@ -8,9 +9,19 @@ interface GameStore {
   selectedCardIds: string[];
   // Privacy: hand is hidden until the current human player taps "I'm ready".
   handRevealed: boolean;
+  // Set when the game was launched from the campaign map (setup passes the
+  // node's preset id). Free play leaves it null — the ruleConfig alone can't
+  // distinguish the two, since free play offers the same presets. Game-over
+  // uses this to show "Continue campaign" / "Try again" instead of the
+  // generic actions.
+  campaignPresetId: string | null;
 
   // lifecycle
-  startGame: (configs: PlayerConfig[], lastManStanding?: boolean) => void;
+  startGame: (
+    configs: PlayerConfig[],
+    ruleConfig?: RuleConfig,
+    campaignPresetId?: string | null,
+  ) => void;
   reset: () => void;
 
   // swap phase
@@ -34,18 +45,28 @@ export const useGameStore = create<GameStore>((set, get) => ({
   recentEvents: [],
   selectedCardIds: [],
   handRevealed: false,
+  campaignPresetId: null,
 
-  startGame: (configs, lastManStanding) => {
-    const game = engine.createGame(configs);
+  startGame: (configs, ruleConfig, campaignPresetId = null) => {
+    const config = ruleConfig ?? DEFAULT_RULES;
+    const game = engine.createGame(configs, config);
     set({
-      game: { ...game, lastManStanding: lastManStanding ?? false },
+      game,
       recentEvents: [],
       selectedCardIds: [],
       handRevealed: false,
+      campaignPresetId,
     });
   },
 
-  reset: () => set({ game: null, recentEvents: [], selectedCardIds: [], handRevealed: false }),
+  reset: () =>
+    set({
+      game: null,
+      recentEvents: [],
+      selectedCardIds: [],
+      handRevealed: false,
+      campaignPresetId: null,
+    }),
 
   swap: (playerIdx, handId, faceUpId) =>
     set((s) =>
@@ -96,10 +117,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const r = engine.playCards(game, game.currentPlayerIndex, selectedCardIds);
     // Keep hand revealed only if the SAME player still holds the turn (e.g. burn).
     const stillSamePlayer = r.state.currentPlayerIndex === prevIdx;
+    // On a rejected play, keep the selection so the player can adjust it
+    // instead of re-tapping everything from scratch.
+    const rejected = r.events.some((e) => e.type === 'playRejected');
     set({
       game: r.state,
       recentEvents: r.events,
-      selectedCardIds: [],
+      selectedCardIds: rejected ? selectedCardIds : [],
       handRevealed: stillSamePlayer ? handRevealed : false,
     });
   },

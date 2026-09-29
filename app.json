@@ -2,19 +2,33 @@
   "expo": {
     "name": "Shed",
     "slug": "shed",
-    "version": "0.1.4 🤔",
+    "version": "0.2.6",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "scheme": "shed",
     "ios": {
-            "supportsTablet": true,
-            "bundleIdentifier": "com.yourname.shed",
-            "infoPlist": {
-              "UIBackgroundModes": ["audio"]
-            }
-          },
-    "android": { "package": "com.yourname.shed", "adaptiveIcon": { "backgroundColor": "#0f3a2d" } },
-    "web": { "bundler": "metro", "output": "single" },
-    "plugins": ["expo-router"]
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourname.shed",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "audio"
+        ]
+      }
+    },
+    "android": {
+      "package": "com.yourname.shed",
+      "adaptiveIcon": {
+        "backgroundColor": "#0f3a2d"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-audio"
+    ]
   }
 }
