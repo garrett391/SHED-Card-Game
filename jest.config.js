@@ -1,8 +1,8 @@
-/** Engine-only Jest config — UI is tested manually for now. */
+/** Engine + bot Jest config — UI is tested manually for now. */
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/src/engine'],
+  roots: ['<rootDir>/src/engine', '<rootDir>/src/ai'],
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: { jsx: 'react-native', esModuleInterop: true, strict: true, target: 'ES2020', moduleResolution: 'node' } }],
   },

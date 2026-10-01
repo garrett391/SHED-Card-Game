@@ -33,7 +33,7 @@ he can rewrite the rules at any time, even mid-game.
 | Node | Variant | Dissenter | The corruption |
 |------|---------------------|--------------------|----------------------------------------|
 | 1 | Jake's Classic | Jake the Elder | None — the pure teaching (tutorial/origin) |
-| 2 | The Spreading | The Farmhand | None — Act II made playable: you're the teacher now |
+| 2 | The Spreading | The Farmhand, the Noble, the Barkeep | None — Act II made playable: you're the teacher now, at a table of three novice pupils |
 | 3 | Justin's Schism | Justin | The first dissenter: "the old rules were too soft" |
 | 4 | Super Tens | Greg the Computer Lord | Cheats, denies, rewrites reality verbally |
 | 5 | Chaos Shed | The Chaos Twins | Chaos for its own sake (future: the joker edition) |

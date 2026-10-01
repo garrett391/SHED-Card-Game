@@ -17,6 +17,9 @@ export type BotAction =
  *       2. Among power cards, prefer transparent > lowerThan > reset > burn.
  *     and play ALL cards of that rank we hold (we want to unload).
  *   - No legal plays → pick up.
+ *
+ * A player with botStyle 'novice' follows the same outline but skips the
+ * rank priority: it plays one legal card, chosen at random.
  */
 export function decideBotAction(state: GameState, playerIdx: number): BotAction {
   const player = state.players[playerIdx];
@@ -40,6 +43,17 @@ export function decideBotAction(state: GameState, playerIdx: number): BotAction 
     byRank.set(c.rank, list);
   }
   if (byRank.size === 0) return { type: 'pickup' };
+
+  // Novice: any one legal card. Three of these plus a human make a table the
+  // human usually wins, which three strategic bots would not. Only seat them
+  // WITH a human in a first-out-wins game, though: playing one card at a time
+  // rarely empties a hand, so novices left to each other (an all-bot table,
+  // or last-man-standing once the human is out) can trade cards for hundreds
+  // of turns, occasionally forever.
+  if (player.botStyle === 'novice') {
+    const legal = Array.from(byRank.values()).flat();
+    return { type: 'play', cardIds: [legal[Math.floor(Math.random() * legal.length)]] };
+  }
 
   // Build a power card priority map from the config.
   // Prefer transparent (skip-like) > lowerThan > reverse > reset > burn.

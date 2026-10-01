@@ -12,15 +12,24 @@ export interface Card {
   suit: Suit;
 }
 
+// How a bot picks among its legal plays. The engine only carries this; it is
+// interpreted by src/ai/bot.ts.
+//   strategic — the default heuristic.
+//   novice    — one legal card at random: never unloads a set, never saves a
+//               power card. For characters who are still learning the game.
+export type BotStyle = 'strategic' | 'novice';
+
 export interface PlayerConfig {
   name: string;
   isBot: boolean;
+  botStyle?: BotStyle; // bots only; omitted = strategic
 }
 
 export interface Player {
   id: number;
   name: string;
   isBot: boolean;
+  botStyle?: BotStyle;
   hand: Card[];      // private cards in hand
   faceUp: Card[];    // mid-game pile (visible to all)
   faceDown: Card[];  // late-game pile (hidden, played at random)

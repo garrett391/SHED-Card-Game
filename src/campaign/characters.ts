@@ -16,9 +16,15 @@
  *
  * END LINES: spoken on the campaign results screen, one pool for when the
  * player beats this character and one for when the character wins.
+ *
+ * PLAY STYLE: `botStyle` sets how the character plays their cards (see
+ * BotStyle in engine/types.ts). Leave it off for the default strategic bot.
+ * Unlike portraits and quips it does NOT follow the name: setup hands it to
+ * the bot only when seeding a campaign table, so a free-play bot renamed
+ * "The Farmhand" gets the face and the lines but plays like any other bot.
  */
 import { ImageSourcePropType } from 'react-native';
-import { Rank, RuleConfig } from '../engine/types';
+import { BotStyle, Rank, RuleConfig } from '../engine/types';
 
 export type ReactionKind =
   | 'selfPickup'
@@ -37,6 +43,8 @@ export interface Character {
   title: string;
   emoji: string;
   portrait: ImageSourcePropType | null;
+  /** How they play. Omitted = strategic. */
+  botStyle?: BotStyle;
   /** Generic table talk after their own unremarkable turns. */
   quips: string[];
   /** Situational lines. Empty pools fall back to generic quips, except
@@ -125,12 +133,18 @@ export const CHARACTERS: Record<string, Character> = {
     title: 'Your first pupil',
     emoji: '🌾',
     portrait: null,
+    botStyle: 'novice',
     quips: [
       'Wait — the 8 goes on ANYTHING?',
       'So the 10 burns the whole pile? The WHOLE pile?',
       'Back home we mostly play snap.',
       'Is it my turn? It feels like my turn.',
       'The noble says this game will never catch on.',
+      'Do the cows count as players? Asking for later.',
+      'Sevens mean small ones next. Sevens mean small ones next...',
+      'Which one was the burny one again?',
+      'I sorted my hand by how much I like them.',
+      "Don't tell the noble, but I think I'm getting good.",
     ],
     reactions: {
       selfPickup: [
@@ -143,6 +157,50 @@ export const CHARACTERS: Record<string, Character> = {
         'Even the teacher carries the pile?',
         'Should... should I not have played that?',
       ],
+    },
+  },
+  noble: {
+    id: 'noble',
+    name: 'The Noble',
+    title: 'Second pupil — insists on going first',
+    emoji: '⚜️',
+    portrait: null,
+    botStyle: 'novice',
+    quips: [
+      'I was assured peasant games were simple. Explain the 8 again.',
+      'In MY house, the highest card goes first.',
+      'The farmhand is NOT allowed to win.',
+      'I shall learn this game, then commission a better one.',
+      'Are the cards aware of who I am?',
+    ],
+    reactions: {
+      selfPickup: [
+        'I am CHOOSING to take these.',
+        'Consider it a tax on the table.',
+        'Outrageous. Whose rule was that?',
+      ],
+      selfBurn: ['Naturally. Nobility burns brightest.', 'I meant to do that. Obviously.'],
+      humanPickup: ['Even teachers pay taxes.', 'How wonderfully common.'],
+    },
+  },
+  barkeep: {
+    id: 'barkeep',
+    name: 'The Barkeep',
+    title: 'Learning between pours',
+    emoji: '🍺',
+    portrait: null,
+    botStyle: 'novice',
+    quips: [
+      'One hand on the cards, one on the taps.',
+      'So a 2 starts us fresh? Like closing time.',
+      "If this catches on, I'm charging table fees.",
+      'Hold on — someone ordered. Where were we?',
+      'The regulars will never believe this game.',
+    ],
+    reactions: {
+      selfPickup: ['Put it on my tab.', "I've spilled worse."],
+      selfBurn: ["That round's on the house!", 'Cleanest table in the county.'],
+      humanPickup: ['Rough night, teacher?', "I'll pour you one after this."],
     },
   },
   justin: {
@@ -271,12 +329,13 @@ export const CHARACTERS: Record<string, Character> = {
 
 /**
  * Which characters host each variant's table. Order matters: these seed the
- * bot slots on setup when arriving from the campaign map. The Chaos Twins
- * are the only two-bot table — you face them together.
+ * bot slots on setup when arriving from the campaign map. Most tables are a
+ * duel; the exceptions are The Spreading (you teach three pupils at once)
+ * and the Chaos Twins (you face them together).
  */
 export const VARIANT_OPPONENTS: Record<string, string[]> = {
   'jake-classic': ['jake'],
-  'the-spreading': ['farmhand'],
+  'the-spreading': ['farmhand', 'noble', 'barkeep'],
   'justins-schism': ['justin'],
   'super-tens': ['greg'],
   'chaos-shed': ['chaos-twin-a', 'chaos-twin-b'],

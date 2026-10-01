@@ -51,6 +51,7 @@ export function createGame(
     id: i,
     name: cfg.name,
     isBot: cfg.isBot,
+    botStyle: cfg.botStyle,
     hand: [],
     faceUp: [],
     faceDown: [],

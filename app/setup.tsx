@@ -157,14 +157,14 @@ export default function SetupScreen() {
   // it expands the full list, and choosing a mode snaps it shut again.
   const [modeExpanded, setModeExpanded] = useState(false);
   // Campaign nodes seed their named hosts as the bot lineup (the Chaos
-  // Twins are a two-bot table). Free play keeps the generic default. The
-  // lineup stays fully editable either way.
+  // Twins are a two-bot table), each with their own play style. Free play
+  // keeps the generic default. The lineup stays fully editable either way.
   const [players, setPlayers] = useState<PlayerConfig[]>(() => {
     const cast = campaignPreset ? opponentsFor(campaignPreset) : [];
     if (cast.length > 0) {
       return [
         { name: 'Player 1', isBot: false },
-        ...cast.map((c) => ({ name: c.name, isBot: true })),
+        ...cast.map((c) => ({ name: c.name, isBot: true, botStyle: c.botStyle })),
       ];
     }
     return [

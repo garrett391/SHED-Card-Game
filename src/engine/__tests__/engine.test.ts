@@ -199,6 +199,15 @@ describe('engine', () => {
     expect(g.drawPile).toHaveLength(52 - 9 * 3);
   });
 
+  test("createGame carries each bot's play style onto its player", () => {
+    const g = createGame([
+      { name: 'A', isBot: false },
+      { name: 'B', isBot: true, botStyle: 'novice' },
+      { name: 'C', isBot: true },
+    ]);
+    expect(g.players.map((p) => p.botStyle)).toEqual([undefined, 'novice', undefined]);
+  });
+
   test('finishing swap for all players starts play', () => {
     let g = createGame([
       { name: 'A', isBot: false },
