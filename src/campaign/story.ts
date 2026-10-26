@@ -139,7 +139,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
     {
       image: null,
       caption:
-        'Word of the game had spread like wildfire, faster than the disciples could follow. Wherever it landed, the rules came back stranger.',
+        'Word of the game had spread like wildfire, faster than the disciples could follow. Wherever it landed, the rules came back bent into stranger shapes.',
     },
     {
       image: require('../../assets/story/greg-journey1.jpg'),
