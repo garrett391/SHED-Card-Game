@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Image,
@@ -23,6 +23,7 @@ import {
   opponentsFor,
 } from '../src/campaign/characters';
 import { playSfx } from '../src/audio/sfx';
+import { DEFAULT_PLAYER_NAME, useProfileStore } from '../src/store/profileStore';
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 6;
@@ -95,6 +96,9 @@ function ModeCard({
 export default function SetupScreen() {
   const router = useRouter();
   const startGame = useGameStore((s) => s.startGame);
+  // The name you last played under, remembered on this device.
+  const savedName = useProfileStore((s) => s.playerName);
+  const setPlayerName = useProfileStore((s) => s.setPlayerName);
 
   const completed = useCampaignStore((s) => s.completed);
   // Preselect a variant when arriving from the campaign map. Guarded by the
@@ -120,16 +124,28 @@ export default function SetupScreen() {
     const cast = campaignPreset ? opponentsFor(campaignPreset) : [];
     if (cast.length > 0) {
       return [
-        { name: 'Player 1', isBot: false },
+        { name: savedName, isBot: false },
         ...cast.map((c) => ({ name: c.name, isBot: true, botStyle: c.botStyle })),
       ];
     }
     return [
-      { name: 'Player 1', isBot: false },
+      { name: savedName, isBot: false },
       { name: 'Bot 1', isBot: true },
       { name: 'Bot 2', isBot: true },
     ];
   });
+
+  // The profile loads from storage asynchronously, so on a cold start the
+  // first render may still see the default. Once the saved name arrives,
+  // fill it in, unless the seat was already renamed by hand.
+  useEffect(() => {
+    if (savedName === DEFAULT_PLAYER_NAME) return;
+    setPlayers((ps) =>
+      ps.map((p, i) =>
+        i === 0 && !p.isBot && p.name === DEFAULT_PLAYER_NAME ? { ...p, name: savedName } : p,
+      ),
+    );
+  }, [savedName]);
 
   // ── Scroll-down affordance ──────────────────────────────────────────────
   // The mode picker can fill the whole viewport on mobile, hiding the Players
@@ -178,6 +194,8 @@ export default function SetupScreen() {
               isBot: !p.isBot,
               name: !p.isBot
                 ? nextBotName(ps)
+                : idx === 0
+                ? savedName
                 : DEFAULT_NAMES[idx] ?? `Player ${idx + 1}`,
             }
           : p,
@@ -197,9 +215,16 @@ export default function SetupScreen() {
   const start = () => {
     const preset = RULE_PRESETS[selectedMode] ?? RULE_PRESETS['jake-classic'];
     playSfx('shuffle'); // the deal — fired on the tap itself
+    // Remember the first human's name for next time; a blank name falls
+    // back to the saved one rather than dealing in a nameless player.
+    const lineup = players.map((p, i) =>
+      !p.isBot && !p.name.trim() ? { ...p, name: i === 0 ? savedName : `Player ${i + 1}` } : p,
+    );
+    const firstHuman = lineup.find((p) => !p.isBot);
+    if (firstHuman) setPlayerName(firstHuman.name);
     // campaignPreset threads through to game-over, which uses it to offer
     // "Continue campaign" / "Try again" instead of the free-play actions.
-    startGame(players, preset, campaignPreset);
+    startGame(lineup, preset, campaignPreset);
     router.replace('/swap');
   };
 
