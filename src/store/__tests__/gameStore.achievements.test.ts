@@ -3,11 +3,13 @@ import { useAchievementStore } from '../achievementStore';
 import { decideBotAction } from '../../ai/bot';
 import { getPlaySource } from '../../engine/engine';
 import { getPreset } from '../../campaign/presets';
+import { seedRandom } from '../../testing/seededRandom';
 
 // Plays whole games through the real store (the same calls the table makes),
 // with the bot deciding for the human seat too, and checks that the
 // achievement bookkeeping stays consistent.
 test('achievements are tracked through the game store', () => {
+  const restore = seedRandom(1987); // bot-driven games: see seededRandom.ts
   let games = 0;
   let wins = 0;
   for (let n = 0; n < 60; n++) {
@@ -44,4 +46,5 @@ test('achievements are tracked through the game store', () => {
   // Something got unlocked over 60 games (pickups alone make duelists likely).
   expect(Object.keys(useAchievementStore.getState().unlocked).length).toBeGreaterThan(0);
   expect(wins).toBeGreaterThan(0);
+  restore();
 });

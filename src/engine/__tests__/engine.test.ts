@@ -19,6 +19,7 @@ import {
   getPlayableCardIds,
 } from '../engine';
 import { getPreset } from '../../campaign/presets';
+import { seedRandom } from '../../testing/seededRandom';
 import { createDeck, JOKER_RANK } from '../cards';
 import { decideBotAction } from '../../ai/bot';
 import { Card, GameState, Player, Rank, RuleConfig, Suit } from '../types';
@@ -980,6 +981,7 @@ describe('rule variants', () => {
     });
 
     test('a full Council game finishes: five seats, mixed rules, two decks', () => {
+      const restore = seedRandom(2026); // bot-only games: see seededRandom.ts
       const council = getPreset('the-council');
       for (let n = 0; n < 50; n++) {
         let g = createGame([
@@ -999,6 +1001,7 @@ describe('rule variants', () => {
         }
         expect(g.phase).toBe('gameOver');
       }
+      restore();
     });
   });
 });
