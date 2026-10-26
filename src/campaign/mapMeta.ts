@@ -41,9 +41,9 @@ export const MAP_SCENES: Record<string, MapScene> = {
     tagline: 'Nothing stops the burn.',
   },
   'chaos-shed': {
-    emoji: '🌀',
-    color: '#3aa0c9',
-    tagline: 'The Twins deal in Bangkok. Nobody sleeps.',
+    emoji: '🎪',
+    color: '#8e44ad',
+    tagline: 'Two jokers, two twins, no sense at all.',
   },
 };
 

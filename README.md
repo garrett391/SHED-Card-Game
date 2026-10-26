@@ -22,7 +22,9 @@ A cross-platform (iOS / Android / Web) mobile app for the card game
   and an auto-generated rules summary
 - Interactive **tutorial** and rules reference screen
 - Background **jazz radio** (streamed, HTTPS on native)
-- Pure, fully tested **game engine** (61 engine unit tests, no UI dependency)
+- **Campaign** on an 8-bit overworld map: story cinematics, named hosts
+  with table talk, nodes that unlock in order
+- Pure, fully tested **game engine** (no UI dependency)
 
 ### Not yet (deliberate)
 
@@ -45,14 +47,24 @@ Then:
 - Press **w** for web (opens in browser)
 - Scan the QR with **Expo Go** on a physical device
 
+### Repainting the campaign map
+
+```bash
+pip install pillow
+python3 scripts/map/build_overworld.py
+```
+
+Regenerates `assets/map/` and `src/campaign/overworld.json`. See
+docs/design/campaign-lore.md (The Campaign Map) for how to add a node.
+
 ### Running tests
 
 ```bash
 npm test
 ```
 
-The engine has 61 unit tests covering all power cards, rule variants (reverse
-rank ordered vs wild, Super Tens, Hard Eights, OFCOM triple-8 burn), edge cases
+The engine tests cover all power cards, rule variants (reverse rank ordered
+vs wild, Super Tens, Hard Eights, triple-8 burn, Chaos Shed's jokers), edge cases
 (8 in four-of-a-kind, 10 on 7, face-down failed flips), starting-player logic,
 and full integration scenarios.
 

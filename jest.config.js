@@ -1,9 +1,9 @@
-/** Engine + bot Jest config — UI is tested manually for now. */
+/** Engine, bot and campaign-data Jest config — UI is tested manually for now. */
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/src/engine', '<rootDir>/src/ai'],
+  roots: ['<rootDir>/src/engine', '<rootDir>/src/ai', '<rootDir>/src/campaign'],
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', { tsconfig: { jsx: 'react-native', esModuleInterop: true, strict: true, target: 'ES2020', moduleResolution: 'node' } }],
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: { jsx: 'react-native', esModuleInterop: true, strict: true, target: 'ES2020', moduleResolution: 'node', resolveJsonModule: true } }],
   },
 };

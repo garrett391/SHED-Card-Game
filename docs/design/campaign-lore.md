@@ -39,7 +39,7 @@ ladder until both are known; there are no placeholder nodes.
 | 2 | The Spreading | The Farmhand, the Noble, the Barkeep | None — Act II made playable: you teach three novice pupils | Locked |
 | 3 | Justin's Schism | Justin | Hard 8s: "the old rules were too soft" | Locked |
 | 4 | Super Tens | Greg the Computer Lord | Cheats, denies, rewrites reality verbally | Locked |
-| 5 | Chaos Shed | Gio and Tati, the Chaos Twins | Reverse play and swap hands (see below) | Locked |
+| 5 | Chaos Shed | Gio and Tati, the Chaos Twins | Two jokers: reverse play, swap hands (see below) | Locked |
 | … | (open slots) | | | |
 | Finale | (unnamed) | **Chris the Scribe** | Holds the pen. Rewrites rules MID-GAME. | Not built |
 
@@ -71,27 +71,46 @@ Every per-node table is keyed by preset id, so a node is additive:
 3. Host(s) in `CHARACTERS` and `VARIANT_OPPONENTS` (characters.ts), with
    portraits in assets/characters/.
 4. Optional cinematic in `CINEMATICS` (story.ts).
+5. Its region on the overworld map (see The Campaign Map).
 
 ## Chaos Shed — the Chaos Twins
 
-Gio and Tati. You face them together. The intended mechanic is the joker
-edition: one twin's card reverses the direction of play, the other's swaps
-hands with another player. Jokers aren't in the deck yet, so the 9 stands
-in for the joker. Shipped today: 9s reverse direction. Not built yet: the
-hand swap.
+Gio (red and blue jester) and Tati (purple and green). You face them
+together. Voice: unhinged, Batman's-Joker energy: laughing at the rules,
+delighted by fire, talking to the deck. No real-world location.
 
-## The Campaign Map — art direction
+The joker edition, shipped Oct 2026 (`jokers: true` on the preset):
+- Two jokers per deck (four with two decks): a red joker and a black joker.
+- Both are wild (playable on anything) and invisible on the pile, like the
+  8: the next player plays on whatever is under them.
+- Red joker: reverses the direction of play.
+- Black joker: swaps your hand with another player's, after you draw back
+  up to three. You choose who; a blind face-down flip swaps with the next
+  player. If the joker was your last card you're out and nothing swaps.
+  Swapping for an empty hand can put you out.
+- Bots save jokers for last and steal the smallest hand.
 
-Target look: a Super Mario World-style 8-bit overworld. The three heroes
-travel a path between nodes, and the land around each node is themed for
-its table (Jake's old wood, the moonlit road and the town of The Spreading,
-Justin's chapel, Greg's machine room, the twins' Bangkok). Paths can branch
-toward slots that open later, which keeps the map scalable as nodes are
-added.
+The 9 no longer reverses in Chaos Shed; it was a stand-in until jokers
+existed.
 
-Until that art exists the map is a vertical path of emoji nodes
-(app/campaign.tsx, mapMeta.ts). `MapScene` gains an `image` when node art
-lands.
+## The Campaign Map
+
+Shipped Oct 2026: a Super Mario World-style 8-bit overworld. The three
+heroes stand at the current node and the map climbs from the bottom:
+Jake's old wood (forest and campfire), the village of The Spreading
+(cottages, pond, wheat), Justin's chapel on a plateau with its graveyard,
+Greg's machine keep in an ashland of lava, and Gio and Tati's carnival
+(big top, checker plaza, balloons). Above the last node, a fog bank hides
+the rest of the land, with Chris's tower and quill rising out of it. The
+tower is scenery, not a node.
+
+How it's built: `scripts/map/build_overworld.py` paints the land as pixel
+art and writes `assets/map/overworld.png`, `assets/map/heroes.png` and the
+node positions in `src/campaign/overworld.json`. app/campaign.tsx draws the
+image and lays live node markers over it. To add a node, write a painter
+for its region, add it to `REGIONS` in ladder order and re-run the script
+(a test fails if the map and `PRESET_ORDER` disagree). The fog band moves
+up as regions are added.
 
 ## Chris the Scribe — boss design notes
 
@@ -152,10 +171,8 @@ assets/characters/) are kept for later use, e.g.:
 
 ## Structure notes
 
-- Map direction: the current campaign map climbs UPWARD (start at bottom).
-  A Dante descent inverts this — start at the top, scroll DOWN into the
-  final table. Two-line change in app/campaign.tsx when the framing is
-  locked in.
+- Map direction: the overworld climbs UPWARD (start at the bottom) toward
+  Chris's tower. A Dante-style descent would mean repainting the map.
 - Pre-game dialogue: first visit to each node plays a short
   CharacterDialogue exchange (disciple vs. dissenter) before the deal.
   Beats live in src/campaign/story.ts, keyed by preset id.
