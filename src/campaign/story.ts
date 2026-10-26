@@ -138,13 +138,12 @@ export const CINEMATICS: Record<string, Cinematic> = {
         "Justin's schism had fallen, but there was no peace. Everywhere they went, the teachings were bending into stranger shapes.",
     },
     {
-      // Drawn by scripts/story/build_greg_journey.py.
-      image: require('../../assets/story/greg-journey1.png'),
+      image: require('../../assets/story/greg-journey1.jpg'),
       caption:
         "Beyond Justin's lands, the road changed under their feet. The grass grew in straight lines. The trees began to hum.",
     },
     {
-      image: require('../../assets/story/greg-journey2.png'),
+      image: require('../../assets/story/greg-journey2.jpg'),
       caption:
         'Robot peasants worked fields of copper and wire. None had met Jake, yet all of them knew the rules, as Greg remembered them.',
     },
