@@ -179,6 +179,9 @@ export default function RootLayout() {
           // Back arrows carry no caption. Otherwise iOS labels them with the
           // previous screen's title, which reads as a stray word.
           headerBackButtonDisplayMode: 'minimal',
+          // Centre titles on every platform (iOS already does), so a title
+          // reads as the page's name, not a caption for the back arrow.
+          headerTitleAlign: 'center',
         }}
       >
         <Stack.Screen name="index" options={{ title: 'Shed' }} />
