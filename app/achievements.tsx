@@ -35,7 +35,6 @@ export default function AchievementsScreen() {
               <Text style={styles.desc}>{a.description}</Text>
               <Text style={styles.meta}>
                 {date ? `Unlocked ${new Date(date).toLocaleDateString()}` : 'Locked'}
-                {a.credit ? `  ·  Idea: ${a.credit}` : ''}
               </Text>
             </View>
           </View>
