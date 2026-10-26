@@ -47,10 +47,10 @@ Chris is the finale, however many nodes come before him. The ladder ends
 at Chaos Shed in the shipped game until the next real table is decided.
 
 The ending, for now (Oct 2026): beating the last node plays a short
-"to be continued" cutscene (`ENDING_ID` in story.ts): the fog in the north
-thins, Chris's tower appears, a light in its window, someone writing. Art
+"to be continued" cutscene (`ENDING_ID` in story.ts): the fog at the edge
+of the world thins, Chris's tower appears, a light in its window, someone writing. Art
 is cropped from the overworld by the map script. Afterwards the map header
-reads "All N tables restored. Something stirs in the north…" and tapping
+reads "All N tables restored. Something stirs beyond the fog…" and tapping
 the tower replays the ending. When Chris's table is built, this cutscene
 becomes the lead-in to his node.
 
@@ -178,6 +178,11 @@ assets/characters/) are kept for later use, e.g.:
 - Multiplayer seats when local multiplayer lands (three heroes, three seats).
 
 ## Structure notes
+
+- Cutscene writing: one or two short lines per caption (the Act I intro is
+  the model). Each dissenter's cutscene names the rule you'll face. No
+  compass directions or "above/below" in story text: the map's direction
+  changes, so say "further along the road" or "beyond the fog" instead.
 
 - Map direction: the overworld climbs UPWARD (start at the bottom) toward
   Chris's tower. A Dante-style descent would mean repainting the map.

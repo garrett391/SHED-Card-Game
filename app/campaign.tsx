@@ -95,7 +95,7 @@ export default function CampaignScreen() {
     <View style={styles.container}>
       <Text style={styles.progress}>
         {allDone
-          ? `🏆 All ${doneCount} tables restored. Something stirs in the north…`
+          ? `🏆 All ${doneCount} tables restored. Something stirs beyond the fog…`
           : `${doneCount} / ${PRESET_ORDER.length} tables restored`}
       </Text>
       <View style={styles.viewport} onLayout={onLayout}>
@@ -142,7 +142,7 @@ export default function CampaignScreen() {
                   <Pressable
                     onPress={playEnding}
                     accessibilityRole="button"
-                    accessibilityLabel="The tower in the north. Replay the ending."
+                    accessibilityLabel="The tower beyond the fog. Replay the ending."
                     style={{
                       position: 'absolute',
                       left: (TOWER.x - TOWER.width / 2) * k,

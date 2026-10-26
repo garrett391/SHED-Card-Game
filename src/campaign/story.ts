@@ -79,7 +79,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
     {
       image: require('../../assets/story/teaching1.png'),
       caption:
-        'After they mastered the craft, Jake the elder instructed them to spread the teachings throughout the land.',
+        'Once they had mastered the game, Jake sent them out to carry the teachings to every corner of the land.',
     },
     {
       image: require('../../assets/story/teaching2.png'),
@@ -92,9 +92,9 @@ export const CINEMATICS: Record<string, Cinematic> = {
         'They taught all who would sit.\nFarmhand and noble alike rose from the table changed.',
     },
     {
-      image: null,
+      image: require('../../assets/story/intro6.png'),
       caption:
-        'For a time, there was harmony at every table...',
+        'For a time, there was harmony at every table…',
     },
   ],
 
@@ -102,7 +102,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
   'justins-schism': [
     {
       image: null,
-      caption: 'Just as night must fall for a single star to pierce the veil, every golden age is tethered to the gravity of its own dark age...',
+      caption: 'But every golden age casts a shadow.',
     },
     {
       image: null,
@@ -116,11 +116,12 @@ export const CINEMATICS: Record<string, Cinematic> = {
     {
       image: require('../../assets/story/schism-justin2.png'),
       caption:
-        'He preached that the old rules were too soft, and that HIS way was the only true path.',
+        "He preached that Jake's rules were too soft, and that his way was the only true path.",
     },
     {
       image: require('../../assets/story/schism-justin3.png'),
-      caption: 'The redemption begins at his table, by his design.',
+      caption:
+        'To end the schism, the disciples would have to beat him at his own table, by his own rules.',
     },
   ],
 
@@ -129,22 +130,22 @@ export const CINEMATICS: Record<string, Cinematic> = {
     {
       image: require('../../assets/story/schism-justin-defeated.png'),
       caption:
-        'One false teaching had fallen, yet victory brought no peace. Wherever the disciples traveled, they found the teachings bending into stranger shapes.',
+        "Justin's schism had fallen, but there was no peace. Everywhere they went, the teachings were bending into stranger shapes.",
     },
     {
       image: require('../../assets/story/greg-computer-lord1.png'),
       caption:
-        "Far below Justin's dominion sat another table, where no rule was ever broken—only remembered differently.",
+        'Further along the road sat a table where no rule was ever broken, only remembered differently.',
     },
     {
       image: require('../../assets/story/greg-computer-lord2.png'),
       caption:
-        'Its master was Greg, the Computer Lord. Once a keeper of ancient machines, they say he could make them obey with nothing but brackets and impeccable memory.',
+        'Its master: Greg, the Computer Lord, keeper of ancient machines. They obeyed him through brackets and an impeccable memory.',
     },
     {
       image: null,
       caption:
-        'Greg never admitted to changing the rules. He simply explained, with perfect confidence, that they had always been this way.',
+        'Greg never admitted to changing the rules. He simply explained, with perfect confidence, that 10s had always burned through 7s.',
     },
   ],
 
@@ -172,22 +173,22 @@ export const CINEMATICS: Record<string, Cinematic> = {
     {
       image: null,
       caption:
-        "The twins' laughter faded behind them.\nFor the first time in a long while, every table they had visited played true.",
+        "The twins' laughter faded behind them. For the first time in a long while, every table they had visited played true.",
     },
     {
       image: require('../../assets/story/ending-north.png'),
       caption:
-        'Then the fog in the north began to thin,\nand a tower no map had ever shown rose out of it.',
+        'Then the fog at the edge of the world began to thin, and a tower no map had ever shown rose out of it.',
     },
     {
       image: require('../../assets/story/ending-tower.png'),
       caption:
-        'In its highest window, a single light.\nSomeone up there was writing.',
+        'In its highest window, a single light. Someone up there was writing.',
     },
     {
       image: null,
       caption:
-        'And with every stroke of the quill,\nthe rules somewhere changed a little more.',
+        'And with every stroke of the quill, the rules somewhere changed a little more.',
     },
     {
       image: null,
