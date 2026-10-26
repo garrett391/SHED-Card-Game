@@ -111,7 +111,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
         'But every golden age casts a shadow. Not everyone who learned the game was content to play it as Jake had taught.',
     },
     {
-      image: null,
+      image: require('../../assets/story/schism-theses.jpg'),
       caption: 'Word arrived from a distant land: a table that no longer played true.',
     },
     {
