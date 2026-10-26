@@ -155,27 +155,4 @@ export const CINEMATICS: Record<string, Cinematic> = {
         'They deal in Bangkok, where the 9s run backwards and nobody sleeps. You face them together, or not at all.',
     },
   ],
-
-  // ── Later circles — caption-only drafts until art lands ────────────────
-  'the-69': [
-    {
-      image: null,
-      caption:
-        'Nina reads the table upside down. From where she sits, your descent looks like a climb.',
-    },
-  ],
-  'ofcom-standard': [
-    {
-      image: null,
-      caption:
-        'The teachings reached the offices, and the offices did what offices do: laminated them. Trevor has never missed a Thursday.',
-    },
-  ],
-  'backpackers-codex': [
-    {
-      image: null,
-      caption:
-        'Every schism, every corruption, every rule at once — scrawled on a napkin in a Chiang Mai hostel. The final trial.',
-    },
-  ],
 };

@@ -8,8 +8,7 @@ One PNG per character. Spec:
 Expected filenames (match character ids in src/campaign/characters.ts):
 
     jake.png  justin.png  greg.png
-    chaos-twin-a.png  chaos-twin-b.png
-    nina.png  trevor.png  backpacker.png
+    gio.png  tati.png
 
 The three disciples (not currently wired in; kept for future story or
 multiplayer use, see docs/design/campaign-lore.md):

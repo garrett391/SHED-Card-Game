@@ -30,21 +30,68 @@ he can rewrite the rules at any time, even mid-game.
 
 ## The Descent (boss ladder)
 
-| Node | Variant | Dissenter | The corruption |
-|------|---------------------|--------------------|----------------------------------------|
-| 1 | Jake's Classic | Jake the Elder | None — the pure teaching (tutorial/origin) |
-| 2 | The Spreading | The Farmhand, the Noble, the Barkeep | None — Act II made playable: you're the teacher now, at a table of three novice pupils |
-| 3 | Justin's Schism | Justin | The first dissenter: "the old rules were too soft" |
-| 4 | Super Tens | Greg the Computer Lord | Cheats, denies, rewrites reality verbally |
-| 5 | Chaos Shed | The Chaos Twins | Chaos for its own sake (future: the joker edition) |
-| 6 | The 69 | Nina | Inversion — reads everything upside down |
-| 7 | The OFCOM Standard | Trevor | Bureaucratization of the sacred teachings |
-| 8 | The Backpacker's Codex | The Backpacker | Syncretism — every corruption at once. The final trial. |
-| 9 | (new variant, unnamed) | **Chris the Scribe** | Holds the pen. Rewrites rules MID-GAME. |
+Locked nodes are real people and real house rules. Nothing goes on the
+ladder until both are known; there are no placeholder nodes.
 
-Open question: does Chris displace the Backpacker as the finale, or sit
-after them as node 9? Current lean: node 9 — the Codex ("every rule at
-once") is a fitting final exam before facing the one who wrote them.
+| Node | Variant | Host | The corruption | Status |
+|------|---------|------|----------------|--------|
+| 1 | Jake's Classic | Jake the Elder | None — the pure teaching (tutorial/origin) | Locked |
+| 2 | The Spreading | The Farmhand, the Noble, the Barkeep | None — Act II made playable: you teach three novice pupils | Locked |
+| 3 | Justin's Schism | Justin | Hard 8s: "the old rules were too soft" | Locked |
+| 4 | Super Tens | Greg the Computer Lord | Cheats, denies, rewrites reality verbally | Locked |
+| 5 | Chaos Shed | Gio and Tati, the Chaos Twins | Reverse play and swap hands (see below) | Locked |
+| … | (open slots) | | | |
+| Finale | (unnamed) | **Chris the Scribe** | Holds the pen. Rewrites rules MID-GAME. | Not built |
+
+Chris is the finale, however many nodes come before him. The ladder ends
+at Chaos Shed in the shipped game until the next real table is decided.
+
+Removed (Oct 2026): The 69 (Nina), The OFCOM Standard (Trevor) and The
+Backpacker's Codex (the Backpacker) were AI-generated filler from early
+drafting and are gone from the game. The engine flags they used
+(`sixNineReverse`, `tripleTransparentBurns`, `burnRankRestricted`,
+`lastManStanding`) still exist and are tested, so a future real table can
+reuse them. The 69 itself is a real house rule (game-rules-variations.md)
+and is a candidate for a slot if a real host is attached to it.
+
+Candidate material for the open slots (real, from our own notes):
+- The 69: reverse rotation, or the 2-for-1 special.
+- Wild / Tame Jokers.
+- Unforced Play (invented by Christian the Davis?). Possibly Chris's base
+  rule before the pen comes out.
+- The Great Counselor / The Forerunner, Jake's tutor
+  (storyboards/counsel-members.md): epilogue after Chris?
+
+### Adding a node
+
+Every per-node table is keyed by preset id, so a node is additive:
+1. Preset in `RULE_PRESETS` and its id in `PRESET_ORDER` (presets.ts).
+   Order there is the ladder order.
+2. Map scene in `MAP_SCENES` (mapMeta.ts).
+3. Host(s) in `CHARACTERS` and `VARIANT_OPPONENTS` (characters.ts), with
+   portraits in assets/characters/.
+4. Optional cinematic in `CINEMATICS` (story.ts).
+
+## Chaos Shed — the Chaos Twins
+
+Gio and Tati. You face them together. The intended mechanic is the joker
+edition: one twin's card reverses the direction of play, the other's swaps
+hands with another player. Jokers aren't in the deck yet, so the 9 stands
+in for the joker. Shipped today: 9s reverse direction. Not built yet: the
+hand swap.
+
+## The Campaign Map — art direction
+
+Target look: a Super Mario World-style 8-bit overworld. The three heroes
+travel a path between nodes, and the land around each node is themed for
+its table (Jake's old wood, the moonlit road and the town of The Spreading,
+Justin's chapel, Greg's machine room, the twins' Bangkok). Paths can branch
+toward slots that open later, which keeps the map scalable as nodes are
+added.
+
+Until that art exists the map is a vertical path of emoji nodes
+(app/campaign.tsx, mapMeta.ts). `MapScene` gains an `image` when node art
+lands.
 
 ## Chris the Scribe — boss design notes
 
@@ -115,8 +162,6 @@ assets/characters/) are kept for later use, e.g.:
 - Post-game: the node's host speaks one line on the results screen, from
   `endLines` in characters.ts (a win pool and a loss pool). Jake has his;
   every other host still needs theirs.
-- The joker edition (Twin Aek reverses direction, Twin Yee swaps hands)
-  remains foretold for Chaos Shed — Aek's quip already plants it.
 
 ## Open questions
 

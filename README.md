@@ -18,7 +18,7 @@ A cross-platform (iOS / Android / Web) mobile app for the card game
 - Pre-game **swap** screen (each player can trade hand ↔ face-up)
 - Pass-the-device privacy gates so humans don't see each other's hands
 - **Rule variants** — selectable presets (Justin's Schism, Super Tens, Chaos
-  Shed, The 69, OFCOM Standard, the Backpacker's Codex) with a variant badge
+  Shed) with a variant badge
   and an auto-generated rules summary
 - Interactive **tutorial** and rules reference screen
 - Background **jazz radio** (streamed, HTTPS on native)

@@ -63,38 +63,6 @@ export const RULE_PRESETS: Record<string, RuleConfig> = {
     reverseRank: 9,
     reverseRankWild: false,
   },
-
-  'the-69': {
-    ...DEFAULT_RULES,
-    id: 'the-69',
-    name: 'The 69',
-    description: 'Playing a 9 on a 6 reverses direction. A subtle trap for the unwary.',
-    flavorText: 'Some combinations are just meant to be.',
-    sixNineReverse: true,
-  },
-
-  'ofcom-standard': {
-    ...DEFAULT_RULES,
-    id: 'ofcom-standard',
-    name: 'The OFCOM Standard',
-    description: 'Three consecutive 8s burn the pile, just like a 10.',
-    flavorText: 'The unofficial world record holders. They never miss a Thursday.',
-    tripleTransparentBurns: true,
-  },
-
-  'backpackers-codex': {
-    ...DEFAULT_RULES,
-    id: 'backpackers-codex',
-    name: "The Backpacker's Codex",
-    description: 'Every variant at once. 9s reverse, hard 8s, triple 8s burn, 10s restricted on face cards. Last one standing loses.',
-    flavorText: "Written on the back of a hostel napkin in Chiang Mai. If you can win this, you've mastered Shed.",
-    reverseRank: 9,
-    reverseRankWild: false,
-    tripleTransparentBurns: true,
-    hardEights: true,
-    burnRankRestricted: true,
-    lastManStanding: true,
-  },
 };
 
 /** Get a preset by ID, falling back to Jake's Classic. */
@@ -102,14 +70,17 @@ export function getPreset(id: string): RuleConfig {
   return RULE_PRESETS[id] ?? RULE_PRESETS['jake-classic'];
 }
 
-/** All preset IDs in display order. */
+/**
+ * All preset IDs in display order. This is also the campaign ladder: each
+ * one is a node on the map, unlocked by beating the one before it, and free
+ * play offers a variant once its node is beaten. To add a node, add its
+ * preset here plus an entry in MAP_SCENES (mapMeta.ts), VARIANT_OPPONENTS
+ * (characters.ts) and, optionally, CINEMATICS (story.ts).
+ */
 export const PRESET_ORDER: string[] = [
   'jake-classic',
   'the-spreading',
   'justins-schism',
   'super-tens',
   'chaos-shed',
-  'the-69',
-  'ofcom-standard',
-  'backpackers-codex',
 ];

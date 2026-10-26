@@ -566,12 +566,10 @@ describe('rule variants', () => {
       expect(isPowerCard(9, ordered)).toBe(false);
     });
 
-    test('all shipped presets use an ordered (non-wild) reverse rank', () => {
-      for (const id of ['chaos-shed', 'backpackers-codex']) {
-        const preset = getPreset(id);
-        expect(preset.reverseRank).toBe(9);
-        expect(preset.reverseRankWild).toBe(false);
-      }
+    test('Chaos Shed uses an ordered (non-wild) reverse rank', () => {
+      const preset = getPreset('chaos-shed');
+      expect(preset.reverseRank).toBe(9);
+      expect(preset.reverseRankWild).toBe(false);
     });
   });
 
@@ -794,12 +792,18 @@ describe('rule variants', () => {
       expect(off.lastManStanding).toBe(false);
     });
 
-    test("the Backpacker's Codex preset enables lastManStanding end-to-end", () => {
-      const codex = getPreset('backpackers-codex');
-      expect(codex.lastManStanding).toBe(true);
+    test('a stacked config (every variant flag on) enables lastManStanding end-to-end', () => {
+      const stacked = rules({
+        reverseRank: 9,
+        reverseRankWild: false,
+        tripleTransparentBurns: true,
+        hardEights: true,
+        burnRankRestricted: true,
+        lastManStanding: true,
+      });
       const g = createGame(
         [{ name: 'A', isBot: false }, { name: 'B', isBot: false }],
-        codex,
+        stacked,
       );
       expect(g.lastManStanding).toBe(true);
     });

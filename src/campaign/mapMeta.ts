@@ -45,21 +45,6 @@ export const MAP_SCENES: Record<string, MapScene> = {
     color: '#3aa0c9',
     tagline: 'The Twins deal in Bangkok. Nobody sleeps.',
   },
-  'the-69': {
-    emoji: '♻️',
-    color: '#4caf7d',
-    tagline: 'Some combinations are just meant to be.',
-  },
-  'ofcom-standard': {
-    emoji: '🏢',
-    color: '#7f8c9b',
-    tagline: 'They never miss a Thursday.',
-  },
-  'backpackers-codex': {
-    emoji: '🗺️',
-    color: '#c0392b',
-    tagline: 'Everything at once. Written on a napkin in Chiang Mai.',
-  },
 };
 
 /** Fallback for presets without an entry (future-proofing). */
