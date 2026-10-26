@@ -115,7 +115,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
       caption: 'Word arrived from a distant land: a table that no longer played true.',
     },
     {
-      image: require('../../assets/story/schism-justin1.png'),
+      image: require('../../assets/story/schism-justin1.jpg'),
       caption:
         'Justin. First of the dissenters. He believed not even the 8 stood above the law.',
     },
