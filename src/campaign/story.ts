@@ -106,7 +106,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
     },
     {
       image: null,
-      caption: 'Word arrived from the east: a table that no longer played true.',
+      caption: 'Word arrived from a distant land: a table that no longer played true.',
     },
     {
       image: require('../../assets/story/schism-justin1.png'),
