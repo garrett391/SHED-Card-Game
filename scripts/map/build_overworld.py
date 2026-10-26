@@ -335,23 +335,28 @@ def scatter(rng: random.Random, y0: int, y1: int, n: int, stamp, keep_clear: Cle
 def paint_jake(cv: Canvas, y0: int, side: str, rng: random.Random, clear: Clear) -> tuple[int, int]:
     """The old wood where Jake taught: deep forest around a firelit clearing."""
     nx, ny = NODE_X[side], y0 + BAND // 2
-    # clearing: trampled earth, a stump table with cards, the campfire
-    for yy in range(ny - 16, ny + 20):
-        for xx in range(nx - 28, nx + 28):
-            if ((xx - nx) / 28) ** 2 + ((yy - ny - 2) / 18) ** 2 <= 1 and noise(xx, yy, 5, 3) > 0.35:
+    # clearing: trampled earth, a stump table, the campfire.
+    # Props sit beside the node, not below it: the map's label covers the
+    # area under every node.
+    for yy in range(ny - 20, ny + 14):
+        for xx in range(nx - 46, nx + 46):
+            if ((xx - nx) / 46) ** 2 + ((yy - ny + 4) / 16) ** 2 <= 1 and noise(xx, yy, 5, 3) > 0.35:
                 cv.set(xx, yy, R['sand'][2] if noise(xx, yy, 2, 4) > 0.5 else R['sand'][1])
-    sx, sy = nx + 18, ny + 10
-    cv.shadow(sx + 2, sy + 2, 6, 2, 0.65)
-    cv.disc(sx, sy, 5, R['wood'][1])
+    sx, sy = nx - 32, ny + 2
+    cv.shadow(sx + 3, sy + 3, 8, 3, 0.6)
+    cv.disc(sx, sy + 1, 7, INK)
+    cv.disc(sx, sy + 1, 6, R['wood'][0])
+    cv.disc(sx, sy - 1, 6, INK)
     cv.disc(sx, sy - 1, 5, R['wood'][3])
     cv.disc(sx, sy - 1, 3, R['wood'][2])
-    cv.rect(sx - 3, sy - 3, 2, 3, WHITE)
-    cv.set(sx - 2, sy - 2, R['jred'][1])
-    cv.rect(sx + 1, sy - 2, 2, 3, WHITE)
-    cv.set(sx + 1, sy - 1, INK)
-    campfire(cv, nx - 22, ny + 12)
+    cv.disc(sx, sy - 1, 1, R['wood'][1])
+    for r in (4, 2):   # growth rings
+        for a in range(0, 360, 20):
+            cv.set(int(sx + r * math.cos(math.radians(a))), int(sy - 1 + r * math.sin(math.radians(a)) * 0.8),
+                   R['wood'][1])
+    campfire(cv, nx + 32, ny + 2)
     # logs to sit on
-    for lx, ly in [(nx - 30, ny + 4), (nx - 14, ny + 20)]:
+    for lx, ly in [(nx + 22, ny - 10), (nx + 38, ny + 6)]:
         cv.rect(lx, ly, 9, 3, R['wood'][2])
         cv.rect(lx, ly, 9, 1, R['wood'][3])
         cv.outline_rect(lx - 1, ly - 1, 11, 5)
@@ -360,7 +365,8 @@ def paint_jake(cv: Canvas, y0: int, side: str, rng: random.Random, clear: Clear)
         if not clear(mx, my):
             cv.sprite(mx, my, ['.rr.', 'rwrr', 'oooo', '.ww.'],
                       {'r': R['jred'][2], 'w': WHITE, 'o': INK})
-    forest = lambda x, y: clear(x, y) or ((x - nx) / 34) ** 2 + ((y - ny) / 24) ** 2 < 1
+    # tree canopies rise ~20px above their base, so keep bases well below
+    forest = lambda x, y: clear(x, y) or ((x - nx) / 54) ** 2 + ((y - ny - 8) / 32) ** 2 < 1
     scatter(rng, y0 + 18, y0 + BAND - 2, 46,
             lambda x, y: (pine if (x * 7 + y) % 3 else tree)(cv, x, y, 0.9 + (x % 3) * 0.1), forest)
     return nx, ny

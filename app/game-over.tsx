@@ -17,7 +17,6 @@ export default function GameOverScreen() {
   const reset = useGameStore((s) => s.reset);
   const campaignPresetId = useGameStore((s) => s.campaignPresetId);
   const completed = useCampaignStore((s) => s.completed);
-  const seenCinematics = useCampaignStore((s) => s.seenCinematics);
   const lastUnlockedId = useCampaignStore((s) => s.lastUnlockedId);
   const acknowledgeUnlock = useCampaignStore((s) => s.acknowledgeUnlock);
   const unlockedPreset = lastUnlockedId ? RULE_PRESETS[lastUnlockedId] : null;
@@ -94,13 +93,12 @@ export default function GameOverScreen() {
     router.replace(route);
   };
 
-  // Mirrors the map's node onPress: first visit to the next node plays its
-  // cinematic (which flows into setup itself); replays go straight to setup.
+  // Mirrors the map's node onPress: entering the next node plays its
+  // cutscene (which flows into setup itself; Skip is always on screen).
   const continueCampaign = () => {
     if (!nextNodeId) return;
-    const cinematic = CINEMATICS[nextNodeId] && !seenCinematics[nextNodeId];
     departTo({
-      pathname: cinematic ? '/cinematic' : '/setup',
+      pathname: CINEMATICS[nextNodeId] ? '/cinematic' : '/setup',
       params: { preset: nextNodeId },
     });
   };

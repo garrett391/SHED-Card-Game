@@ -10,8 +10,8 @@
  *   - available: unlocked but off the frontier (gap-y progress data)
  *   - locked:    dark marker, 🔒, tagline replaced by an unlock hint
  *
- * Tapping an unlocked node plays its cinematic on the first visit, then
- * goes to setup with that node's preset. Completed nodes stay playable.
+ * Tapping an unlocked node plays its cutscene every time (Skip is always
+ * on screen), then goes to setup with that node's preset. Completed nodes stay playable.
  *
  * Adding a node: paint its region in the map script and re-run it (see the
  * script's header). A test checks every campaign preset has a position.
@@ -51,7 +51,6 @@ const NODE_POS = OVERWORLD.nodes as Record<string, NodePos>;
 export default function CampaignScreen() {
   const router = useRouter();
   const completed = useCampaignStore((s) => s.completed);
-  const seenCinematics = useCampaignStore((s) => s.seenCinematics);
   const scrollRef = useRef<ScrollView>(null);
   const [width, setWidth] = useState(0);
   const [viewportH, setViewportH] = useState(0);
@@ -120,18 +119,11 @@ export default function CampaignScreen() {
                     scene={MAP_SCENES[id] ?? DEFAULT_SCENE}
                     state={stateFor(id)}
                     unlockHint={prevName ? `Beat ${prevName} to unlock` : null}
-                    onReplayStory={
-                      CINEMATICS[id] && seenCinematics[id]
-                        ? () =>
-                            router.push({ pathname: '/cinematic', params: { preset: id } })
-                        : null
-                    }
                     onPress={() => {
-                      // First visit plays the node's cinematic (if it has
-                      // one), which continues to setup itself.
-                      const cinematic = CINEMATICS[id] && !seenCinematics[id];
+                      // Every visit plays the node's cutscene (Skip is on
+                      // screen), which continues to setup itself.
                       router.push({
-                        pathname: cinematic ? '/cinematic' : '/setup',
+                        pathname: CINEMATICS[id] ? '/cinematic' : '/setup',
                         params: { preset: id },
                       });
                     }}
@@ -173,7 +165,6 @@ function MapNode({
   state,
   unlockHint,
   onPress,
-  onReplayStory,
 }: {
   x: number;
   y: number;
@@ -183,7 +174,6 @@ function MapNode({
   state: NodeState;
   unlockHint: string | null;
   onPress: () => void;
-  onReplayStory: (() => void) | null;
 }) {
   const locked = state === 'locked';
   const pulse = useRef(new Animated.Value(1)).current;
@@ -251,17 +241,6 @@ function MapNode({
         <Text style={styles.labelTagline} numberOfLines={2}>
           {locked ? unlockHint ?? 'Locked' : scene.tagline}
         </Text>
-        {onReplayStory && !locked && (
-          <Pressable
-            onPress={onReplayStory}
-            hitSlop={8}
-            style={styles.storyChip}
-            accessibilityRole="button"
-            accessibilityLabel={`Replay ${preset.name} story`}
-          >
-            <Text style={styles.storyChipText}>↺ Story</Text>
-          </Pressable>
-        )}
       </Pressable>
     </>
   );
@@ -333,18 +312,5 @@ const styles = StyleSheet.create({
     color: '#d8d8e0',
     fontSize: 10,
     marginTop: 1,
-  },
-  storyChip: {
-    marginTop: 4,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    borderRadius: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(248,200,48,0.6)',
-  },
-  storyChipText: {
-    color: '#f8c830',
-    fontSize: 10,
-    letterSpacing: 0.5,
   },
 });

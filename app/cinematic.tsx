@@ -5,8 +5,8 @@
  * campaignStore on finish or skip, then replaces to /setup with the same
  * preset so the game flow continues seamlessly.
  *
- * Replays (the map's "↺ Story" chip) run the same flow: after the story,
- * you land on that node's setup, primed to play — backing out is one tap.
+ * Every tap on a map node plays its cutscene; Skip is always available.
+ * `seenCinematics` is still recorded, though nothing reads it right now.
  *
  * Scenes fade in on entry (image + caption together). expo-image renders
  * PNGs and animated GIF/WebP alike, so "simple GIF" scenes need no special
