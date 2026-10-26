@@ -1,22 +1,26 @@
 """
-Build the campaign overworld: an 8-bit, Super Mario World-style map.
+Build the campaign overworld: a 16-bit, Super Mario World-style map.
 
     python3 scripts/map/build_overworld.py
 
 Writes:
-    assets/map/overworld.png  the painted map (pixel art, pre-scaled by SCALE)
-    assets/map/heroes.png     the three disciples as one small sprite
-    src/campaign/overworld.json  map size + each node's position, keyed by
-                                 preset id, read by app/campaign.tsx
+    assets/map/overworld.png     the painted map (pixel art, pre-scaled by SCALE)
+    assets/map/heroes.png        the three disciples as one small sprite
+    src/campaign/overworld.json  map size, hero sprite size and each node's
+                                 position, keyed by preset id; read by
+                                 app/campaign.tsx
 
 The map climbs from the bottom (the first node) to the top. Each node owns a
 horizontal band of land painted in its own theme; above the last band sits
 a fog bank, and above that, Chris's tower in the clouds (scenery, not a
 node).
 
+Style: 16-bit. Every material has a shade ramp (dark → light) and shapes are
+lit from the upper left, outlined, and cast a soft shadow down-right.
+
 To add a node: write a painter for it below, add it to REGIONS in ladder
 order (the order must match PRESET_ORDER in src/campaign/presets.ts; a test
-checks this), then re-run this script.
+checks this), then re-run this script. Output is deterministic (fixed seed).
 
 Requires Pillow (pip install pillow).
 """
@@ -26,52 +30,98 @@ import json
 import math
 import random
 from pathlib import Path
+from typing import Callable
 
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
 
-W = 96            # map width in art pixels
-BAND = 64         # height of one node's region, in art pixels
-TOP = 84          # fog bank + Chris's tower above the last region
-BOTTOM = 10       # sea/shore margin below the first region
-SCALE = 8         # output upscale (nearest neighbour keeps it crisp)
+W = 192           # map width in art pixels
+BAND = 128        # height of one node's region, in art pixels
+TOP = 168         # sky, fog bank and Chris's tower above the last region
+BOTTOM = 20       # shore and sea below the first region
+SCALE = 4         # output upscale (nearest neighbour keeps it crisp)
+NODE_X = {'left': 60, 'right': 132}
 
-# ─── Palette (SNES-ish) ──────────────────────────────────────────────────────
-C = {
-    'sea': (56, 128, 232), 'sea_lt': (120, 184, 248), 'sea_dk': (32, 88, 192),
-    'grass': (104, 200, 72), 'grass_lt': (152, 224, 104), 'grass_dk': (56, 152, 56),
-    'tree': (32, 120, 56), 'tree_lt': (64, 168, 72), 'tree_dk': (16, 80, 40),
-    'trunk': (120, 72, 32),
-    'cliff': (176, 112, 56), 'cliff_dk': (120, 72, 32),
-    'path': (248, 216, 136), 'path_dk': (208, 160, 88),
-    'stone': (168, 168, 176), 'stone_lt': (208, 208, 216), 'stone_dk': (104, 104, 120),
-    'roof': (200, 64, 48), 'roof_dk': (144, 40, 32), 'wall': (240, 224, 192),
-    'wood': (160, 104, 48), 'wood_dk': (112, 64, 24),
-    'window': (248, 232, 96), 'black': (24, 24, 32), 'white': (248, 248, 248),
-    'purple': (128, 64, 176), 'purple_dk': (80, 40, 120), 'purple_lt': (176, 120, 224),
-    'gold': (248, 200, 48),
-    'ash': (88, 80, 80), 'ash_dk': (56, 48, 56), 'lava': (248, 104, 32), 'lava_lt': (248, 184, 56),
-    'screen': (72, 232, 120),
-    'jgreen': (64, 176, 80), 'jpurple': (144, 72, 192), 'jred': (216, 48, 48), 'jblue': (48, 96, 216),
-    'fog': (200, 208, 224), 'fog_lt': (232, 236, 244), 'sky': (120, 136, 176),
-    'night': (40, 40, 72),
-    'skin': (240, 192, 144), 'hair': (72, 48, 32),
+# ─── Palette: shade ramps, darkest first ─────────────────────────────────────
+R = {
+    'grass': [(30, 92, 46), (46, 124, 54), (72, 160, 62), (112, 194, 78), (164, 222, 110)],
+    'leaf': [(14, 50, 38), (24, 82, 46), (40, 118, 54), (70, 156, 62), (122, 194, 86)],
+    'pine': [(10, 44, 40), (18, 70, 50), (30, 102, 62), (58, 138, 74)],
+    'water': [(22, 58, 142), (36, 88, 192), (58, 128, 228), (104, 176, 246), (196, 230, 255)],
+    'sand': [(118, 82, 46), (172, 124, 70), (214, 172, 108), (238, 206, 142), (252, 234, 182)],
+    'rock': [(44, 40, 54), (80, 76, 92), (120, 116, 132), (164, 160, 174), (210, 208, 220)],
+    'cliff': [(64, 38, 26), (104, 66, 38), (146, 98, 54), (184, 136, 80), (214, 172, 112)],
+    'roof': [(92, 26, 24), (142, 40, 34), (192, 66, 48), (226, 112, 82)],
+    'roof_b': [(30, 50, 96), (44, 76, 140), (68, 108, 184), (110, 150, 216)],
+    'wall': [(140, 116, 94), (190, 166, 134), (228, 212, 180), (248, 240, 218)],
+    'wood': [(58, 36, 22), (98, 60, 30), (140, 92, 46), (182, 130, 70)],
+    'purple': [(44, 22, 66), (76, 38, 114), (114, 62, 162), (162, 108, 204), (206, 166, 234)],
+    'ash': [(34, 30, 38), (52, 46, 54), (72, 66, 74), (96, 90, 98)],
+    'lava': [(128, 22, 16), (204, 60, 22), (246, 124, 30), (252, 196, 70), (255, 244, 180)],
+    'jred': [(110, 20, 30), (176, 36, 46), (224, 70, 70), (246, 126, 116)],
+    'jblue': [(22, 36, 104), (38, 66, 176), (76, 114, 228), (130, 166, 246)],
+    'jgreen': [(22, 90, 46), (44, 142, 70), (92, 192, 100), (150, 226, 140)],
+    'jpurple': [(60, 30, 98), (106, 52, 162), (154, 100, 212), (198, 156, 240)],
+    'gold': [(132, 84, 14), (196, 144, 30), (246, 198, 54), (255, 234, 140)],
+    'fog': [(112, 120, 156), (152, 160, 190), (194, 200, 222), (230, 234, 246)],
+    'night': [(14, 12, 26), (28, 26, 48), (44, 42, 72), (66, 64, 100)],
+    'screen': [(16, 72, 40), (40, 160, 80), (96, 236, 132), (196, 255, 210)],
+    'glass': [(150, 40, 60), (60, 90, 200), (240, 200, 60), (80, 170, 90)],
 }
+INK = (18, 16, 26)          # outline
+WHITE = (250, 250, 250)
+SKIN = [(176, 116, 82), (226, 168, 124), (246, 202, 162)]
+HAIR = [(40, 26, 18), (74, 48, 30), (110, 74, 44)]
 
+LIGHT = (-0.55, -0.6, 0.58)   # from the upper left, toward the viewer
+
+
+def mix(a, b, t: float):
+    return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
+
+
+def shade(ramp, v: float):
+    """Pick a ramp colour for brightness v in 0..1."""
+    v = max(0.0, min(0.999, v))
+    return ramp[int(v * len(ramp))]
+
+
+# ─── Value noise (deterministic texture) ─────────────────────────────────────
+
+def _hash(x: int, y: int, seed: int) -> float:
+    h = (x * 374761393 + y * 668265263 + seed * 2147483647) & 0xFFFFFFFF
+    h = ((h ^ (h >> 13)) * 1274126177) & 0xFFFFFFFF
+    return (h ^ (h >> 16)) / 0xFFFFFFFF
+
+
+def noise(x: float, y: float, cell: float, seed: int = 0) -> float:
+    gx, gy = x / cell, y / cell
+    x0, y0 = int(math.floor(gx)), int(math.floor(gy))
+    fx, fy = gx - x0, gy - y0
+    fx, fy = fx * fx * (3 - 2 * fx), fy * fy * (3 - 2 * fy)
+    a = _hash(x0, y0, seed) + (_hash(x0 + 1, y0, seed) - _hash(x0, y0, seed)) * fx
+    b = _hash(x0, y0 + 1, seed) + (_hash(x0 + 1, y0 + 1, seed) - _hash(x0, y0 + 1, seed)) * fx
+    return a + (b - a) * fy
+
+
+# ─── Canvas and shape helpers ────────────────────────────────────────────────
 
 class Canvas:
     def __init__(self, w: int, h: int):
         self.w, self.h = w, h
-        self.img = Image.new('RGB', (w, h), C['sea'])
+        self.img = Image.new('RGB', (w, h), R['water'][1])
         self.px = self.img.load()
 
+    def ok(self, x: int, y: int) -> bool:
+        return 0 <= x < self.w and 0 <= y < self.h
+
     def set(self, x: int, y: int, col) -> None:
-        if 0 <= x < self.w and 0 <= y < self.h:
-            self.px[x, y] = C[col] if isinstance(col, str) else col
+        if self.ok(x, y):
+            self.px[x, y] = col
 
     def get(self, x: int, y: int):
-        return self.px[x, y]
+        return self.px[x, y] if self.ok(x, y) else (0, 0, 0)
 
     def rect(self, x: int, y: int, w: int, h: int, col) -> None:
         for yy in range(y, y + h):
@@ -84,228 +134,531 @@ class Canvas:
                 if (xx - cx) ** 2 + (yy - cy) ** 2 <= r * r:
                     self.set(xx, yy, col)
 
+    def darken(self, x: int, y: int, f: float) -> None:
+        if self.ok(x, y):
+            c = self.px[x, y]
+            self.px[x, y] = (int(c[0] * f), int(c[1] * f), int(c[2] * f * 1.05))
+
+    def tint(self, x: int, y: int, col, t: float) -> None:
+        if self.ok(x, y):
+            self.px[x, y] = mix(self.px[x, y], col, t)
+
+    def shadow(self, cx: float, cy: float, rx: float, ry: float, f: float = 0.7) -> None:
+        """Soft drop shadow: an ellipse that darkens what's under it."""
+        for yy in range(int(cy - ry - 1), int(cy + ry + 2)):
+            for xx in range(int(cx - rx - 1), int(cx + rx + 2)):
+                if ((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2 <= 1:
+                    self.darken(xx, yy, f)
+
+    def glow(self, cx: float, cy: float, r: float, col, strength: float = 0.45) -> None:
+        for yy in range(int(cy - r), int(cy + r + 1)):
+            for xx in range(int(cx - r), int(cx + r + 1)):
+                d = math.hypot(xx - cx, yy - cy) / r
+                if d < 1:
+                    self.tint(xx, yy, col, strength * (1 - d) ** 1.5)
+
+    def blob(self, circles: list[tuple[float, float, float]], ramp, outline=INK,
+             highlight: bool = True) -> None:
+        """Union of spheres, each lit from the upper left, with an outline."""
+        if not circles:
+            return
+        x0 = int(min(c[0] - c[2] for c in circles)) - 2
+        x1 = int(max(c[0] + c[2] for c in circles)) + 2
+        y0 = int(min(c[1] - c[2] for c in circles)) - 2
+        y1 = int(max(c[1] + c[2] for c in circles)) + 2
+
+        def inside(x, y):
+            return any((x - cx) ** 2 + (y - cy) ** 2 <= r * r for cx, cy, r in circles)
+
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                if not inside(x, y):
+                    continue
+                if outline and not (inside(x - 1, y) and inside(x + 1, y)
+                                    and inside(x, y - 1) and inside(x, y + 1)):
+                    self.set(x, y, outline)
+                    continue
+                # light from the circle this pixel sits nearest the top of
+                best = -9.0
+                for cx, cy, r in circles:
+                    d2 = (x - cx) ** 2 + (y - cy) ** 2
+                    if d2 <= r * r:
+                        nx, ny = (x - cx) / r, (y - cy) / r
+                        nz = math.sqrt(max(0.0, 1 - nx * nx - ny * ny))
+                        lit = nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2]
+                        best = max(best, lit)
+                v = 0.5 + best * 0.55
+                # ordered dither between ramp steps for a 16-bit finish
+                v += ((x * 3 + y * 5) % 4 - 1.5) * 0.03
+                self.set(x, y, shade(ramp, v if highlight else min(v, 0.75)))
+
+    def box(self, x: int, y: int, w: int, h: int, ramp, outline=INK) -> None:
+        """A wall: lit left edge, shaded right edge, outline."""
+        for yy in range(y, y + h):
+            for xx in range(x, x + w):
+                t = (xx - x) / max(1, w - 1)
+                col = ramp[-1] if t < 0.15 else ramp[-2] if t < 0.7 else ramp[-3]
+                self.set(xx, yy, col)
+        self.outline_rect(x, y, w, h)
+        _ = outline
+
+    def outline_rect(self, x: int, y: int, w: int, h: int) -> None:
+        for xx in range(x, x + w):
+            self.set(xx, y, INK)
+            self.set(xx, y + h - 1, INK)
+        for yy in range(y, y + h):
+            self.set(x, yy, INK)
+            self.set(x + w - 1, yy, INK)
+
     def sprite(self, x: int, y: int, rows: list[str], key: dict) -> None:
-        """Stamp an ASCII sprite; '.' is transparent."""
         for j, row in enumerate(rows):
             for i, ch in enumerate(row):
                 if ch != '.':
                     self.set(x + i, y + j, key[ch])
 
 
-# ─── Sprites ─────────────────────────────────────────────────────────────────
-TREE = ['.ggg.', 'gGggg', 'ggggd', 'gggdd', '.ddd.', '..t..']
-TREE_KEY = {'g': 'tree', 'G': 'tree_lt', 'd': 'tree_dk', 't': 'trunk'}
+# ─── Props ───────────────────────────────────────────────────────────────────
 
-BUSH = ['.gg.', 'gGgd', '.dd.']
-BUSH_KEY = TREE_KEY
-
-HOUSE = [
-    '...rr...',
-    '..rrrr..',
-    '.rrrrrr.',
-    'RRRRRRRR',
-    '.wwwwww.',
-    '.wyww#w.',
-    '.wyww#w.',
-]
-HOUSE_KEY = {'r': 'roof', 'R': 'roof_dk', 'w': 'wall', 'y': 'window', '#': 'wood_dk'}
-
-ROCK = ['.ss.', 'sSsd', 'sddd']
-ROCK_KEY = {'s': 'stone', 'S': 'stone_lt', 'd': 'stone_dk'}
+def tree(cv: Canvas, x: int, y: int, s: float = 1.0) -> None:
+    """Round broadleaf tree; (x, y) is the base of the trunk."""
+    cv.shadow(x + 3, y + 1, 7 * s, 2.5 * s, 0.62)
+    cv.rect(x - 1, y - int(5 * s), 3, int(5 * s) + 1, R['wood'][1])
+    cv.rect(x - 1, y - int(5 * s), 1, int(5 * s) + 1, R['wood'][2])
+    r = 5.2 * s
+    cv.blob([(x - 3 * s, y - 8 * s, r), (x + 3 * s, y - 8 * s, r), (x, y - 12 * s, r * 1.05)],
+            R['leaf'], outline=R['leaf'][0])
 
 
-def scatter(cv: Canvas, rng: random.Random, y0: int, y1: int, n: int, stamp, keep_clear) -> None:
-    """Drop n decorations in rows y0..y1, skipping anything keep_clear rejects."""
-    tries = 0
-    while n > 0 and tries < n * 40:
-        tries += 1
-        x, y = rng.randrange(6, W - 10), rng.randrange(y0, y1)
-        if keep_clear(x, y):
-            continue
-        stamp(x, y)
-        n -= 1
+def pine(cv: Canvas, x: int, y: int, s: float = 1.0) -> None:
+    """Layered conifer; (x, y) is the base of the trunk."""
+    cv.shadow(x + 3, y + 1, 5 * s, 2 * s, 0.62)
+    cv.rect(x - 1, y - 3, 3, 4, R['wood'][1])
+    h = int(18 * s)
+    for j in range(h):
+        yy = y - 3 - j
+        half = (h - j) * 0.42 + ((j % 6) < 2) * 1.2
+        for xx in range(int(x - half), int(x + half) + 1):
+            edge = xx in (int(x - half), int(x + half)) or (j % 6 == 0)
+            t = (xx - (x - half)) / max(1, 2 * half)
+            col = R['pine'][0] if edge else R['pine'][3] if t < 0.3 else R['pine'][2] if t < 0.6 else R['pine'][1]
+            cv.set(xx, yy, col)
+    cv.set(x, y - 3 - h, R['pine'][0])
+
+
+def bush(cv: Canvas, x: int, y: int) -> None:
+    cv.shadow(x + 2, y + 1, 4, 1.5, 0.65)
+    cv.blob([(x - 2, y - 2, 2.6), (x + 2, y - 2, 2.6), (x, y - 4, 2.8)], R['leaf'], outline=R['leaf'][0])
+
+
+def boulder(cv: Canvas, x: int, y: int, r: float = 3) -> None:
+    cv.shadow(x + 2, y + 1, r + 1, 1.6, 0.65)
+    cv.blob([(x, y - r * 0.6, r), (x + r * 0.7, y - r * 0.3, r * 0.7)], R['rock'])
+
+
+def flower(cv: Canvas, x: int, y: int, col) -> None:
+    cv.set(x, y, col)
+    cv.set(x, y + 1, R['grass'][1])
+
+
+def house(cv: Canvas, x: int, y: int, w: int = 14, roof='roof', chimney: bool = True) -> None:
+    """Cottage; (x, y) is the top-left of the wall."""
+    h = 9
+    cv.shadow(x + w / 2 + 3, y + h, w / 2 + 3, 2.5, 0.65)
+    cv.box(x, y, w, h, R['wall'])
+    # door + windows
+    dx = x + w // 2 - 1
+    cv.rect(dx, y + h - 6, 3, 5, R['wood'][1])
+    cv.set(dx + 2, y + h - 3, R['gold'][2])
+    for wx in (x + 2, x + w - 5):
+        cv.rect(wx, y + 2, 3, 3, R['gold'][3])
+        cv.set(wx, y + 2, R['gold'][1])
+        cv.outline_rect(wx - 1, y + 1, 5, 5)
+    # roof: overhanging, tiled rows lit on the left slope
+    rh = 7
+    for j in range(rh):
+        yy = y - rh + j
+        inset = rh - 1 - j
+        for xx in range(x - 2 + inset, x + w + 2 - inset):
+            mid = x + w / 2
+            ramp = R[roof]
+            col = ramp[3] if xx < mid - 1 else ramp[2] if xx < mid + 1 else ramp[1]
+            if j % 2 == 1 and (xx + j) % 3 == 0:
+                col = ramp[0]
+            if xx in (x - 2 + inset, x + w + 1 - inset) or j == rh - 1:
+                col = INK
+            cv.set(xx, yy, col)
+    if chimney:
+        cx = x + w - 4
+        cv.rect(cx, y - rh - 2, 3, 5, R['rock'][2])
+        cv.outline_rect(cx - 1, y - rh - 3, 5, 6)
+        for k, (ox, oy, r) in enumerate([(1, -6, 1.6), (3, -9, 2.0), (2, -13, 2.4)]):
+            cv.blob([(cx + 1 + ox, y - rh - 3 + oy, r)], R['fog'], outline=None)
+
+
+def campfire(cv: Canvas, x: int, y: int) -> None:
+    cv.glow(x, y - 2, 14, R['lava'][3], 0.35)
+    for i in range(-3, 4):
+        cv.set(x + i, y, R['wood'][1])
+        cv.set(x + i, y - 1 if abs(i) == 3 else y, R['wood'][2])
+    cv.sprite(x - 2, y - 6, ['..a..', '.aba.', 'abcba', '.bcb.', '..b..'],
+              {'a': R['lava'][1], 'b': R['lava'][3], 'c': R['lava'][4]})
+
+
+def gravestone(cv: Canvas, x: int, y: int) -> None:
+    cv.shadow(x + 2, y + 1, 3, 1, 0.7)
+    cv.sprite(x - 2, y - 6, ['.ooo.', 'oabbo', 'oabbo', 'oabbo', 'oabbo', 'ooooo'],
+              {'o': INK, 'a': R['rock'][4], 'b': R['rock'][3]})
 
 
 # ─── Region painters ─────────────────────────────────────────────────────────
 # Each paints the band [y0, y0+BAND) and returns the node position (x, y) in
-# art pixels. `side` is 'left' or 'right': where the node sits in the band.
+# art pixels. `side` is where the node sits; landmarks go on the other side.
+# `clear(x, y)` says whether (x, y) is too near the road or a node to decorate.
 
-def paint_jake(cv: Canvas, y0: int, side: str, rng: random.Random, clear) -> tuple[int, int]:
-    """The old wood where Jake taught: a deep forest round a firelit clearing."""
-    nx = 30 if side == 'left' else 66
-    ny = y0 + BAND // 2
-    for _ in range(70):
-        x, y = rng.randrange(4, W - 8), rng.randrange(y0 + 2, y0 + BAND - 6)
-        if (x + 2 - nx) ** 2 + (y + 3 - ny) ** 2 < 15 ** 2 or clear(x, y):
+Clear = Callable[[int, int], bool]
+
+
+def scatter(rng: random.Random, y0: int, y1: int, n: int, stamp, keep_clear: Clear,
+            x0: int = 14, x1: int = W - 14) -> None:
+    pts = []
+    tries = 0
+    while len(pts) < n and tries < n * 60:
+        tries += 1
+        x, y = rng.randrange(x0, x1), rng.randrange(y0, y1)
+        if keep_clear(x, y) or any(abs(x - px) < 7 and abs(y - py) < 6 for px, py in pts):
             continue
-        cv.sprite(x, y, TREE, TREE_KEY)
-    # clearing: a stump table and a campfire
-    cv.sprite(nx + 9, ny + 4, ['.ww.', 'wWWw', '.ww.'], {'w': 'wood', 'W': 'wood_dk'})
-    cv.sprite(nx - 13, ny + 5, ['.l.', 'lLl', 'www'], {'l': 'lava', 'L': 'lava_lt', 'w': 'wood_dk'})
+        pts.append((x, y))
+    for x, y in sorted(pts, key=lambda p: p[1]):   # back to front
+        stamp(x, y)
+
+
+def paint_jake(cv: Canvas, y0: int, side: str, rng: random.Random, clear: Clear) -> tuple[int, int]:
+    """The old wood where Jake taught: deep forest around a firelit clearing."""
+    nx, ny = NODE_X[side], y0 + BAND // 2
+    # clearing: trampled earth, a stump table with cards, the campfire
+    for yy in range(ny - 16, ny + 20):
+        for xx in range(nx - 28, nx + 28):
+            if ((xx - nx) / 28) ** 2 + ((yy - ny - 2) / 18) ** 2 <= 1 and noise(xx, yy, 5, 3) > 0.35:
+                cv.set(xx, yy, R['sand'][2] if noise(xx, yy, 2, 4) > 0.5 else R['sand'][1])
+    sx, sy = nx + 18, ny + 10
+    cv.shadow(sx + 2, sy + 2, 6, 2, 0.65)
+    cv.disc(sx, sy, 5, R['wood'][1])
+    cv.disc(sx, sy - 1, 5, R['wood'][3])
+    cv.disc(sx, sy - 1, 3, R['wood'][2])
+    cv.rect(sx - 3, sy - 3, 2, 3, WHITE)
+    cv.set(sx - 2, sy - 2, R['jred'][1])
+    cv.rect(sx + 1, sy - 2, 2, 3, WHITE)
+    cv.set(sx + 1, sy - 1, INK)
+    campfire(cv, nx - 22, ny + 12)
+    # logs to sit on
+    for lx, ly in [(nx - 30, ny + 4), (nx - 14, ny + 20)]:
+        cv.rect(lx, ly, 9, 3, R['wood'][2])
+        cv.rect(lx, ly, 9, 1, R['wood'][3])
+        cv.outline_rect(lx - 1, ly - 1, 11, 5)
+    # mushrooms
+    for mx, my in [(nx + 32, ny + 22), (nx - 36, ny - 10), (nx + 8, ny + 26)]:
+        if not clear(mx, my):
+            cv.sprite(mx, my, ['.rr.', 'rwrr', 'oooo', '.ww.'],
+                      {'r': R['jred'][2], 'w': WHITE, 'o': INK})
+    forest = lambda x, y: clear(x, y) or ((x - nx) / 34) ** 2 + ((y - ny) / 24) ** 2 < 1
+    scatter(rng, y0 + 18, y0 + BAND - 2, 46,
+            lambda x, y: (pine if (x * 7 + y) % 3 else tree)(cv, x, y, 0.9 + (x % 3) * 0.1), forest)
     return nx, ny
 
 
-def paint_spreading(cv: Canvas, y0: int, side: str, rng: random.Random, clear) -> tuple[int, int]:
-    """The town that had never known the game: cottages along the road, a pond."""
-    nx = 30 if side == 'left' else 66
-    ny = y0 + BAND // 2
-    far = 64 if side == 'left' else 8
-    for (hx, hy) in [(far, y0 + 6), (far + 12, y0 + 14), (far + 2, y0 + 26), (far + 14, y0 + 36),
-                     (nx - 4 + (14 if side == 'left' else -18), y0 + 4)]:
-        if not clear(hx + 3, hy + 3):
-            cv.sprite(hx, hy, HOUSE, HOUSE_KEY)
-    # pond
-    px = 12 if side == 'left' else 72
-    py = y0 + BAND - 14
-    cv.disc(px + 6, py + 3, 6, 'sea')
-    cv.disc(px + 5, py + 2, 2, 'sea_lt')
-    # wheat field
-    for yy in range(y0 + 46, y0 + 56):
-        for xx in range(far, far + 20):
-            if (xx + yy) % 3 == 0 and not clear(xx, yy):
-                cv.set(xx, yy, 'gold')
-    scatter(cv, rng, y0 + 2, y0 + BAND - 4, 10, lambda x, y: cv.sprite(x, y, BUSH, BUSH_KEY), clear)
+def paint_spreading(cv: Canvas, y0: int, side: str, rng: random.Random, clear: Clear) -> tuple[int, int]:
+    """The town that had never known the game: cottages, a tavern, a pond."""
+    nx, ny = NODE_X[side], y0 + BAND // 2
+    far = 112 if side == 'left' else 16
+    # wheat field with fence
+    fx, fy = far + 4, y0 + 92
+    for yy in range(fy, fy + 22):
+        for xx in range(fx, fx + 52):
+            if not clear(xx, yy):
+                cv.set(xx, yy, R['gold'][2] if (xx + (yy // 2)) % 3 else R['gold'][1] if yy % 2 else R['gold'][3])
+    for xx in range(fx - 2, fx + 54, 4):
+        if not clear(xx, fy - 2):
+            cv.rect(xx, fy - 4, 1, 4, R['wood'][1])
+    for xx in range(fx - 2, fx + 53):
+        if not clear(xx, fy - 3):
+            cv.set(xx, fy - 3, R['wood'][3])
+    # tavern (bigger, blue roof, hanging sign) and cottages
+    houses = [(far + 6, y0 + 22, 14), (far + 30, y0 + 16, 22), (far + 6, y0 + 50, 14),
+              (far + 34, y0 + 58, 14)]
+    for i, (hx, hy, w) in enumerate(houses):
+        house(cv, hx, hy, w, roof='roof_b' if w > 16 else 'roof')
+    tx, ty = houses[1][0], houses[1][1]
+    cv.rect(tx - 4, ty + 2, 1, 6, R['wood'][0])
+    cv.rect(tx - 7, ty + 4, 4, 3, R['wood'][2])
+    cv.set(tx - 6, ty + 5, R['gold'][3])
+    # well
+    wx, wy = far + 26, y0 + 46
+    cv.shadow(wx + 2, wy + 3, 5, 2, 0.65)
+    cv.disc(wx, wy, 4, R['rock'][3])
+    cv.disc(wx, wy, 2.5, R['water'][0])
+    cv.rect(wx - 4, wy - 7, 1, 6, R['wood'][1])
+    cv.rect(wx + 3, wy - 7, 1, 6, R['wood'][1])
+    cv.rect(wx - 5, wy - 8, 10, 2, R['roof'][2])
+    # pond on the near side, under the road's far bank
+    px, py = (18 if side == 'left' else 160), y0 + 104
+    for yy in range(py - 9, py + 10):
+        for xx in range(px - 14, px + 15):
+            d = ((xx - px) / 14) ** 2 + ((yy - py) / 9) ** 2
+            if d <= 1:
+                cv.set(xx, yy, R['water'][3] if d > 0.75 else R['water'][2] if d > 0.35 else R['water'][1])
+            elif d <= 1.25:
+                cv.set(xx, yy, R['sand'][2])
+    for lx, ly in [(px - 5, py - 2), (px + 4, py + 3)]:
+        cv.sprite(lx, ly, ['.gg', 'ggg', 'gg.'], {'g': R['grass'][3]})
+    cv.set(px + 5, py + 3, (240, 160, 200))
+    scatter(rng, y0 + 4, y0 + BAND - 4, 14, lambda x, y: bush(cv, x, y),
+            lambda x, y: clear(x, y) or (far - 4 < x < far + 60))
+    scatter(rng, y0 + 4, y0 + BAND - 4, 18,
+            lambda x, y: flower(cv, x, y, [WHITE, (250, 220, 80), (240, 120, 160)][x % 3]), clear)
     return nx, ny
 
 
-def paint_justin(cv: Canvas, y0: int, side: str, rng: random.Random, clear) -> tuple[int, int]:
+def paint_justin(cv: Canvas, y0: int, side: str, rng: random.Random, clear: Clear) -> tuple[int, int]:
     """Justin's chapel on a raised plateau, the first heretic's seat."""
-    nx = 30 if side == 'left' else 66
-    ny = y0 + BAND // 2
-    hx = 72 if side == 'left' else 24          # plateau centre
-    hy = y0 + 26
-    # plateau: light top, cliff face below (SMW-style raised ground)
-    for yy in range(hy - 15, hy + 18):
-        for xx in range(hx - 20, hx + 21):
-            top = (xx - hx) ** 2 / 400 + (yy - hy) ** 2 / 196 <= 1
-            face = (xx - hx) ** 2 / 400 + (yy - hy - 4) ** 2 / 196 <= 1
+    nx, ny = NODE_X[side], y0 + BAND // 2
+    hx, hy = (144 if side == 'left' else 48), y0 + 54
+    rx, ry, face = 40, 26, 10
+    # plateau: lit top with grass texture, a striped cliff face below
+    for yy in range(hy - ry, hy + ry + face + 1):
+        for xx in range(hx - rx, hx + rx + 1):
+            top = ((xx - hx) / rx) ** 2 + ((yy - hy) / ry) ** 2 <= 1
+            under = ((xx - hx) / rx) ** 2 + ((yy - hy - face) / ry) ** 2 <= 1
             if top:
-                cv.set(xx, yy, 'grass_lt' if (xx + yy) % 7 else 'grass')
-            elif face:
-                cv.set(xx, yy, 'cliff' if (xx % 4) else 'cliff_dk')
-    chapel = [
-        '........g........',
-        '.......ggg.......',
-        '........g........',
-        '.......PPP.......',
-        '.......PyP.......',
-        '.......PPP.......',
-        '......ppppp......',
-        '......pwwwp......',
-        '.....PPPPPPP.....',
-        '....ppppppppp....',
-        '...ppppppppppp...',
-        '..PPPPPPPPPPPPP..',
-        '.wwwwwwwwwwwwwww.',
-        '.wyywwwwwwwwyyww.',
-        '.wyywwwy#ywwyyww.',
-        '.wwwwwww#wwwwwww.',
-        '.wwwwwww#wwwwwww.',
-        '.sssssss#sssssss.',
-    ]
-    cv.sprite(hx - 8, hy - 16, chapel, {'p': 'purple', 'P': 'purple_dk', 'w': 'stone_lt', 'y': 'window',
-                                        '#': 'black', 'g': 'gold', 's': 'stone_dk'})
-    # steps down the cliff face
-    for i in range(6):
-        cv.rect(hx - 2, hy + 2 + i * 2, 5, 1, 'stone_lt')
-        cv.rect(hx - 2, hy + 3 + i * 2, 5, 1, 'stone_dk')
-    # graveyard on the plateau
-    for gx, gy in [(hx - 16, hy - 2), (hx - 12, hy + 2), (hx + 11, hy - 1), (hx + 15, hy + 3)]:
-        cv.sprite(gx, gy, ['.s.', 'sss', '.s.', '.d.'], {'s': 'stone_lt', 'd': 'stone_dk'})
-    off_hill = lambda x, y: clear(x, y) or (x + 2 - hx) ** 2 / 500 + (y + 3 - hy) ** 2 / 400 < 1
-    scatter(cv, rng, y0 + 2, y0 + BAND - 6, 10, lambda x, y: cv.sprite(x, y, TREE, TREE_KEY), off_hill)
+                edge = ((xx - hx) / rx) ** 2 + ((yy - hy) / ry) ** 2 > 0.9
+                v = 0.55 + 0.25 * noise(xx, yy, 4, 9) - (0.2 if edge else 0)
+                cv.set(xx, yy, shade(R['grass'][1:], v))
+            elif under and yy > hy:
+                depth = (yy - hy) / (ry + face)
+                band = (yy + (xx // 5)) % 4 == 0
+                ramp = R['cliff']
+                col = ramp[1] if band else ramp[3] if xx < hx - rx * 0.5 else ramp[2]
+                cv.set(xx, yy, mix(col, ramp[0], depth * 0.4))
+    # outline of the plateau top
+    for yy in range(hy - ry - 1, hy + ry + 2):
+        for xx in range(hx - rx - 1, hx + rx + 2):
+            d = ((xx - hx) / rx) ** 2 + ((yy - hy) / ry) ** 2
+            if 1 < d <= 1.08 and yy <= hy + 4:
+                cv.set(xx, yy, R['grass'][0])
+    # steps cut into the cliff
+    sx = hx - 4
+    for i in range(7):
+        y = hy + ry - 4 + i * 2
+        cv.rect(sx, y, 9, 1, R['rock'][4])
+        cv.rect(sx, y + 1, 9, 1, R['rock'][2])
+    # chapel
+    cx, cy = hx - 13, hy - 10   # wall top-left
+    cv.shadow(cx + 17, cy + 16, 18, 4, 0.62)
+    cv.box(cx, cy, 26, 15, R['wall'])
+    # pointed nave roof
+    for j in range(9):
+        inset = 8 - j
+        for xx in range(cx - 2 + inset, cx + 28 - inset):
+            col = R['purple'][3] if xx < cx + 12 else R['purple'][2] if xx < cx + 15 else R['purple'][1]
+            if (xx + j) % 4 == 0 and j % 2:
+                col = R['purple'][0]
+            if xx in (cx - 2 + inset, cx + 27 - inset):
+                col = INK
+            cv.set(xx, cy - 9 + j, col)
+    # bell tower with spire and cross
+    tx = cx + 9
+    cv.box(tx, cy - 22, 8, 14, R['wall'])
+    cv.rect(tx + 2, cy - 19, 4, 4, INK)
+    cv.rect(tx + 3, cy - 18, 2, 3, R['gold'][2])
+    for j in range(10):
+        half = (j + 1) * 0.45
+        for xx in range(int(tx + 4 - half), int(tx + 4 + half) + 1):
+            col = R['purple'][3] if xx < tx + 4 else R['purple'][1]
+            cv.set(xx, cy - 32 + j, col)
+    cv.rect(tx + 3, cy - 39, 1, 7, R['gold'][2])
+    cv.rect(tx + 1, cy - 37, 5, 1, R['gold'][2])
+    # rose window (stained glass) and arched door
+    rwx, rwy = cx + 13, cy + 5
+    cv.disc(rwx, rwy, 3.5, INK)
+    for k, (ox, oy) in enumerate([(-1, -1), (1, -1), (-1, 1), (1, 1), (0, 0)]):
+        cv.set(rwx + ox, rwy + oy, R['glass'][k % 4])
+    cv.sprite(rwx - 2, cy + 9, ['.ooo.', 'obbbo', 'obbbo', 'obbbo', 'obbbo', 'obbbo'],
+              {'o': INK, 'b': R['wood'][1]})
+    for wx in (cx + 3, cx + 20):
+        cv.sprite(wx, cy + 4, ['.o.', 'oao', 'obo', 'oco', 'ooo'],
+                  {'o': INK, 'a': R['glass'][2], 'b': R['glass'][1], 'c': R['glass'][0]})
+    # graveyard
+    for gx, gy in [(hx - 32, hy - 2), (hx - 25, hy + 6), (hx + 22, hy - 4), (hx + 29, hy + 4),
+                   (hx - 33, hy + 10)]:
+        gravestone(cv, gx, gy)
+    off_hill = lambda x, y: clear(x, y) or ((x - hx) / (rx + 8)) ** 2 + ((y - hy - 4) / (ry + 14)) ** 2 < 1
+    scatter(rng, y0 + 10, y0 + BAND - 2, 16, lambda x, y: tree(cv, x, y), off_hill)
     return nx, ny
 
 
-def paint_greg(cv: Canvas, y0: int, side: str, rng: random.Random, clear) -> tuple[int, int]:
-    """Greg's keep in the ashlands: a machine fortress on a lava field."""
-    nx = 30 if side == 'left' else 66
-    ny = y0 + BAND // 2
-    # scorched ground: an irregular blob of ash centred on the keep's side
-    fx = 60 if side == 'left' else 13
-    acx, acy = fx + 11, y0 + 30
-    for yy in range(y0 - 6, y0 + BAND + 6):
-        for xx in range(0, W):
+def paint_greg(cv: Canvas, y0: int, side: str, rng: random.Random, clear: Clear) -> tuple[int, int]:
+    """Greg's keep in the ashlands: a machine fortress on a field of lava."""
+    nx, ny = NODE_X[side], y0 + BAND // 2
+    kx = 124 if side == 'left' else 24        # keep's left edge
+    acx, acy = kx + 22, y0 + 60
+    # scorched ground: an irregular blob of ash
+    land = (R['grass'] + [R['sand'][2], R['sand'][3], R['sand'][4]])
+    for yy in range(y0 - 10, y0 + BAND + 10):
+        for xx in range(W):
             ang = math.atan2(yy - acy, xx - acx)
-            r = 30 + 4 * math.sin(ang * 3 + 1) + 3 * math.sin(ang * 7)
-            if (xx - acx) ** 2 + ((yy - acy) * 1.1) ** 2 > r * r:
+            r = 60 + 8 * math.sin(ang * 3 + 1) + 6 * math.sin(ang * 7) + 4 * noise(xx, yy, 6, 2)
+            d = math.hypot(xx - acx, (yy - acy) * 1.15)
+            if d > r or cv.get(xx, yy) not in land:
                 continue
-            if cv.get(xx, yy) in (C['grass'], C['grass_lt'], C['grass_dk']):
-                cv.set(xx, yy, 'ash_dk' if (xx * 7 + yy * 3) % 13 == 0 else 'ash')
-            elif cv.get(xx, yy) == C['cliff']:
-                cv.set(xx, yy, 'black')
-    # lava pools
-    for lx, ly, r in [(fx + 5, y0 + 44, 4), (fx + 19, y0 + 47, 3), (fx + 2, y0 + 10, 3)]:
-        if not clear(lx, ly):
-            cv.disc(lx, ly, r, 'lava')
-            cv.disc(lx - 1, ly - 1, r / 2, 'lava_lt')
-    keep = [
-        's.s.s.............s.s.s',
-        'sssss.............sssss',
-        'sSgSs.............sSgSs',
-        'sssss.s.s.s.s.s.s.sssss',
-        'sSssSsssssssssssssSssSs',
-        'ssssssSSSSSSSSSSSssssss',
-        'sSssSsSgggggggggSsSssSs',
-        'ssssssSgGgggGgggSssssss',
-        'sSssSsSgggggggggSsSssSs',
-        'ssssssSSSSSSSSSSSssssss',
-        'sSssSssssssssssssSsSssS',
-        'sssssssssbbbbbsssssssss',
-        'sSssSsssbbbbbbbsSssSssS',
-        'ssssssssbbbbbbbssssssss',
-        'ddddddddddddddddddddddd',
-    ]
-    cv.sprite(fx, y0 + 18, keep, {'s': 'stone', 'S': 'stone_dk', 'g': 'screen', 'G': 'white', 'b': 'black', 'd': 'stone_dk'})
-    # smoke stacks venting over the keep
-    for sx in (fx + 7, fx + 14):
-        cv.rect(sx, y0 + 12, 2, 6, 'stone_dk')
-        cv.disc(sx + 1, y0 + 9, 2, 'ash')
-        cv.disc(sx + 2, y0 + 6, 1.5, 'stone')
-    scatter(cv, rng, y0 + 2, y0 + BAND - 4, 12, lambda x, y: cv.sprite(x, y, ROCK, ROCK_KEY), clear)
+            if d > r - 3:
+                cv.set(xx, yy, mix(cv.get(xx, yy), R['ash'][2], 0.6))
+            else:
+                v = noise(xx, yy, 3, 8)
+                cv.set(xx, yy, shade(R['ash'], 0.2 + v * 0.6))
+                if v > 0.82:
+                    cv.set(xx, yy, R['lava'][1])   # embers in the cracks
+    # lava pools with bright cores and a glow around them
+    for lx, ly, r in [(kx + 6, y0 + 94, 8), (kx + 40, y0 + 100, 6), (kx + 2, y0 + 22, 5)]:
+        if clear(lx, ly):
+            continue
+        cv.glow(lx, ly, r * 2.2, R['lava'][2], 0.5)
+        for yy in range(int(ly - r), int(ly + r) + 1):
+            for xx in range(int(lx - r * 1.4), int(lx + r * 1.4) + 1):
+                d = ((xx - lx) / (r * 1.4)) ** 2 + ((yy - ly) / r) ** 2
+                if d <= 1:
+                    v = 1 - d + 0.25 * noise(xx, yy, 2, 5)
+                    cv.set(xx, yy, shade(R['lava'], v))
+                elif d <= 1.2:
+                    cv.set(xx, yy, R['ash'][0])
+    # keep: brick walls, corner towers with crenellations, a giant screen
+    W_, H_ = 44, 28
+    ky = y0 + 36
+    cv.shadow(kx + W_ / 2 + 5, ky + H_, W_ / 2 + 6, 4, 0.6)
+    for yy in range(ky, ky + H_):
+        for xx in range(kx, kx + W_):
+            row = (yy - ky) // 3
+            mortar = (yy - ky) % 3 == 2 or (xx + (row % 2) * 3) % 6 == 0
+            t = (xx - kx) / W_
+            col = R['rock'][1] if mortar else R['rock'][3] if t < 0.2 else R['rock'][2]
+            cv.set(xx, yy, col)
+    cv.outline_rect(kx, ky, W_, H_)
+    for tx in (kx - 4, kx + W_ - 8):
+        cv.box(tx, ky - 10, 12, H_ + 10, R['rock'])
+        for i in range(0, 12, 4):
+            cv.rect(tx + i, ky - 13, 3, 3, R['rock'][3])
+            cv.outline_rect(tx + i - 1, ky - 14, 5, 5)
+        cv.rect(tx + 4, ky - 4, 3, 5, R['screen'][2])
+        cv.outline_rect(tx + 3, ky - 5, 5, 7)
+    for i in range(0, W_ - 8, 5):
+        cv.rect(kx + 8 + i, ky - 3, 3, 3, R['rock'][3])
+        cv.outline_rect(kx + 7 + i, ky - 4, 5, 5)
+    # the screen: green glow, scanlines, a blinking cursor
+    sx, sy = kx + 13, ky + 4
+    cv.rect(sx - 1, sy - 1, 20, 12, INK)
+    for yy in range(sy, sy + 10):
+        for xx in range(sx, sx + 18):
+            cv.set(xx, yy, R['screen'][1] if yy % 2 else R['screen'][0])
+    for i, ln in enumerate([7, 12, 5, 9]):
+        cv.rect(sx + 2, sy + 1 + i * 2, ln, 1, R['screen'][3])
+    cv.rect(sx + 2 + 10, sy + 7, 2, 2, R['screen'][3])
+    cv.glow(sx + 9, sy + 5, 18, R['screen'][2], 0.25)
+    # gate and pipes
+    cv.sprite(kx + W_ // 2 - 4, ky + H_ - 9, ['.oooooo.', 'oaaaaaao', 'oabababo', 'oabababo',
+                                             'oabababo', 'oabababo', 'oabababo', 'oabababo', 'oooooooo'],
+              {'o': INK, 'a': R['wood'][1], 'b': R['wood'][0]})
+    for px in (kx + 10, kx + 34):
+        cv.rect(px, ky - 18, 4, 18, R['rock'][1])
+        cv.rect(px, ky - 18, 1, 18, R['rock'][3])
+        for k, (ox, oy, r) in enumerate([(2, -22, 2.5), (5, -27, 3.2), (3, -33, 3.8)]):
+            cv.blob([(px + ox, ky + oy, r)], R['ash'], outline=None)
+    scatter(rng, y0 + 4, y0 + BAND - 4, 16, lambda x, y: boulder(cv, x, y, 2.5 + (x % 2)), clear)
     return nx, ny
 
 
-def paint_chaos(cv: Canvas, y0: int, side: str, rng: random.Random, clear) -> tuple[int, int]:
-    """Gio and Tati's carnival: a striped big top, balloons and a checker plaza."""
-    nx = 30 if side == 'left' else 66
-    ny = y0 + BAND // 2
-    tx = 60 if side == 'left' else 6
+def paint_chaos(cv: Canvas, y0: int, side: str, rng: random.Random, clear: Clear) -> tuple[int, int]:
+    """Gio and Tati's carnival: a striped big top, a checker plaza, balloons."""
+    nx, ny = NODE_X[side], y0 + BAND // 2
+    tw = 50
+    tx = 108 if side == 'left' else 34       # tent's left edge
     # checker plaza in front of the big top
-    pcx, pcy = tx + 10, y0 + 30
-    for yy in range(pcy - 9, pcy + 10):
-        for xx in range(pcx - 16, pcx + 17):
-            if (xx - pcx) ** 2 / 256 + (yy - pcy) ** 2 / 81 <= 1:
-                cv.set(xx, yy, 'jpurple' if ((xx // 2) + (yy // 2)) % 2 else 'jgreen')
-    tent = [
-        '..........y..........',
-        '.........rrr.........',
-        '........rrbbr........',
-        '.......rrbbrrb.......',
-        '......rrbbrrbbr......',
-        '.....rrbbrrbbrrb.....',
-        '....rrbbrrbbrrbbr....',
-        '...rrbbrrbbrrbbrrb...',
-        '..rrbbrrbbrrbbrrbbr..',
-        '.ggggggggggggggggggg.',
-        '.rrbbrrbb###bbrrbbrr.',
-        '.rrbbrrbb###bbrrbbrr.',
-        '.rrbbrrbb###bbrrbbrr.',
-        '.rrbbrrbb###bbrrbbrr.',
-    ]
-    cv.sprite(tx, y0 + 12, tent, {'r': 'jred', 'b': 'jblue', 'g': 'gold', 'y': 'gold', '#': 'black'})
+    pcx, pcy = tx + tw // 2, y0 + 78
+    for yy in range(pcy - 18, pcy + 19):
+        for xx in range(pcx - 30, pcx + 31):
+            d = ((xx - pcx) / 30) ** 2 + ((yy - pcy) / 18) ** 2
+            if d <= 1:
+                odd = ((xx // 4) + (yy // 3)) % 2
+                ramp = R['jpurple'] if odd else R['jgreen']
+                cv.set(xx, yy, ramp[1] if d > 0.85 else ramp[2])
+            elif d <= 1.1:
+                cv.set(xx, yy, R['gold'][1])
+    # the big top: striped body, conical roof lit from the left, pennants
+    by, bh = y0 + 44, 18
+    cv.shadow(tx + tw / 2 + 4, by + bh, tw / 2 + 6, 4, 0.6)
+    for yy in range(by, by + bh):
+        for xx in range(tx, tx + tw):
+            stripe = ((xx - tx) // 4) % 2
+            ramp = R['jred'] if stripe else R['jblue']
+            t = (xx - tx) / tw
+            cv.set(xx, yy, ramp[3] if t < 0.15 else ramp[2] if t < 0.65 else ramp[1])
+    cv.outline_rect(tx, by, tw, bh)
+    door = tx + tw // 2 - 5
+    for yy in range(by + 4, by + bh):
+        half = min(5, (yy - by - 4) * 0.6 + 1)
+        for xx in range(int(door + 5 - half), int(door + 5 + half)):
+            cv.set(xx, yy, INK)
+    apex = (tx + tw // 2, y0 + 14)
+    for yy in range(apex[1], by):
+        frac = (yy - apex[1]) / (by - apex[1])
+        half = frac * (tw / 2 + 3)
+        for xx in range(int(apex[0] - half), int(apex[0] + half) + 1):
+            ang = (xx - apex[0]) / max(1, half)
+            seg = int((ang + 1) * 5) % 2
+            ramp = R['jred'] if seg else R['jblue']
+            col = ramp[3] if ang < -0.4 else ramp[2] if ang < 0.3 else ramp[1]
+            if xx in (int(apex[0] - half), int(apex[0] + half)):
+                col = INK
+            cv.set(xx, yy, col)
+    for xx in range(tx - 3, tx + tw + 3):
+        cv.set(xx, by - 1, R['gold'][2] if xx % 3 else R['gold'][0])
+    cv.rect(apex[0], apex[1] - 8, 1, 8, INK)
+    cv.sprite(apex[0] + 1, apex[1] - 8, ['aaa', 'aa.', 'a..'], {'a': R['jgreen'][2]})
+    # bunting strung from the tent to a pole
+    pole = tx + tw + 8 if side == 'left' else tx - 8
+    cv.rect(pole, y0 + 26, 1, 22, INK)
+    for i in range(13):
+        t = i / 12
+        x = int(apex[0] + (pole - apex[0]) * t)
+        y = int(apex[1] + 4 + (y0 + 26 - apex[1] - 4) * t + math.sin(t * math.pi) * 6)
+        cv.set(x, y, INK)
+        if i % 2:
+            cv.sprite(x - 1, y + 1, ['abc', '.b.'],
+                      {'a': R['jred'][2], 'b': [R['jgreen'][2], R['gold'][2], R['jpurple'][2]][i % 3],
+                       'c': R['jblue'][2]})
     # balloons on strings
-    for bx, by, col in [(tx - 3, y0 + 8, 'jgreen'), (tx + 21, y0 + 6, 'jpurple'),
-                        (tx + 1, y0 + 42, 'jred'), (tx + 16, y0 + 44, 'gold')]:
-        if not clear(bx, by):
-            cv.sprite(bx, by, ['.cc.', 'cCcc', 'cccc', '.cc.', '..w.', '.w..', '..w.'],
-                      {'c': col, 'C': 'white', 'w': 'white'})
+    for bx, by2, ramp in [(tx - 6, y0 + 74, 'jred'), (tx + tw + 6, y0 + 58, 'jpurple'),
+                          (tx + 4, y0 + 104, 'gold'), (tx + tw - 4, y0 + 106, 'jgreen')]:
+        if clear(bx, by2):
+            continue
+        for k in range(8):
+            cv.set(bx + (k % 2), by2 + 4 + k, INK)
+        cv.blob([(bx, by2, 3.3)], R[ramp])
+        cv.set(bx - 1, by2 - 1, WHITE)
     # jack-in-the-box
-    jb = 12 if side == 'right' else 78
-    cv.sprite(jb, y0 + 50, ['.p.', 'pPp', 'g.g', 'ggg', 'GGG'],
-              {'p': 'jpurple', 'P': 'jgreen', 'g': 'gold', 'G': 'wood_dk'})
-    off_plaza = lambda x, y: clear(x, y) or (x + 2 - pcx) ** 2 / 400 + (y + 1 - pcy) ** 2 / 225 < 1
-    scatter(cv, rng, y0 + 2, y0 + BAND - 4, 8, lambda x, y: cv.sprite(x, y, BUSH, BUSH_KEY), off_plaza)
+    jx, jy = (tx + tw - 2, y0 + 108) if side == 'left' else (tx - 6, y0 + 108)
+    cv.shadow(jx + 5, jy + 9, 6, 2, 0.65)
+    cv.box(jx, jy, 9, 8, R['jpurple'])
+    cv.rect(jx + 2, jy + 2, 5, 4, R['gold'][2])
+    for k in range(5):
+        cv.set(jx + 4 + (k % 2) * 2 - 1, jy - 1 - k, R['rock'][3])
+    cv.blob([(jx + 4.5, jy - 9, 3.2)], R['wall'])
+    cv.set(jx + 3, jy - 9, INK)
+    cv.set(jx + 6, jy - 9, INK)
+    cv.rect(jx + 3, jy - 7, 4, 1, R['jred'][2])
+    cv.sprite(jx + 1, jy - 15, ['a.b.c', '.aabc'], {'a': R['jred'][2], 'b': R['jgreen'][2], 'c': R['jblue'][2]})
+    off_plaza = lambda x, y: clear(x, y) or ((x - pcx) / 44) ** 2 + ((y - pcy + 16) / 40) ** 2 < 1
+    scatter(rng, y0 + 4, y0 + BAND - 4, 12, lambda x, y: bush(cv, x, y), off_plaza)
+    scatter(rng, y0 + 4, y0 + BAND - 4, 16,
+            lambda x, y: cv.set(x, y, [R['jred'][2], R['jgreen'][3], R['gold'][3], R['jpurple'][3]][(x + y) % 4]),
+            off_plaza)   # confetti
     return nx, ny
 
 
@@ -319,95 +672,134 @@ REGIONS = [
 ]
 
 
-# ─── Terrain: island, shore, cliffs ──────────────────────────────────────────
+# ─── Terrain: island, beach, foam, shore cliff ───────────────────────────────
 
-def paint_land(cv: Canvas, h_land: int, rng: random.Random) -> None:
-    """Green land between two wavy coastlines, the sea showing at the edges."""
+def coast(y: int) -> tuple[int, int]:
+    """Left and right edges of the land on row y."""
+    left = 10 + 6 * math.sin(y / 26) + 3 * math.sin(y / 8.3) + 2 * noise(0, y, 6, 11)
+    right = W - (10 + 6 * math.sin(y / 34 + 2) + 3 * math.sin(y / 9.4) + 2 * noise(1, y, 6, 12))
+    return int(left), int(right)
+
+
+def paint_land(cv: Canvas, rng: random.Random) -> None:
+    land_top, land_bottom = TOP - 8, cv.h - BOTTOM
     for y in range(cv.h):
-        wobble_l = int(5 + 3 * math.sin(y / 13) + 1.5 * math.sin(y / 4.1))
-        wobble_r = int(5 + 3 * math.sin(y / 17 + 2) + 1.5 * math.sin(y / 4.7))
+        lft, rgt = coast(y)
         for x in range(cv.w):
-            if y < TOP - 4 or y >= cv.h - BOTTOM:
-                continue
-            if wobble_l <= x < cv.w - wobble_r:
-                g = 'grass'
-                n = (x * 13 + y * 7) % 17
-                if n == 0:
-                    g = 'grass_lt'
-                elif n == 5:
-                    g = 'grass_dk'
-                cv.set(x, y, g)
-            elif x == wobble_l - 1 or x == cv.w - wobble_r:
-                cv.set(x, y, 'cliff')
-    # bottom shore cliff
+            inland = land_top <= y < land_bottom and lft <= x < rgt
+            if inland:
+                d_edge = min(x - lft, rgt - 1 - x)
+                if d_edge < 3:
+                    cv.set(x, y, R['sand'][3] if d_edge else R['sand'][2])
+                    continue
+                v = 0.35 + 0.3 * noise(x, y, 9, 1) + 0.15 * noise(x, y, 3, 2)
+                cv.set(x, y, shade(R['grass'][1:4], v))
+            else:
+                # water: shallow and light near the land, deep further out
+                d = min(abs(x - lft), abs(x - rgt), abs(y - land_bottom) if y >= land_bottom else 99)
+                if y < land_bottom and lft <= x < rgt:
+                    d = 99
+                v = 0.85 - min(d, 16) / 22 + 0.1 * noise(x, y, 5, 6)
+                cv.set(x, y, shade(R['water'][:4], v))
+                if d == 1 or (d == 2 and (x + y) % 3 == 0):
+                    cv.set(x, y, R['water'][4])   # foam
+    # grass detail: tufts and dark speckle
+    for _ in range(cv.w * cv.h // 40):
+        x, y = rng.randrange(cv.w), rng.randrange(land_top, land_bottom)
+        if cv.get(x, y) in R['grass'][1:4] and cv.get(x, y - 1) in R['grass'][1:4]:
+            if rng.random() < 0.5:
+                cv.set(x, y, R['grass'][4])
+                cv.set(x - 1, y + 1, R['grass'][1])
+                cv.set(x + 1, y + 1, R['grass'][1])
+            else:
+                cv.set(x, y, R['grass'][1])
+    # shore cliff along the bottom: the island stands above the sea
     for x in range(cv.w):
-        for d in range(2):
-            y = cv.h - BOTTOM + d
-            if cv.get(x, y - 2) != C['sea']:
-                cv.set(x, y, 'cliff' if d == 0 else 'cliff_dk')
-    # waves
-    for _ in range(cv.w * cv.h // 120):
+        lft, rgt = coast(land_bottom)
+        if not (lft <= x < rgt):
+            continue
+        for d in range(7):
+            band = (x // 6 + d) % 3 == 0
+            col = R['cliff'][1] if band else R['cliff'][3] if d < 2 else R['cliff'][2]
+            cv.set(x, land_bottom + d, mix(col, R['cliff'][0], d / 9))
+        cv.set(x, land_bottom + 7, R['water'][4])
+    # glints on the open sea
+    for _ in range(cv.w * cv.h // 260):
         x, y = rng.randrange(cv.w), rng.randrange(cv.h)
-        if cv.get(x, y) == C['sea'] and x + 2 < cv.w and cv.get(x + 2, y) == C['sea']:
-            cv.set(x, y, 'sea_lt')
-            cv.set(x + 1, y, 'sea_lt')
+        if cv.get(x, y) in R['water'][:3] and cv.get(x + 2, y) in R['water'][:3]:
+            cv.set(x, y, R['water'][3])
+            cv.set(x + 1, y, R['water'][4])
+            cv.set(x + 2, y, R['water'][3])
 
 
 def paint_sky(cv: Canvas, rng: random.Random) -> None:
-    """Fog bank over the unexplored north, Chris's tower rising out of it."""
+    """Night sky over the unexplored north, Chris's tower rising from the fog."""
     for y in range(TOP):
+        t = y / TOP
+        base = mix(R['night'][1], R['fog'][0], t ** 0.8)
         for x in range(cv.w):
-            cv.set(x, y, 'sky')
-    # tower (scenery, not a node): dark spire with one lit window
-    tower = [
-        '.....b.....',
-        '....bbb....',
-        '....bwb....',
-        '...bbbbb...',
-        '...bbybb...',
-        '...bbbbb...',
-        '..bbbbbbb..',
-        '..bbbybbb..',
-        '..bbbbbbb..',
-        '..bbbbbbb..',
-        '.bbbbbbbbb.',
-        '.bbbbybbbb.',
-        '.bbbbbbbbb.',
-        '.bbbbbbbbb.',
-        'bbbbbbbbbbb',
-        'bbbbbbbbbbb',
-        'bbbbbbbbbbb',
-        'bbbbbbbbbbb',
-    ]
-    cv.sprite(W // 2 - 5, 14, tower, {'b': 'night', 'w': 'white', 'y': 'window'})
-    # quill on the spire
-    cv.sprite(W // 2 - 1, 8, ['..w', '.w.', 'w..', 'g..', 'g..', 'g..'], {'w': 'white', 'g': 'gold'})
-    # rolling fog: layered blobs, densest at the bottom where the land begins
-    for _ in range(140):
-        y = int(TOP - 1 - abs(rng.gauss(0, 18)))
-        x = rng.randrange(-6, cv.w + 6)
-        r = rng.uniform(3, 7)
-        if y < 30 and abs(x - W // 2) < 9:
-            continue  # keep the tower visible
-        cv.disc(x, y, r, 'fog')
-        cv.disc(x - 1, y - 1, r * 0.55, 'fog_lt')
-    for x in range(cv.w):  # solid fog skirt over the coastline
-        for y in range(TOP - 8, TOP):
-            if rng.random() < 0.85:
-                cv.set(x, y, 'fog')
+            # banded dither between gradient steps
+            c = mix(base, R['night'][2], 0.25) if (x + y * 2) % 7 == 0 and t < 0.6 else base
+            cv.set(x, y, c)
+    for _ in range(60):
+        x, y = rng.randrange(cv.w), rng.randrange(TOP // 2)
+        cv.set(x, y, WHITE if rng.random() < 0.3 else R['fog'][3])
+    # moon
+    cv.blob([(30, 22, 7)], [(170, 170, 150), (210, 208, 184), (238, 236, 214), (252, 250, 236)])
+    # tower: brick shaft narrowing upward, lit windows, a quill on top
+    cx, base = W // 2, 118
+    for y in range(36, base):
+        half = 9 + (y - 36) * 0.09
+        for x in range(int(cx - half), int(cx + half) + 1):
+            row = y // 3
+            mortar = y % 3 == 0 or (x + (row % 2) * 2) % 5 == 0
+            t = (x - (cx - half)) / (2 * half)
+            col = R['night'][3] if t < 0.2 else R['night'][2] if t < 0.65 else R['night'][1]
+            if mortar:
+                col = R['night'][0]
+            if x in (int(cx - half), int(cx + half)):
+                col = INK
+            cv.set(x, y, col)
+    for y in range(22, 37):     # roof cone
+        half = (y - 22) * 0.75
+        for x in range(int(cx - half), int(cx + half) + 1):
+            cv.set(x, y, R['purple'][2] if x < cx else R['purple'][1])
+    for wy in (48, 66, 84, 100):
+        cv.rect(cx - 2, wy, 4, 6, INK)
+        cv.rect(cx - 1, wy + 1, 2, 4, R['gold'][3] if wy != 66 else R['gold'][2])
+        cv.glow(cx, wy + 3, 9, R['gold'][2], 0.3)
+    # the quill
+    for i in range(12):
+        x, y = cx + 1 + i // 2, 21 - i
+        cv.set(x, y, R['wall'][3])
+        cv.set(x - 1, y, R['wall'][1] if i > 2 else R['gold'][2])
+    cv.rect(cx, 19, 1, 4, R['gold'][1])
+    # rolling fog: shaded cloud puffs, densest where the land begins
+    puffs = []
+    for _ in range(170):
+        y = TOP - 2 - abs(rng.gauss(0, 26))
+        x = rng.uniform(-8, cv.w + 8)
+        if y < 70 and abs(x - cx) < 16:
+            continue      # keep the tower clear
+        puffs.append((x, y, rng.uniform(5, 11)))
+    for x, y, r in sorted(puffs, key=lambda p: p[1]):
+        cv.blob([(x, y, r), (x + r * 0.8, y + 1, r * 0.75)], R['fog'], outline=None)
+    for x in range(cv.w):
+        for y in range(TOP - 10, TOP + 2):
+            if noise(x, y, 4, 13) > 0.25 or y > TOP - 4:
+                cv.set(x, y, R['fog'][2] if (x + y) % 5 else R['fog'][3])
 
 
-# ─── Path ────────────────────────────────────────────────────────────────────
+# ─── Road and node pads ──────────────────────────────────────────────────────
 
 def road_points(nodes: list[tuple[int, int]]) -> list[tuple[float, float]]:
-    """A winding road through every node, bottom to top, then off into the fog."""
+    """A winding road through every node, bottom to top, then into the fog."""
     pts: list[tuple[float, float]] = []
-    chain = [(nodes[0][0], nodes[0][1] + 14)] + nodes + [(W // 2, TOP - 10)]
+    chain = [(nodes[0][0], nodes[0][1] + 30)] + nodes + [(W // 2, TOP - 14)]
     for (x0, y0), (x1, y1) in zip(chain, chain[1:]):
         steps = int(abs(y1 - y0) + abs(x1 - x0)) * 2
         for i in range(steps):
             t = i / steps
-            # ease in/out horizontally so the road leaves each node going up
             e = t * t * (3 - 2 * t)
             pts.append((x0 + (x1 - x0) * e, y0 + (y1 - y0) * t))
     return pts
@@ -415,68 +807,110 @@ def road_points(nodes: list[tuple[int, int]]) -> list[tuple[float, float]]:
 
 def paint_road(cv: Canvas, pts: list[tuple[float, float]]) -> None:
     for x, y in pts:
-        cv.disc(x, y, 3.2, 'path_dk')
+        cv.disc(x + 1, y + 1, 7, R['sand'][0])     # shaded lower-right edge
     for x, y in pts:
-        cv.disc(x, y, 2.2, 'path')
-
-
-def near_road(pts, nodes):
-    road = {(int(x), int(y)) for x, y in pts}
-
-    def clear(x: int, y: int) -> bool:
-        for dx in range(-6, 9):
-            for dy in range(-6, 9):
-                if (x + dx, y + dy) in road:
-                    return True
-        return any((x - nx) ** 2 + (y - ny) ** 2 < 11 ** 2 for nx, ny in nodes)
-    return clear
+        cv.disc(x, y, 6.2, R['sand'][1])
+    for x, y in pts:
+        cv.disc(x, y, 5.2, R['sand'][2])
+    for x, y in pts[::3]:
+        cv.disc(x - 1, y - 1, 2.6, R['sand'][3])   # worn, sunlit middle
+    seen = set()
+    for x, y in pts[::7]:                          # pebbles
+        k = (int(x * 3 + y) % 9)
+        p = (int(x) + k - 4, int(y) + (k % 3) - 1)
+        if p not in seen and k in (1, 5):
+            seen.add(p)
+            cv.set(*p, R['sand'][0])
+            cv.set(p[0] + 1, p[1], R['sand'][4])
 
 
 def node_pad(cv: Canvas, x: int, y: int) -> None:
-    """A flat stone landing under each node marker."""
-    cv.disc(x, y + 1, 7.5, 'path_dk')
-    cv.disc(x, y, 7, 'stone_dk')
-    cv.disc(x, y, 6, 'stone')
-    cv.disc(x - 1, y - 1, 3, 'stone_lt')
+    """A round stone landing under each node marker."""
+    cv.shadow(x + 3, y + 4, 15, 9, 0.6)
+    cv.disc(x, y + 2, 14, R['rock'][1])     # side of the slab
+    for yy in range(y - 13, y + 14):
+        for xx in range(x - 13, x + 14):
+            d = math.hypot(xx - x, yy - y)
+            if d <= 13:
+                ring = d > 11
+                seam = (int(math.atan2(yy - y, xx - x) * 4) % 3 == 0 and 6 < d < 11)
+                v = 0.75 - (xx - x + yy - y) / 60
+                col = R['rock'][1] if ring else R['rock'][2] if seam else shade(R['rock'][2:], v)
+                cv.set(xx, yy, col)
+    for yy in range(y - 14, y + 15):
+        for xx in range(x - 14, x + 15):
+            if 13 < math.hypot(xx - x, yy - y) <= 14:
+                cv.set(xx, yy, INK)
+
+
+def near_road(pts, nodes) -> Clear:
+    road = set()
+    for x, y in pts:
+        for dx in range(-11, 12):
+            for dy in range(-11, 12):
+                road.add((int(x) + dx, int(y) + dy))
+
+    def clear(x: int, y: int) -> bool:
+        if (x, y) in road:
+            return True
+        return any((x - nx) ** 2 + (y - ny) ** 2 < 22 ** 2 for nx, ny in nodes)
+    return clear
 
 
 # ─── Heroes sprite ───────────────────────────────────────────────────────────
 
-def build_heroes() -> Image.Image:
-    """Erich (beard), Garrett (clean-shaven), Nick (glasses), side by side."""
-    hero = [
-        '.hhhh.',
-        'hhhhhh',
-        'hssssh',
-        '.sEsE.',
-        '.ssss.',
-        '.BBBB.',
-        'cccccc',
-        'sccccs',
-        '.cccc.',
-        '.p..p.',
-        '.p..p.',
-    ]
+HERO = [
+    '...oooooo...',
+    '..oHHHHHHo..',
+    '.oHHhhhhHHo.',
+    '.oHhhhhhhHo.',
+    '.oHssssssHo.',
+    '.ossesseso..',
+    '.ossesseso..',
+    '..osssssso..',
+    '..oBBBBBBo..',
+    '...oBmmBo...',
+    '..ooccccoo..',
+    '.occCCCCcco.',
+    'ossccCCccsso',
+    'ossccCCccsso',
+    '.o.ccccccoo.',
+    '..obbbbbbo..',
+    '..obbo.obbo.',
+    '..obbo.obbo.',
+    '..oooo.oooo.',
+]
+
+
+def build_heroes() -> tuple[Image.Image, int, int]:
+    """Erich (beard, blue), Garrett (clean-shaven, red), Nick (glasses, green)."""
     looks = [
-        ({'E': 'black', 'B': 'hair', 'c': 'jblue'}, None),          # Erich: beard
-        ({'E': 'black', 'B': 'skin', 'c': 'jred'}, None),           # Garrett
-        ({'E': 'black', 'B': 'skin', 'c': 'jgreen'}, 'glasses'),    # Nick
+        ('jblue', 'beard', None),
+        ('jred', 'shaven', None),
+        ('jgreen', 'shaven', 'glasses'),
     ]
-    cv = Canvas(6 * 3 + 4, 13)
-    cv.img.paste((0, 0, 0), (0, 0, cv.w, cv.h))
-    img = Image.new('RGBA', (cv.w, cv.h), (0, 0, 0, 0))
+    hw, hh = len(HERO[0]), len(HERO)
+    gap = 2
+    img = Image.new('RGBA', (hw * 3 + gap * 2, hh), (0, 0, 0, 0))
     px = img.load()
-    for n, (over, extra) in enumerate(looks):
-        key = {'h': 'hair', 's': 'skin', 'p': 'black', **over}
-        ox, oy = n * 8, 1
-        for j, row in enumerate(hero):
+    for n, (shirt, face, extra) in enumerate(looks):
+        beard = HAIR[1] if face == 'beard' else SKIN[1]
+        key = {
+            'o': INK, 'H': HAIR[0], 'h': HAIR[2], 's': SKIN[2], 'e': INK,
+            'B': beard, 'm': HAIR[0] if face == 'beard' else SKIN[0],
+            'c': R[shirt][1], 'C': R[shirt][2], 'b': R['wood'][1],
+        }
+        ox = n * (hw + gap)
+        for j, row in enumerate(HERO):
             for i, ch in enumerate(row):
                 if ch != '.':
-                    px[ox + i, oy + j] = C[key[ch]] + (255,)
+                    px[ox + i, j] = key[ch] + (255,)
         if extra == 'glasses':
-            for i in range(0, 6):
-                px[ox + i, oy + 3] = C['black'] + (255,)
-    return img.resize((img.width * SCALE, img.height * SCALE), Image.NEAREST)
+            for i in range(2, 10):
+                px[ox + i, 5] = INK + (255,)
+            px[ox + 4, 6] = (150, 200, 240, 255)
+            px[ox + 7, 6] = (150, 200, 240, 255)
+    return img.resize((img.width * SCALE, img.height * SCALE), Image.NEAREST), img.width * SCALE, img.height * SCALE
 
 
 # ─── Build ───────────────────────────────────────────────────────────────────
@@ -485,38 +919,40 @@ def build() -> None:
     rng = random.Random(1987)  # fixed seed: same map every run
     h = TOP + BAND * len(REGIONS) + BOTTOM
     cv = Canvas(W, h)
-    paint_land(cv, h, rng)
+    paint_land(cv, rng)
 
-    # Node positions first (bottom-up, zigzag), so decorations avoid the road.
     nodes: list[tuple[int, int]] = []
+    sides: list[str] = []
     for i, _ in enumerate(REGIONS):
         y0 = h - BOTTOM - BAND * (i + 1)
         side = 'left' if i % 2 == 0 else 'right'
-        nodes.append((30 if side == 'left' else 66, y0 + BAND // 2))
+        sides.append(side)
+        nodes.append((NODE_X[side], y0 + BAND // 2))
     pts = road_points(nodes)
     clear = near_road(pts, nodes)
 
+    paint_road(cv, pts)          # under everything placed beside it
     placed: dict[str, dict] = {}
     for i, (pid, painter) in enumerate(REGIONS):
         y0 = h - BOTTOM - BAND * (i + 1)
-        side = 'left' if i % 2 == 0 else 'right'
-        x, y = painter(cv, y0, side, rng, clear)
-        placed[pid] = {'x': x * SCALE, 'y': y * SCALE, 'side': side}
-
+        x, y = painter(cv, y0, sides[i], rng, clear)
+        placed[pid] = {'x': x * SCALE, 'y': y * SCALE, 'side': sides[i]}
+    paint_road(cv, pts)          # repaint so props never sit on the road
     paint_sky(cv, rng)
-    paint_road(cv, pts)
     for x, y in nodes:
         node_pad(cv, x, y)
 
     out_dir = ROOT / 'assets' / 'map'
     out_dir.mkdir(parents=True, exist_ok=True)
     cv.img.resize((W * SCALE, h * SCALE), Image.NEAREST).save(out_dir / 'overworld.png', optimize=True)
-    build_heroes().save(out_dir / 'heroes.png', optimize=True)
+    heroes, hw, hh = build_heroes()
+    heroes.save(out_dir / 'heroes.png', optimize=True)
 
     meta = {
         '//': 'Generated by scripts/map/build_overworld.py. Do not edit by hand.',
         'width': W * SCALE,
         'height': h * SCALE,
+        'heroes': {'width': hw, 'height': hh},
         'order': [pid for pid, _ in REGIONS],
         'nodes': placed,
     }

@@ -22,7 +22,7 @@ A cross-platform (iOS / Android / Web) mobile app for the card game
   and an auto-generated rules summary
 - Interactive **tutorial** and rules reference screen
 - Background **jazz radio** (streamed, HTTPS on native)
-- **Campaign** on an 8-bit overworld map: story cinematics, named hosts
+- **Campaign** on a 16-bit overworld map: story cinematics, named hosts
   with table talk, nodes that unlock in order
 - Pure, fully tested **game engine** (no UI dependency)
 

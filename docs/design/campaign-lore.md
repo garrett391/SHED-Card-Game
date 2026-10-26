@@ -95,7 +95,7 @@ existed.
 
 ## The Campaign Map
 
-Shipped Oct 2026: a Super Mario World-style 8-bit overworld. The three
+Shipped Oct 2026: a Super Mario World-style 16-bit overworld (repainted from 8-bit the same month). The three
 heroes stand at the current node and the map climbs from the bottom:
 Jake's old wood (forest and campfire), the village of The Spreading
 (cottages, pond, wheat), Justin's chapel on a plateau with its graveyard,
