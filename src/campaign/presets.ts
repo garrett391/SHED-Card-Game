@@ -60,6 +60,28 @@ export const RULE_PRESETS: Record<string, RuleConfig> = {
     flavorText: 'Gio and Tati say the rules are the setup. They are the punchline.',
     jokers: true,
   },
+
+  // Justin returns: the schism comes back harder (see campaign-lore.md).
+  'second-schism': {
+    ...DEFAULT_RULES,
+    id: 'second-schism',
+    name: 'The Second Schism',
+    description: "Hard 8s, and now the 10 can't burn a face card either. Justin brings two followers.",
+    flavorText: 'Not even the 10 stands above the law.',
+    hardEights: true,
+    burnRankRestricted: true,
+  },
+
+  // The semi-finale: every dissenter at one table, each by their own rules.
+  'the-council': {
+    ...DEFAULT_RULES,
+    id: 'the-council',
+    name: 'The Council of Schisms',
+    description: "Justin, Greg, Gio and Tati at one table. Each plays by their own rules on their turn; you play by Jake's.",
+    flavorText: 'Every schism, one table.',
+    jokers: true,
+    seatRules: true,
+  },
 };
 
 /** Get a preset by ID, falling back to Jake's Classic. */
@@ -80,4 +102,6 @@ export const PRESET_ORDER: string[] = [
   'justins-schism',
   'super-tens',
   'chaos-shed',
+  'second-schism',
+  'the-council',
 ];

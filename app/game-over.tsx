@@ -10,12 +10,14 @@ import { RULE_PRESETS, PRESET_ORDER } from '../src/campaign/presets';
 import { CINEMATICS, ENDING_ID } from '../src/campaign/story';
 import { characterByName, endLine, opponentsFor } from '../src/campaign/characters';
 import { CharacterDialogue } from '../src/components/CharacterDialogue';
+import { ACHIEVEMENT_BY_ID } from '../src/achievements/achievements';
 
 export default function GameOverScreen() {
   const router = useRouter();
   const game = useGameStore((s) => s.game);
   const reset = useGameStore((s) => s.reset);
   const campaignPresetId = useGameStore((s) => s.campaignPresetId);
+  const earnedThisGame = useGameStore((s) => s.earnedThisGame);
   const completed = useCampaignStore((s) => s.completed);
   const lastUnlockedId = useCampaignStore((s) => s.lastUnlockedId);
   const acknowledgeUnlock = useCampaignStore((s) => s.acknowledgeUnlock);
@@ -161,6 +163,24 @@ export default function GameOverScreen() {
             />
           </View>
         )}
+        {earnedThisGame.length > 0 && (
+          <Pressable
+            style={styles.achBanner}
+            onPress={() => router.push('/achievements')}
+            accessibilityRole="button"
+            accessibilityLabel={`${earnedThisGame.length} achievements unlocked. View all.`}
+          >
+            <Text style={styles.achTitle}>
+              🏆 {earnedThisGame.length === 1 ? 'Achievement unlocked' : `${earnedThisGame.length} achievements unlocked`}
+            </Text>
+            {earnedThisGame.map((id) => (
+              <Text key={id} style={styles.achItem}>
+                {ACHIEVEMENT_BY_ID[id].emoji} {ACHIEVEMENT_BY_ID[id].name}
+              </Text>
+            ))}
+            <Text style={styles.achLink}>View all ›</Text>
+          </Pressable>
+        )}
         {unlockedPreset && (
           <View style={styles.unlockBanner}>
             <Text style={styles.unlockTitle}>🔓 New variant unlocked</Text>
@@ -268,6 +288,17 @@ const styles = StyleSheet.create({
   },
   actions: { marginBottom: 30 },
   hostLine: { marginBottom: 16 },
+  achBanner: {
+    marginBottom: 16,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#f4c430',
+    backgroundColor: 'rgba(244,196,48,0.08)',
+  },
+  achTitle: { color: '#f4c430', fontWeight: '800', fontSize: 14, marginBottom: 6 },
+  achItem: { color: theme.color.textOnDark, fontSize: 15, marginTop: 2 },
+  achLink: { color: '#f4c430', fontSize: 12, marginTop: 8, textAlign: 'right' },
   unlockBanner: {
     alignItems: 'center',
     backgroundColor: 'rgba(255, 215, 0, 0.08)',

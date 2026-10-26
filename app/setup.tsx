@@ -217,9 +217,13 @@ export default function SetupScreen() {
     playSfx('shuffle'); // the deal — fired on the tap itself
     // Remember the first human's name for next time; a blank name falls
     // back to the saved one rather than dealing in a nameless player.
-    const lineup = players.map((p, i) =>
-      !p.isBot && !p.name.trim() ? { ...p, name: i === 0 ? savedName : `Player ${i + 1}` } : p,
-    );
+    const lineup = players.map((p, i) => {
+      if (!p.isBot && !p.name.trim()) return { ...p, name: i === 0 ? savedName : `Player ${i + 1}` };
+      // Seat-rules tables (the Council): each host brings their own table's
+      // rules, matched by name like portraits are.
+      const home = p.isBot && preset.seatRules ? characterByName(p.name)?.homeTable : undefined;
+      return home && RULE_PRESETS[home] ? { ...p, rules: RULE_PRESETS[home] } : p;
+    });
     const firstHuman = lineup.find((p) => !p.isBot);
     if (firstHuman) setPlayerName(firstHuman.name);
     // campaignPreset threads through to game-over, which uses it to offer

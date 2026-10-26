@@ -45,13 +45,16 @@ export function createGame(
 
   // Explicitly calculate the deck configuration based on num players
   const deckCount = playerConfigs.length > 4 ? 2 : 1;
-  const deck = shuffle(createDeck(deckCount, ruleConfig.jokers));
+  // Jokers go in if the table or any seat plays with them.
+  const jokers = ruleConfig.jokers || playerConfigs.some(c => c.rules?.jokers);
+  const deck = shuffle(createDeck(deckCount, jokers));
 
   const players: Player[] = playerConfigs.map((cfg, i) => ({
     id: i,
     name: cfg.name,
     isBot: cfg.isBot,
     botStyle: cfg.botStyle,
+    ...(cfg.rules ? { rules: cfg.rules } : {}),
     hand: [],
     faceUp: [],
     faceDown: [],
@@ -137,6 +140,11 @@ export function finishSwap(state: GameState, playerIdx: number): GameState {
   };
 }
 
+/** The rules a player plays by: their seat's own, else the table's. */
+export function rulesFor(state: GameState, playerIdx: number): RuleConfig {
+  return state.players[playerIdx]?.rules ?? state.ruleConfig;
+}
+
 /**
  * A player's current "source" is implied by what cards they have:
  *   - hand non-empty → play from hand
@@ -159,8 +167,9 @@ export function getPlayableCardIds(state: GameState, playerIdx: number): string[
   // Face-down is blind — any one of them may be chosen; legality is post-reveal.
   if (source === 'faceDown') return player.faceDown.map(c => c.id);
   const cards = source === 'hand' ? player.hand : player.faceUp;
-  const top = getEffectiveTopCard(state.playPile, state.ruleConfig);
-  return cards.filter(c => canPlayCardOnTop(c, top, state.ruleConfig)).map(c => c.id);
+  const cfg = rulesFor(state, playerIdx);
+  const top = getEffectiveTopCard(state.playPile, cfg);
+  return cards.filter(c => canPlayCardOnTop(c, top, cfg)).map(c => c.id);
 }
 
 /**
@@ -201,7 +210,7 @@ export function playCards(
   if (state.phase !== 'playing') return { state, events: [] };
   if (state.currentPlayerIndex !== playerIdx) return { state, events: [] };
 
-  const cfg = state.ruleConfig;
+  const cfg = rulesFor(state, playerIdx);
   const player = state.players[playerIdx];
   const source = getPlaySource(player);
   if (source === null) return { state, events: [] };

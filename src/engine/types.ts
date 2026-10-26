@@ -29,6 +29,9 @@ export interface PlayerConfig {
   name: string;
   isBot: boolean;
   botStyle?: BotStyle; // bots only; omitted = strategic
+  /** This seat's own rules, used on its turns instead of the table's
+   *  (the Council: every dissenter plays by their own rules). */
+  rules?: RuleConfig;
 }
 
 export interface Player {
@@ -36,6 +39,8 @@ export interface Player {
   name: string;
   isBot: boolean;
   botStyle?: BotStyle;
+  /** Seat rules (see PlayerConfig.rules). Omitted = the table's ruleConfig. */
+  rules?: RuleConfig;
   hand: Card[];      // private cards in hand
   faceUp: Card[];    // mid-game pile (visible to all)
   faceDown: Card[];  // late-game pile (hidden, played at random)
@@ -94,6 +99,11 @@ export interface RuleConfig {
   // black joker that swaps hands. Wild (playable on anything) and invisible
   // on the pile, like the transparent rank.
   jokers: boolean;
+
+  // Seat rules: each host plays by the rules of their own table on their
+  // turn (the Council). Setup attaches the rules; this flag only describes
+  // the table.
+  seatRules: boolean;
 
   // Gameplay variants
   // Note: voluntary pickup (choosing to take the pile even when you can play)

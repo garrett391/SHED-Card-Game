@@ -273,7 +273,7 @@ function MapNode({
           { left: labelLeft, top: y + MARKER / 2 + 8 },
         ]}
       >
-        <Text style={[styles.labelName, locked && styles.labelNameLocked]} numberOfLines={1}>
+        <Text style={[styles.labelName, locked && styles.labelNameLocked]} numberOfLines={2}>
           {preset.name}
         </Text>
         <Text style={styles.labelTagline} numberOfLines={2}>
@@ -338,6 +338,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   labelName: {
+    textAlign: 'center',
     color: '#f8f8f8',
     fontWeight: '800',
     fontSize: 13,

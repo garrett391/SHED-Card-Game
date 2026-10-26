@@ -45,6 +45,16 @@ export const MAP_SCENES: Record<string, MapScene> = {
     color: '#8e44ad',
     tagline: 'Two jokers, two twins, no sense at all.',
   },
+  'second-schism': {
+    emoji: '🕯️',
+    color: '#a83246',
+    tagline: 'Justin is back, and his law is harder.',
+  },
+  'the-council': {
+    emoji: '⚖️',
+    color: '#5b6fa8',
+    tagline: 'Every schism, one table.',
+  },
 };
 
 /** Fallback for presets without an entry (future-proofing). */

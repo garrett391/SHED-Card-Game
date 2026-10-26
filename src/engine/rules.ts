@@ -21,6 +21,7 @@ export const DEFAULT_RULES: RuleConfig = {
   burnRankOverridesLowerThan: false,
   sixNineReverse: false,
   jokers: false,
+  seatRules: false,
   lastManStanding: false,
 };
 

@@ -45,6 +45,9 @@ export interface Character {
   portrait: ImageSourcePropType | null;
   /** How they play. Omitted = strategic. */
   botStyle?: BotStyle;
+  /** The preset whose rules they play by at a seat-rules table (the
+   *  Council): their own schism. */
+  homeTable?: string;
   /** Generic table talk after their own unremarkable turns. */
   quips: string[];
   /** Situational lines. Empty pools fall back to generic quips, except
@@ -203,11 +206,46 @@ export const CHARACTERS: Record<string, Character> = {
       humanPickup: ['Rough night, teacher?', "I'll pour you one after this."],
     },
   },
+  acolyte: {
+    id: 'acolyte',
+    name: 'The Acolyte',
+    title: "Justin's newest follower",
+    emoji: '🕯️',
+    portrait: null,
+    quips: [
+      'Brother Justin says the 8 must kneel.',
+      'I used to play the soft way. I am ashamed.',
+      'Every card under the law. Every card.',
+    ],
+    reactions: {
+      selfPickup: ['A test of faith.', 'I deserved that.'],
+      selfBurn: ['For the new law!'],
+      humanPickup: ['The law is the law.', 'Repent, and pick up.'],
+    },
+  },
+  zealot: {
+    id: 'zealot',
+    name: 'The Zealot',
+    title: "Justin's most devoted follower",
+    emoji: '🔥',
+    portrait: null,
+    quips: [
+      'Soft rules make soft players.',
+      'Not even the 10 is above the law now.',
+      'Justin wrote it. I believe it.',
+    ],
+    reactions: {
+      selfPickup: ['The law tests the faithful.', 'Hmph.'],
+      selfBurn: ['Burn the heresy!', 'Cleansed.'],
+      humanPickup: ['Heretic.', 'Your soft rules cannot save you here.'],
+    },
+  },
   justin: {
     id: 'justin',
     name: 'Justin',
     title: 'First heretic of the Schism',
     emoji: '⛪',
+    homeTable: 'second-schism',
     portrait: require('../../assets/characters/justin.png'),
     quips: [
       'The old rules were too soft.',
@@ -225,6 +263,7 @@ export const CHARACTERS: Record<string, Character> = {
     name: 'Greg the Computer Lord',
     title: 'Retired programmer. Active cheater.',
     emoji: '🖥️',
+    homeTable: 'super-tens',
     portrait: require('../../assets/characters/greg.png'),
     quips: [
       'That move is legal. Trust me, I used to program.',
@@ -245,6 +284,7 @@ export const CHARACTERS: Record<string, Character> = {
     name: 'Gio',
     title: 'The laughing half of the Chaos Twins',
     emoji: '🤡',
+    homeTable: 'chaos-shed',
     portrait: require('../../assets/characters/gio.png'),
     quips: [
       'Ha! Ha ha. Sorry. I just pictured your face two turns from now.',
@@ -276,6 +316,7 @@ export const CHARACTERS: Record<string, Character> = {
     name: 'Tati',
     title: 'The giggling half of the Chaos Twins',
     emoji: '🎭',
+    homeTable: 'chaos-shed',
     portrait: require('../../assets/characters/tati.png'),
     quips: [
       'Shh. Do you hear that? The deck is giggling.',
@@ -306,8 +347,9 @@ export const CHARACTERS: Record<string, Character> = {
 /**
  * Which characters host each variant's table. Order matters: these seed the
  * bot slots on setup when arriving from the campaign map. Most tables are a
- * duel; the exceptions are The Spreading (you teach three pupils at once)
- * and the Chaos Twins (you face them together).
+ * duel; the exceptions are The Spreading (you teach three pupils at once),
+ * the Chaos Twins (you face them together), the Second Schism (Justin
+ * brings followers) and the Council (every dissenter at once).
  */
 export const VARIANT_OPPONENTS: Record<string, string[]> = {
   'jake-classic': ['jake'],
@@ -315,6 +357,8 @@ export const VARIANT_OPPONENTS: Record<string, string[]> = {
   'justins-schism': ['justin'],
   'super-tens': ['greg'],
   'chaos-shed': ['gio', 'tati'],
+  'second-schism': ['justin', 'acolyte', 'zealot'],
+  'the-council': ['justin', 'greg', 'gio', 'tati'],
 };
 
 /** Characters for a variant (empty array if none assigned). */

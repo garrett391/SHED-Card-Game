@@ -14,7 +14,9 @@ import {
   hasPlayableMove,
   pickupPile,
   playCards,
+  rulesFor,
   swapTargets,
+  getPlayableCardIds,
 } from '../engine';
 import { getPreset } from '../../campaign/presets';
 import { createDeck, JOKER_RANK } from '../cards';
@@ -937,6 +939,66 @@ describe('rule variants', () => {
       });
       const action = decideBotAction(state, 0);
       expect(action).toEqual({ type: 'play', cardIds: ['js'], swapTargetId: 2 });
+    });
+  });
+
+  // ── Seat rules (the Council) ────────────────────────────────────────────
+  describe('seat rules', () => {
+    const superTens = getPreset('super-tens');
+
+    test('each seat plays by its own rules on its own turn', () => {
+      const state = setupGame({
+        players: [
+          player({ hand: [card(10, '♥', 'mine'), card(4)] }),
+          player({ hand: [card(10, '♠', 'gregs'), card(4, '♣')], rules: superTens }),
+        ],
+        pile: [card(7)],
+      });
+      // Classic seat: a 10 can't go on a 7.
+      expect(getPlayableCardIds(state, 0)).toEqual(['4♠']);
+      // Super Tens seat: it can.
+      expect(getPlayableCardIds({ ...state, currentPlayerIndex: 1 }, 1)).toContain('gregs');
+      const r = playCards({ ...state, currentPlayerIndex: 1 }, 1, ['gregs']);
+      expect(r.events.some(e => e.type === 'pileBurned')).toBe(true);
+    });
+
+    test('rulesFor falls back to the table rules', () => {
+      const state = setupGame({ players: [player(), player({ rules: superTens })] });
+      expect(rulesFor(state, 0)).toBe(state.ruleConfig);
+      expect(rulesFor(state, 1)).toBe(superTens);
+    });
+
+    test('createGame keeps seat rules and adds jokers if any seat uses them', () => {
+      const g = createGame([
+        { name: 'A', isBot: false },
+        { name: 'B', isBot: true, rules: getPreset('chaos-shed') },
+      ]);
+      expect(g.players[1].rules?.id).toBe('chaos-shed');
+      expect(g.players[0].rules).toBeUndefined();
+      const all = [...g.drawPile, ...g.players.flatMap(p => [...p.hand, ...p.faceUp, ...p.faceDown])];
+      expect(all.filter(c => c.joker)).toHaveLength(2);
+    });
+
+    test('a full Council game finishes: five seats, mixed rules, two decks', () => {
+      const council = getPreset('the-council');
+      for (let n = 0; n < 50; n++) {
+        let g = createGame([
+          { name: 'You', isBot: true },
+          { name: 'Justin', isBot: true, rules: getPreset('second-schism') },
+          { name: 'Greg', isBot: true, rules: superTens },
+          { name: 'Gio', isBot: true, rules: getPreset('chaos-shed') },
+          { name: 'Tati', isBot: true, rules: getPreset('chaos-shed') },
+        ], council);
+        for (let i = 0; i < 5; i++) g = finishSwap(g, i);
+        let turns = 0;
+        while (g.phase === 'playing' && turns++ < 5000) {
+          const a = decideBotAction(g, g.currentPlayerIndex);
+          g = a.type === 'pickup'
+            ? pickupPile(g, g.currentPlayerIndex).state
+            : playCards(g, g.currentPlayerIndex, a.cardIds, { swapTargetId: a.swapTargetId }).state;
+        }
+        expect(g.phase).toBe('gameOver');
+      }
     });
   });
 });

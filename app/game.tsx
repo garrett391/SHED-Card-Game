@@ -7,6 +7,7 @@ import { GameLogModal } from '../src/components/GameLogModal';
 import { OpponentStrip } from '../src/components/OpponentStrip';
 import { PlayingCard } from '../src/components/PlayingCard';
 import { VariantBadge } from '../src/components/VariantBadge';
+import { AchievementToast } from '../src/components/AchievementToast';
 import { theme } from '../src/components/theme';
 import { decideBotAction } from '../src/ai/bot';
 import { rankLabel, cardLabel } from '../src/engine/cards';
@@ -58,6 +59,7 @@ export default function GameScreen() {
   const pickup = useGameStore((s) => s.pickup);
   const revealHand = useGameStore((s) => s.revealHand);
   const recentEvents = useGameStore((s) => s.recentEvents);
+  const earnedThisGame = useGameStore((s) => s.earnedThisGame);
   const campaignPresetId = useGameStore((s) => s.campaignPresetId);
 
   // Face-down flip result: pause to show what was flipped before bots continue.
@@ -470,6 +472,37 @@ export default function GameScreen() {
     }
   }
 
+  // While someone else plays, the lone human keeps their cards in view,
+  // dimmed and untappable, so they can plan ahead. Pass-and-play (several
+  // humans) still hides every hand between turns for privacy.
+  const watcher = humanCount === 1 ? game.players.find((p) => !p.isBot) ?? null : null;
+  const renderWatchingHand = (p: (typeof game.players)[number]) => {
+    const src = getPlaySource(p);
+    if (src === null) {
+      return <Text style={styles.dim}>You're out. Watching {currentPlayer.name}…</Text>;
+    }
+    const cards =
+      src === 'hand' ? [...p.hand].sort((a, b) => a.rank - b.rank)
+      : src === 'faceUp' ? p.faceUp
+      : p.faceDown;
+    const label =
+      src === 'hand' ? `${p.name}'s hand`
+      : src === 'faceUp' ? 'Mid-game (face-up)'
+      : 'Late game (face-down)';
+    return (
+      <>
+        <Text style={styles.sectionLabel}>
+          {label} <Text style={styles.watchingNote}>· {currentPlayer.name}'s turn</Text>
+        </Text>
+        <View style={styles.cardRow}>
+          {cards.map((c) => (
+            <PlayingCard key={c.id} card={c} faceDown={src === 'faceDown'} dimmed disabled />
+          ))}
+        </View>
+      </>
+    );
+  };
+
   // Decide what cards to show in the player's bottom area.
   const renderHandArea = () => {
     if (source === 'hand') {
@@ -554,6 +587,7 @@ export default function GameScreen() {
   };
 
   return (
+    <View style={{ flex: 1 }}>
     <ScrollView contentContainerStyle={styles.container}>
       {/* Variant badge — shows which ruleset is active */}
       <VariantBadge config={game.ruleConfig} />
@@ -611,6 +645,10 @@ export default function GameScreen() {
               : currentPlayer.isBot
               ? `${currentPlayer.name} is thinking…`
               : `${currentPlayer.name}'s turn`}
+            {/* Seat-rules tables: name whose rules this turn is played by. */}
+            {game.phase !== 'gameOver' && currentPlayer.rules
+              ? ` · ${currentPlayer.rules.name}`
+              : ''}
           </Text>
           {recentEvents.length > 0 && (
             <Text style={styles.recent}>{summarizeRecent(recentEvents, game.players, game.ruleConfig)}</Text>
@@ -671,7 +709,9 @@ export default function GameScreen() {
       <View style={styles.playerArea}>
         {isHumanTurn ? (
           renderHandArea()
-        ) : game.phase === 'gameOver' ? null : (
+        ) : game.phase === 'gameOver' ? null : watcher ? (
+          renderWatchingHand(watcher)
+        ) : (
           <Text style={styles.dim}>Waiting for {currentPlayer.name}…</Text>
         )}
       </View>
@@ -683,6 +723,8 @@ export default function GameScreen() {
         log={game.log}
       />
     </ScrollView>
+    <AchievementToast earned={earnedThisGame} />
+    </View>
   );
 }
 
@@ -945,6 +987,10 @@ const styles = StyleSheet.create({
   playerArea: {
     marginTop: 8,
     minHeight: 140,
+  },
+  watchingNote: {
+    color: theme.color.textMuted,
+    fontWeight: '400',
   },
   sectionLabel: {
     color: theme.color.textOnDark,

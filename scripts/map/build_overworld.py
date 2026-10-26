@@ -670,6 +670,184 @@ def paint_chaos(cv: Canvas, y0: int, side: str, rng: random.Random, clear: Clear
     return nx, ny
 
 
+def torch(cv: Canvas, x: int, y: int) -> None:
+    """Standing torch; (x, y) is the foot of the pole."""
+    cv.glow(x, y - 9, 10, R['lava'][3], 0.4)
+    cv.rect(x, y - 7, 1, 8, R['wood'][0])
+    cv.sprite(x - 1, y - 11, ['.a.', 'aba', '.c.'],
+              {'a': R['lava'][2], 'b': R['lava'][4], 'c': R['wood'][2]})
+
+
+def banner(cv: Canvas, x: int, y: int, ramp, mark=None) -> None:
+    """A hanging banner on a pole; (x, y) is the foot of the pole."""
+    cv.rect(x, y - 20, 1, 21, R['wood'][0])
+    cv.set(x, y - 21, R['gold'][3])
+    for j in range(12):
+        w = 6 if j < 10 else (4 if j == 10 else 2)
+        for i in range(w):
+            col = ramp[2] if i < 2 else ramp[1]
+            if i == w - 1 or (j == 11):
+                col = ramp[0]
+            cv.set(x + 1 + i + (6 - w) // 2, y - 19 + j, col)
+    if mark:
+        for i in range(4):   # an X, Justin's mark from his banners
+            cv.set(x + 2 + i, y - 16 + i, mark)
+            cv.set(x + 5 - i, y - 16 + i, mark)
+
+
+def paint_second_schism(cv: Canvas, y0: int, side: str, rng: random.Random, clear: Clear) -> tuple[int, int]:
+    """The schism returns: Justin's dark cathedral, red banners, burning cards."""
+    nx, ny = NODE_X[side], y0 + BAND // 2
+    cx = 144 if side == 'left' else 48            # cathedral centre
+    by = y0 + 62                                  # cathedral base line
+    # flagstone plaza
+    for yy in range(by - 4, by + 34):
+        for xx in range(cx - 38, cx + 39):
+            d = ((xx - cx) / 38) ** 2 + ((yy - by - 14) / 20) ** 2
+            if d <= 1 and not clear(xx, yy):
+                edge = (xx // 5 + (yy // 3) % 2) % 2 == 0 and yy % 3 == 0 or xx % 5 == 0
+                col = R['rock'][1] if edge else R['rock'][2] if noise(xx, yy, 3, 21) < 0.5 else R['rock'][3]
+                cv.set(xx, yy, col)
+    # nave
+    nw, nh = 34, 22
+    nx0 = cx - nw // 2
+    cv.shadow(cx + 6, by + 2, nw / 2 + 12, 5, 0.6)
+    for yy in range(by - nh, by):
+        for xx in range(nx0, nx0 + nw):
+            row = (yy - by) // 3
+            mortar = (yy - by) % 3 == 0 or (xx + (row % 2) * 2) % 5 == 0
+            t = (xx - nx0) / nw
+            col = R['night'][3] if t < 0.2 else R['night'][2]
+            cv.set(xx, yy, R['night'][1] if mortar else col)
+    cv.outline_rect(nx0, by - nh, nw, nh)
+    for j in range(10):                           # pitched roof
+        inset = 9 - j
+        for xx in range(nx0 - 1 + inset, nx0 + nw + 1 - inset):
+            col = R['jred'][2] if xx < cx - 1 else R['jred'][1] if xx < cx + 2 else R['jred'][0]
+            if xx in (nx0 - 1 + inset, nx0 + nw - inset):
+                col = INK
+            cv.set(xx, by - nh - 10 + j, col)
+    # twin towers with spires
+    for tx in (nx0 - 8, nx0 + nw - 2):
+        th = nh + 14
+        for yy in range(by - th, by):
+            for xx in range(tx, tx + 10):
+                t = (xx - tx) / 10
+                mortar = (yy % 3 == 0) or (xx + (yy // 3) % 2 * 2) % 5 == 0
+                col = R['night'][1] if mortar else R['night'][3] if t < 0.3 else R['night'][2]
+                cv.set(xx, yy, col)
+        cv.outline_rect(tx, by - th, 10, th)
+        for j in range(12):
+            half = (j + 1) * 0.45
+            for xx in range(int(tx + 5 - half), int(tx + 5 + half) + 1):
+                cv.set(xx, by - th - 12 + j, R['jred'][2] if xx < tx + 5 else R['jred'][0])
+        cv.rect(tx + 3, by - th + 5, 4, 6, INK)
+        cv.rect(tx + 4, by - th + 6, 2, 4, R['lava'][3])
+        cv.glow(tx + 5, by - th + 8, 8, R['lava'][2], 0.25)
+    # rose window and great door
+    cv.disc(cx, by - nh + 8, 4.5, INK)
+    for k, (ox, oy) in enumerate([(-2, 0), (2, 0), (0, -2), (0, 2), (0, 0), (-1, -1), (1, 1)]):
+        cv.set(cx + ox, by - nh + 8 + oy, R['jred'][2] if k % 2 else R['lava'][3])
+    cv.sprite(cx - 4, by - 10, ['..oooo..', '.obbbbo.', 'obbbbbbo', 'obbbbbbo', 'obbbbbbo',
+                                'obbbbbbo', 'obbbbbbo', 'obbbbbbo', 'obbbbbbo', 'oooooooo'],
+              {'o': INK, 'b': R['wood'][0]})
+    # red X banners and torches flanking the door
+    for bx in (cx - 22, cx + 18):
+        banner(cv, bx, by + 8, R['jred'], mark=WHITE)
+    for tx in (cx - 12, cx + 12):
+        torch(cv, tx, by + 6)
+    # the burning pile of old-rule cards
+    fx, fy = cx, by + 22
+    cv.glow(fx, fy - 3, 16, R['lava'][3], 0.45)
+    for k in range(14):
+        ang = k * 2.4
+        x = int(fx + math.cos(ang) * (3 + k % 4) * 1.6)
+        y = int(fy + math.sin(ang) * (2 + k % 3))
+        cv.rect(x, y, 2, 1, WHITE)
+        cv.set(x, y + 1, INK)
+    cv.sprite(fx - 3, fy - 9, ['...a...', '..aba..', '.abcba.', 'abccbba', '.bcccb.', '..bbb..'],
+              {'a': R['lava'][1], 'b': R['lava'][3], 'c': R['lava'][4]})
+    # dead trees around
+    def dead_tree(x: int, y: int) -> None:
+        cv.shadow(x + 2, y + 1, 4, 1.5, 0.7)
+        cv.rect(x, y - 10, 2, 11, R['wood'][0])
+        for i in range(4):
+            cv.set(x - 1 - i, y - 7 - i, R['wood'][0])
+            cv.set(x + 2 + i, y - 5 - i, R['wood'][0])
+    off = lambda x, y: clear(x, y) or ((x - cx) / 48) ** 2 + ((y - by) / 44) ** 2 < 1
+    scatter(rng, y0 + 6, y0 + BAND - 2, 10, dead_tree, off)
+    scatter(rng, y0 + 6, y0 + BAND - 2, 8, lambda x, y: boulder(cv, x, y, 2.5), off)
+    return nx, ny
+
+
+def paint_council(cv: Canvas, y0: int, side: str, rng: random.Random, clear: Clear) -> tuple[int, int]:
+    """The Council of Schisms: one round table, a seat and banner for each."""
+    nx, ny = NODE_X[side], y0 + BAND // 2
+    cx, cy = (138 if side == 'left' else 54), y0 + 66
+    R1 = 40
+    # marble floor in a ring of pillars
+    for yy in range(cy - 30, cy + 31):
+        for xx in range(cx - R1 - 2, cx + R1 + 3):
+            d = ((xx - cx) / R1) ** 2 + ((yy - cy) / 28) ** 2
+            if d > 1:
+                continue
+            ring = 0.82 < d
+            v = 0.55 + 0.3 * noise(xx, yy, 5, 31)
+            col = R['wall'][1] if ring else shade(R['wall'], v)
+            if not ring and 0.47 < noise(xx * 1.4, yy, 6, 33) < 0.5:
+                col = R['wall'][0]           # marble veins
+            cv.set(xx, yy, col)
+    for yy in range(cy - 31, cy + 32):        # floor edge + low step
+        for xx in range(cx - R1 - 3, cx + R1 + 4):
+            d = ((xx - cx) / R1) ** 2 + ((yy - cy) / 28) ** 2
+            if 1 < d <= 1.1:
+                cv.set(xx, yy, INK if yy < cy else R['rock'][1])
+    # pillars around the ring (back ones first)
+    pillars = []
+    for k in range(10):
+        a = k / 10 * 2 * math.pi + 0.3
+        pillars.append((cx + math.cos(a) * (R1 - 4), cy + math.sin(a) * 24))
+    for px, py in sorted(pillars, key=lambda p: p[1]):
+        px, py = int(px), int(py)
+        cv.shadow(px + 3, py + 1, 4, 1.5, 0.6)
+        cv.rect(px - 2, py - 16, 5, 16, R['wall'][2])
+        cv.rect(px - 2, py - 16, 1, 16, R['wall'][3])
+        cv.rect(px + 2, py - 16, 1, 16, R['wall'][0])
+        cv.rect(px - 3, py - 18, 7, 2, R['wall'][3])
+        cv.rect(px - 3, py, 7, 1, R['rock'][1])
+        cv.outline_rect(px - 3, py - 18, 7, 2)
+    # the round table, with a seat for each dissenter
+    cv.shadow(cx + 4, cy + 6, 18, 6, 0.6)
+    seats = [('purple', -1.0), ('screen', -0.35), ('jred', 0.35), ('jblue', 1.0)]   # Justin, Greg, Gio, Tati
+    for ramp, t in seats:                     # far seats behind the table
+        sx, sy = int(cx + t * 20), cy - 13 + int(abs(t) * 5)
+        cv.blob([(sx, sy, 3.2)], R[ramp])
+    cv.disc(cx, cy + 2, 16, R['wood'][0])
+    for yy in range(cy - 12, cy + 13):
+        for xx in range(cx - 18, cx + 19):
+            d = ((xx - cx) / 17) ** 2 + ((yy - cy) / 11) ** 2
+            if d <= 1:
+                v = 0.6 - (xx - cx + yy - cy) / 60
+                cv.set(xx, yy, shade(R['wood'], v))
+            elif d <= 1.12:
+                cv.set(xx, yy, INK)
+    for k in range(7):                        # cards dealt round the table
+        a = k / 7 * 2 * math.pi
+        x, y = int(cx + math.cos(a) * 10), int(cy + math.sin(a) * 6)
+        cv.rect(x, y, 2, 3, WHITE)
+        cv.set(x, y, R['jred'][2] if k % 2 else INK)
+    cv.rect(cx - 1, cy - 1, 3, 3, R['jblue'][1])  # the deck
+    # banners: Justin, Greg, Gio, Tati
+    for (ramp, mark), bx in zip([('purple', WHITE), ('screen', None), ('jred', None), ('jblue', None)],
+                                [cx - 30, cx - 12, cx + 8, cx + 26]):
+        banner(cv, bx, cy - 24, R[ramp], mark=mark)
+    # hedges
+    off = lambda x, y: clear(x, y) or ((x - cx) / (R1 + 10)) ** 2 + ((y - cy + 4) / 42) ** 2 < 1
+    scatter(rng, y0 + 4, y0 + BAND - 4, 18, lambda x, y: bush(cv, x, y), off)
+    scatter(rng, y0 + 4, y0 + BAND - 4, 8, lambda x, y: tree(cv, x, y), off)
+    return nx, ny
+
+
 # Ladder order. Must match PRESET_ORDER (src/campaign/presets.ts).
 REGIONS = [
     ('jake-classic', paint_jake),
@@ -677,6 +855,8 @@ REGIONS = [
     ('justins-schism', paint_justin),
     ('super-tens', paint_greg),
     ('chaos-shed', paint_chaos),
+    ('second-schism', paint_second_schism),
+    ('the-council', paint_council),
 ]
 
 

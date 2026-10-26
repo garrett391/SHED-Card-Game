@@ -193,6 +193,7 @@ export default function RootLayout() {
         <Stack.Screen name="game" options={{ title: 'Shed', headerBackVisible: false }} />
         <Stack.Screen name="game-over" options={{ title: 'Game over', headerBackVisible: false }} />
         <Stack.Screen name="rules" options={{ title: 'Rules', presentation: 'modal' }} />
+        <Stack.Screen name="achievements" options={{ title: 'Achievements' }} />
       </Stack>
     </SafeAreaProvider>
   );

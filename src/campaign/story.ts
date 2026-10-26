@@ -63,6 +63,11 @@ export const CINEMATICS: Record<string, Cinematic> = {
         'The 2 resets. The 7 keeps it low.\nThe 10 burns it all.\nAnd the 8? The 8 you never see.',
     },
     {
+      image: null,
+      caption:
+        'Cards of the same rank may be played together.\nLay down all four, and the pile burns.',
+    },
+    {
       image: require('../../assets/story/its_all_up_here.png'),
       caption:
         'Jake wrote none of it down.\nThe rules lived only in the telling.',
@@ -168,12 +173,48 @@ export const CINEMATICS: Record<string, Cinematic> = {
     },
   ],
 
+  // ── The schism returns ──────────────────────────────────────────────────
+  'second-schism': [
+    {
+      image: null,
+      caption: 'Peace never lasts long. Justin had not given up. He had only gone quiet.',
+    },
+    {
+      image: require('../../assets/story/schism-justin2.png'),
+      caption: 'Now he preached a harder law: not even the 10 may burn a face card.',
+    },
+    {
+      image: require('../../assets/story/schism-justin3.png'),
+      caption: 'His 8s still bow to the 7. And this time, he does not sit alone.',
+    },
+  ],
+
+  // ── The semi-finale: every dissenter at one table ───────────────────────
+  'the-council': [
+    {
+      image: null,
+      caption: 'One by one, the dissenters had fallen. Then word came that they had stopped fighting each other.',
+    },
+    {
+      image: null,
+      caption: 'Justin, Greg, Gio and Tati: every schism, gathered at a single table.',
+    },
+    {
+      image: null,
+      caption: "Each would play by their own rules, on their own turn. The disciples would play by Jake's.",
+    },
+    {
+      image: null,
+      caption: 'Win, and the teachings hold. Lose, and every table goes back to arguing.',
+    },
+  ],
+
   // ── The ending (for now): the fog lifts a little ───────────────────────
   [ENDING_ID]: [
     {
       image: null,
       caption:
-        "The twins' laughter faded behind them. For the first time in a long while, every table they had visited played true.",
+        'The Council broke apart, each dissenter back to their own table. For the first time in a long while, every table played true.',
     },
     {
       image: require('../../assets/story/ending-north.png'),

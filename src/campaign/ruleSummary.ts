@@ -53,6 +53,12 @@ export function variantDiff(config: RuleConfig): string[] {
         `${rankLabel(config.transparentRank)}. The red joker reverses the direction of play. The black joker swaps your hand with another player\'s: you choose who.`,
     );
 
+  // ── Seat rules ─────────────────────────────────────────────────────────────
+  if (config.seatRules && !base.seatRules)
+    out.push(
+      "Every dissenter plays by the rules of their own table on their turn: Justin's hard 8s and restricted 10s, Greg's 10s that burn through 7s, the twins' jokers. You play by Jake's Classic.",
+    );
+
   // ── Special combo ──────────────────────────────────────────────────────────
   if (config.sixNineReverse && !base.sixNineReverse)
     out.push('Playing a 9 on a 6 reverses the direction of play.');

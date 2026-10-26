@@ -1,6 +1,6 @@
 import { GameState, Rank } from '../engine/types';
 import { canPlayCardOnTop, getEffectiveTopCard, isPowerCard } from '../engine/rules';
-import { getPlaySource, swapTargets } from '../engine/engine';
+import { getPlaySource, rulesFor, swapTargets } from '../engine/engine';
 import { JOKER_RANK } from '../engine/cards';
 
 export type BotAction =
@@ -25,7 +25,7 @@ export type BotAction =
 export function decideBotAction(state: GameState, playerIdx: number): BotAction {
   const player = state.players[playerIdx];
   const source = getPlaySource(player);
-  const cfg = state.ruleConfig;
+  const cfg = rulesFor(state, playerIdx);
   if (source === null) return { type: 'pickup' };
 
   if (source === 'faceDown') {
