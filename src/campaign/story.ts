@@ -106,8 +106,9 @@ export const CINEMATICS: Record<string, Cinematic> = {
   // ── The first schism ────────────────────────────────────────────────────
   'justins-schism': [
     {
-      image: null,
-      caption: 'But every golden age casts a shadow.',
+      image: require('../../assets/story/schism-shadow.jpg'),
+      caption:
+        'But every golden age casts a shadow. Not everyone who learned the game was content to play it as Jake had taught.',
     },
     {
       image: null,
