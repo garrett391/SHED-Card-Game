@@ -1,9 +1,10 @@
 import { GameState, Rank } from '../engine/types';
 import { canPlayCardOnTop, getEffectiveTopCard, isPowerCard } from '../engine/rules';
-import { getPlaySource } from '../engine/engine';
+import { getPlaySource, swapTargets } from '../engine/engine';
+import { JOKER_RANK } from '../engine/cards';
 
 export type BotAction =
-  | { type: 'play'; cardIds: string[] }
+  | { type: 'play'; cardIds: string[]; swapTargetId?: number }
   | { type: 'pickup' };
 
 /**
@@ -62,6 +63,7 @@ export function decideBotAction(state: GameState, playerIdx: number): BotAction 
     [cfg.lowerThanRank]: 2,
     [cfg.resetRank]: 3,
     [cfg.burnRank]: 4,
+    [JOKER_RANK]: 5, // the most chaotic card: save it for last
   };
   if (cfg.reverseRank !== null) {
     powerOrder[cfg.reverseRank] = 2.5; // between lowerThan and reset
@@ -77,5 +79,18 @@ export function decideBotAction(state: GameState, playerIdx: number): BotAction 
   });
 
   const chosenRank = ranks[0];
-  return { type: 'play', cardIds: byRank.get(chosenRank)! };
+  const cardIds = byRank.get(chosenRank)!;
+  const swapping = sourceCards.some((c) => cardIds.includes(c.id) && c.joker === 'swap');
+  return swapping
+    ? { type: 'play', cardIds, swapTargetId: pickSwapTarget(state, playerIdx) }
+    : { type: 'play', cardIds };
+}
+
+/** Steal the smallest hand at the table (ties go to the earliest seat). */
+function pickSwapTarget(state: GameState, playerIdx: number): number | undefined {
+  const targets = swapTargets(state, playerIdx);
+  if (targets.length === 0) return undefined;
+  return targets.reduce((best, id) =>
+    state.players[id].hand.length < state.players[best].hand.length ? id : best,
+  );
 }

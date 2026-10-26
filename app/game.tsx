@@ -14,6 +14,7 @@ import {
   getPlayableCardIds,
   getPlaySource,
   hasPlayableMove,
+  swapTargets,
 } from '../src/engine/engine';
 import { useGameStore } from '../src/store/gameStore';
 import { useCampaignStore } from '../src/store/campaignStore';
@@ -67,6 +68,9 @@ export default function GameScreen() {
 
   // Game history modal
   const [historyOpen, setHistoryOpen] = useState(false);
+
+  // Swap joker selected and Play tapped: choose whose hand to take.
+  const [swapPicking, setSwapPicking] = useState(false);
 
   // Hold before routing to game-over when a HUMAN's play ended the game, so
   // their winning play shows in the caption for a beat before the podium.
@@ -192,7 +196,7 @@ export default function GameScreen() {
         if (source === 'faceDown') {
           latest.playFaceDown(action.cardIds[0]);
         } else {
-          latest.playSelected();
+          latest.playSelected(action.swapTargetId);
         }
       }
 
@@ -392,6 +396,34 @@ export default function GameScreen() {
     );
   }
 
+  // Swap joker target picker.
+  if (swapPicking && isHumanTurn) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.gate}>
+          <Text style={styles.passLabel}>The black joker</Text>
+          <Text style={styles.passName}>Swap hands with…</Text>
+          <View style={{ alignSelf: 'stretch', gap: 10, marginTop: 8 }}>
+            {swapTargets(game, game.currentPlayerIndex).map((id) => {
+              const p = game.players[id];
+              return (
+                <Button
+                  key={id}
+                  title={`${p.name} · ${p.hand.length} card${p.hand.length === 1 ? '' : 's'}`}
+                  onPress={() => {
+                    setSwapPicking(false);
+                    playAndHold(id);
+                  }}
+                />
+              );
+            })}
+            <Button title="Cancel" variant="ghost" onPress={() => setSwapPicking(false)} />
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   // Face-down flip result gate: show what was flipped before continuing.
   if (flipResult) {
     return (
@@ -417,6 +449,25 @@ export default function GameScreen() {
         </View>
       </View>
     );
+  }
+
+  // Play the selection. If that play just ended the game, surface it in the
+  // caption and hold the game-over route for a beat — otherwise the podium
+  // appears before you ever see what you played. Set synchronously (not via
+  // effect) so the routing effect sees the hold this commit.
+  function playAndHold(swapTargetId?: number) {
+    const playerName = currentPlayer!.name;
+    playSelected(swapTargetId);
+    const latest = useGameStore.getState();
+    if (latest.game?.phase === 'gameOver') {
+      const d = buildBotActionDisplay(playerName, latest.recentEvents, latest.game.ruleConfig);
+      setActionCaption({
+        emoji: d.emoji,
+        text: captionText(playerName, d),
+        nonce: Date.now(),
+      });
+      setFinalHold(true);
+    }
   }
 
   // Decide what cards to show in the player's bottom area.
@@ -572,26 +623,20 @@ export default function GameScreen() {
                 setToast('Select a card first');
                 return;
               }
-              const playerName = currentPlayer.name;
-              playSelected();
-              // If that play just ended the game, surface it in the caption and
-              // hold the game-over route for a beat — otherwise the podium
-              // appears before you ever see what you played. Set synchronously
-              // (not via effect) so the routing effect sees the hold this commit.
-              const latest = useGameStore.getState();
-              if (latest.game?.phase === 'gameOver') {
-                const d = buildBotActionDisplay(
-                  playerName,
-                  latest.recentEvents,
-                  latest.game.ruleConfig,
-                );
-                setActionCaption({
-                  emoji: d.emoji,
-                  text: captionText(playerName, d),
-                  nonce: Date.now(),
-                });
-                setFinalHold(true);
+              // A swap joker needs a target first, unless there's only one.
+              const selected = [...currentPlayer.hand, ...currentPlayer.faceUp].filter(
+                (c) => selectedCardIds.includes(c.id),
+              );
+              const legal = getPlayableCardIds(game, game.currentPlayerIndex);
+              if (
+                selected.some((c) => c.joker === 'swap') &&
+                selected.every((c) => legal.includes(c.id)) &&
+                swapTargets(game, game.currentPlayerIndex).length > 1
+              ) {
+                setSwapPicking(true);
+                return;
               }
+              playAndHold();
             }}
             style={({ pressed }) => [
               styles.playBtn,
@@ -705,6 +750,8 @@ function buildBotActionDisplay(
   events: GameEvent[],
   cfg: RuleConfig,
 ): { botName: string; headline: string; detail?: string; card?: Card; emoji: string } {
+  const playerNameIn = (id: number) =>
+    useGameStore.getState().game?.players[id]?.name ?? 'someone';
   // Check for pile pickup
   const pickup = events.find((e) => e.type === 'pileTakenUp');
   if (pickup && pickup.type === 'pileTakenUp') {
@@ -732,7 +779,7 @@ function buildBotActionDisplay(
   if (played && played.type === 'cardsPlayed') {
     const n = played.cards.length;
     const label = n === 1
-      ? `played ${cardLabel(played.cards[0])}`
+      ? `played ${played.cards[0].joker ? 'the ' : ''}${cardLabel(played.cards[0])}`
       : `played ${n}× ${rankLabel(played.cards[0].rank)}`;
 
     // Check for burn
@@ -750,6 +797,10 @@ function buildBotActionDisplay(
     }
     if (reversed) {
       detail = (detail ? detail + '\n' : '') + '🔄 Direction reversed!';
+    }
+    const swapped = events.find((e) => e.type === 'handsSwapped');
+    if (swapped && swapped.type === 'handsSwapped') {
+      detail = (detail ? detail + '\n' : '') + `🔀 Swaps hands with ${playerNameIn(swapped.targetId)}!`;
     }
     if (finished) {
       detail = (detail ? detail + '\n' : '') + '🏆 Out of the game!';
@@ -785,6 +836,9 @@ function summarizeRecent(
         ? `🔥 Triple ${rankLabel(cfg.transparentRank)}s burn the pile`
         : '🔥 Four-of-a-kind burns the pile';
     }
+    if (e.type === 'handsSwapped') {
+      return `🔀 ${playerName(e.playerId)} swapped hands with ${playerName(e.targetId)}`;
+    }
     if (e.type === 'directionReversed') {
       return '🔄 Direction reversed!';
     }
@@ -801,7 +855,7 @@ function summarizeRecent(
   for (const e of events) {
     if (e.type === 'cardsPlayed') {
       const n = e.cards.length;
-      const label = rankLabel(e.cards[0].rank);
+      const label = e.cards[0].joker && n === 1 ? cardLabel(e.cards[0]) : rankLabel(e.cards[0].rank);
       const played = n === 1 ? `played ${label}` : `played ${n}× ${label}`;
       return `${playerName(e.playerId)} ${played}`;
     }

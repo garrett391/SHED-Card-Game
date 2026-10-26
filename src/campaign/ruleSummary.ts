@@ -46,6 +46,13 @@ export function variantDiff(config: RuleConfig): string[] {
     );
   }
 
+  // ── Jokers ─────────────────────────────────────────────────────────────────
+  if (config.jokers && !base.jokers)
+    out.push(
+      'Two jokers join the deck (four with two decks). Jokers are wild and invisible on the pile, like the ' +
+        `${rankLabel(config.transparentRank)}. The red joker reverses the direction of play. The black joker swaps your hand with another player\'s: you choose who.`,
+    );
+
   // ── Special combo ──────────────────────────────────────────────────────────
   if (config.sixNineReverse && !base.sixNineReverse)
     out.push('Playing a 9 on a 6 reverses the direction of play.');

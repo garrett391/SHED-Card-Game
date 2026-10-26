@@ -31,7 +31,8 @@ interface GameStore {
   // playing phase
   toggleSelect: (cardId: string) => void;
   clearSelection: () => void;
-  playSelected: () => void;
+  /** swapTargetId: whose hand a swap joker takes (see engine.playCards). */
+  playSelected: (swapTargetId?: number) => void;
   playFaceDown: (cardId: string) => void;
   pickup: () => void;
 
@@ -110,11 +111,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   clearSelection: () => set({ selectedCardIds: [] }),
 
-  playSelected: () => {
+  playSelected: (swapTargetId) => {
     const { game, selectedCardIds, handRevealed } = get();
     if (!game || selectedCardIds.length === 0) return;
     const prevIdx = game.currentPlayerIndex;
-    const r = engine.playCards(game, game.currentPlayerIndex, selectedCardIds);
+    const r = engine.playCards(game, game.currentPlayerIndex, selectedCardIds, {
+      swapTargetId,
+    });
     // Keep hand revealed only if the SAME player still holds the turn (e.g. burn).
     const stillSamePlayer = r.state.currentPlayerIndex === prevIdx;
     // On a rejected play, keep the selection so the player can adjust it

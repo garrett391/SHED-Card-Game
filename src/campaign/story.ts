@@ -145,14 +145,19 @@ export const CINEMATICS: Record<string, Cinematic> = {
   // ── The Chaos Twins ─────────────────────────────────────────────────────
   'chaos-shed': [
     {
+      image: null,
+      caption:
+        'The disciples heard the next table before they saw it: laughter, and the sound of cards hitting the floor.',
+    },
+    {
       image: require('../../assets/story/chaos-twins-card.png'),
       caption:
-        'Of the Chaos Twins, only a card survives. Power 9. Mischief 13. Effect: PRANKOCALYPSE.',
+        'Gio and Tati, the Chaos Twins. They never broke the old rules. They just added two cards nobody could predict.',
     },
     {
       image: null,
       caption:
-        'They deal in Bangkok, where the 9s run backwards and nobody sleeps. You face them together, or not at all.',
+        'The red joker turns the table around. The black joker steals your hand and gives you theirs. You face them together, or not at all.',
     },
   ],
 };

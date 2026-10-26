@@ -3,13 +3,19 @@
 
 export type Suit = '♠' | '♥' | '♦' | '♣';
 
-// Card value: 2-10 literal, J=11, Q=12, K=13, A=14
-export type Rank = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
+// Card value: 2-10 literal, J=11, Q=12, K=13, A=14, joker=15 (JOKER_RANK).
+export type Rank = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
+
+/** What a joker does when played (Chaos Shed). The red joker reverses the
+ *  direction of play; the black joker swaps hands with another player. */
+export type JokerKind = 'reverse' | 'swap';
 
 export interface Card {
   id: string;
   rank: Rank;
   suit: Suit;
+  /** Set only on jokers (rank JOKER_RANK). Suit then just sets the color. */
+  joker?: JokerKind;
 }
 
 // How a bot picks among its legal plays. The engine only carries this; it is
@@ -84,6 +90,11 @@ export interface RuleConfig {
   // Special combos
   sixNineReverse: boolean;          // Playing 9 on a 6 reverses direction
 
+  // Jokers (Chaos Shed): two per deck — a red joker that reverses play and a
+  // black joker that swaps hands. Wild (playable on anything) and invisible
+  // on the pile, like the transparent rank.
+  jokers: boolean;
+
   // Gameplay variants
   // Note: voluntary pickup (choosing to take the pile even when you can play)
   // is a standing rule in every variant — the pile is always tappable on your
@@ -124,7 +135,9 @@ export type GameEvent =
   /** An attempted play was illegal under the current rules. State is
    *  unchanged; `reason` is player-facing text explaining why. */
   | { type: 'playRejected'; playerId: number; reason: string }
-  | { type: 'directionReversed'; playerId: number };
+  | { type: 'directionReversed'; playerId: number }
+  /** A swap joker traded `playerId`'s hand with `targetId`'s. */
+  | { type: 'handsSwapped'; playerId: number; targetId: number };
 
 export interface PlayResult {
   state: GameState;

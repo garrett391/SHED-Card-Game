@@ -1,5 +1,5 @@
 import { Card, Player, Rank, RuleConfig } from './types';
-import { rankLabel } from './cards';
+import { JOKER_RANK, rankLabel } from './cards';
 
 // ─── Default rule config (Jake the Elder's rules) ──────────────────────────────
 
@@ -20,6 +20,7 @@ export const DEFAULT_RULES: RuleConfig = {
   burnRankRestricted: false,
   burnRankOverridesLowerThan: false,
   sixNineReverse: false,
+  jokers: false,
   lastManStanding: false,
 };
 
@@ -46,6 +47,9 @@ export function getPowerRanks(config: RuleConfig = DEFAULT_RULES): ReadonlySet<R
   // playable). An ordered reverse rank is a normal card that happens to flip
   // direction, so it stays in the starting-card calc and isn't hoarded.
   if (config.reverseRank !== null && config.reverseRankWild) ranks.push(config.reverseRank);
+  // Jokers are wild, so they're power cards: kept out of the starting-card
+  // calc and saved by the bot.
+  if (config.jokers) ranks.push(JOKER_RANK);
   const set: ReadonlySet<Rank> = new Set(ranks);
   _powerRankCache.set(config, set);
   return set;
@@ -66,9 +70,14 @@ export function getEffectiveTopCard(
   config: RuleConfig = DEFAULT_RULES,
 ): Card | null {
   for (const card of playPile) {
-    if (card.rank !== config.transparentRank) return card;
+    if (!isInvisible(card, config)) return card;
   }
   return null;
+}
+
+/** Skipped when reading the pile: the transparent rank, and jokers. */
+export function isInvisible(card: Card, config: RuleConfig = DEFAULT_RULES): boolean {
+  return card.rank === config.transparentRank || card.rank === JOKER_RANK;
 }
 
 // ─── Legality checks ────────────────────────────────────────────────────────────
@@ -92,6 +101,9 @@ export function canPlayCardOnTop(
   top: Card | null,
   config: RuleConfig = DEFAULT_RULES,
 ): boolean {
+  // Jokers are wild
+  if (card.rank === JOKER_RANK) return true;
+
   // Reset rank: always playable
   if (card.rank === config.resetRank) return true;
 
@@ -182,7 +194,7 @@ export function checkFourOfAKindBurn(
   let targetRank: Rank | null = null;
   let count = 0;
   for (const card of playPile) {
-    if (card.rank === config.transparentRank) continue;
+    if (isInvisible(card, config)) continue;
     if (targetRank === null) {
       targetRank = card.rank;
       count = 1;

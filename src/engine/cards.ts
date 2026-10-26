@@ -1,10 +1,15 @@
-import { Card, Rank, Suit } from './types';
+import { Card, JokerKind, Rank, Suit } from './types';
+
+/** Rank given to jokers. Above the ace, so a sorted hand puts them last. */
+export const JOKER_RANK = 15 as const;
 
 const SUITS: readonly Suit[] = ['♠', '♥', '♦', '♣'];
 const RANKS: readonly Rank[] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
 
-/** Build a fresh, ordered deck (no jokers). Supports combining multiple decks with explicit namespacing. */
-export function createDeck(deckCount = 1): Card[] {
+/** Build a fresh, ordered deck. Supports combining multiple decks with
+ *  explicit namespacing. With `jokers`, each deck adds a red reverse joker
+ *  and a black swap joker. */
+export function createDeck(deckCount = 1, jokers = false): Card[] {
   const deck: Card[] = [];
   for (let d = 0; d < deckCount; d++) {
     for (const suit of SUITS) {
@@ -12,6 +17,10 @@ export function createDeck(deckCount = 1): Card[] {
         // Namespaced ID format like "d0-r14-s♠" for bulletproof multiplayer logs
         deck.push({ id: `d${d}-r${rank}-s${suit}`, rank, suit });
       }
+    }
+    if (jokers) {
+      deck.push({ id: `d${d}-joker-reverse`, rank: JOKER_RANK, suit: '♥', joker: 'reverse' });
+      deck.push({ id: `d${d}-joker-swap`, rank: JOKER_RANK, suit: '♠', joker: 'swap' });
     }
   }
   return deck;
@@ -28,6 +37,7 @@ export function shuffle<T>(arr: readonly T[]): T[] {
 }
 
 export function rankLabel(rank: Rank): string {
+  if (rank === JOKER_RANK) return 'Joker';
   if (rank === 11) return 'J';
   if (rank === 12) return 'Q';
   if (rank === 13) return 'K';
@@ -39,6 +49,11 @@ export function isRedSuit(suit: Suit): boolean {
   return suit === '♥' || suit === '♦';
 }
 
+export function jokerLabel(kind: JokerKind): string {
+  return kind === 'reverse' ? 'Reverse Joker' : 'Swap Joker';
+}
+
 export function cardLabel(card: Card): string {
+  if (card.joker) return jokerLabel(card.joker);
   return `${rankLabel(card.rank)}${card.suit}`;
 }

@@ -56,12 +56,9 @@ export const RULE_PRESETS: Record<string, RuleConfig> = {
     ...DEFAULT_RULES,
     id: 'chaos-shed',
     name: 'Chaos Shed',
-    description: '9s reverse the direction of play. Four of a kind still burns. Keep up.',
-    flavorText: 'The Chaos Twins taught this one to backpackers in Bangkok. Nobody sleeps.',
-    // Ordered, not wild: a 9 obeys meets-or-beats like any card — it just
-    // also flips direction when legally played.
-    reverseRank: 9,
-    reverseRankWild: false,
+    description: 'Two jokers join the deck. The red joker reverses the direction of play; the black joker swaps your hand with another player\'s.',
+    flavorText: 'Gio and Tati say the rules are the setup. They are the punchline.',
+    jokers: true,
   },
 };
 

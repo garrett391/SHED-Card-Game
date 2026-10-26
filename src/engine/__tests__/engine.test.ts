@@ -14,8 +14,11 @@ import {
   hasPlayableMove,
   pickupPile,
   playCards,
+  swapTargets,
 } from '../engine';
 import { getPreset } from '../../campaign/presets';
+import { createDeck, JOKER_RANK } from '../cards';
+import { decideBotAction } from '../../ai/bot';
 import { Card, GameState, Player, Rank, RuleConfig, Suit } from '../types';
 
 // ─── helpers ─────────────────────────────────────────────────────────────
@@ -566,10 +569,10 @@ describe('rule variants', () => {
       expect(isPowerCard(9, ordered)).toBe(false);
     });
 
-    test('Chaos Shed uses an ordered (non-wild) reverse rank', () => {
+    test('Chaos Shed uses jokers, not a reverse rank', () => {
       const preset = getPreset('chaos-shed');
-      expect(preset.reverseRank).toBe(9);
-      expect(preset.reverseRankWild).toBe(false);
+      expect(preset.jokers).toBe(true);
+      expect(preset.reverseRank).toBeNull();
     });
   });
 
@@ -806,6 +809,134 @@ describe('rule variants', () => {
         stacked,
       );
       expect(g.lastManStanding).toBe(true);
+    });
+  });
+
+  // ── Jokers (Chaos Shed) ─────────────────────────────────────────────────
+  describe('jokers', () => {
+    const J = rules({ jokers: true });
+    const revJ = (id = 'jr'): Card => ({ id, rank: JOKER_RANK, suit: '♥', joker: 'reverse' });
+    const swapJ = (id = 'js'): Card => ({ id, rank: JOKER_RANK, suit: '♠', joker: 'swap' });
+
+    test('a deck with jokers has 54 cards: one reverse, one swap', () => {
+      const deck = createDeck(1, true);
+      expect(deck).toHaveLength(54);
+      expect(deck.filter(c => c.joker === 'reverse')).toHaveLength(1);
+      expect(deck.filter(c => c.joker === 'swap')).toHaveLength(1);
+      expect(createDeck(2, true).filter(c => c.joker)).toHaveLength(4);
+      expect(createDeck(1)).toHaveLength(52);
+    });
+
+    test('createGame deals from a joker deck when the config asks', () => {
+      const g = createGame(
+        [{ name: 'A', isBot: false }, { name: 'B', isBot: false }],
+        J,
+      );
+      const all = [...g.drawPile, ...g.players.flatMap(p => [...p.hand, ...p.faceUp, ...p.faceDown])];
+      expect(all).toHaveLength(54);
+    });
+
+    test('jokers are wild and invisible on the pile', () => {
+      expect(canPlayCardOnTop(revJ(), card(14), J)).toBe(true);
+      expect(canPlayCardOnTop(swapJ(), card(7), J)).toBe(true);
+      expect(getEffectiveTopCard([revJ(), card(9)], J)?.rank).toBe(9);
+      expect(isPowerCard(JOKER_RANK, J)).toBe(true);
+    });
+
+    test('jokers do not break a four-of-a-kind', () => {
+      expect(checkFourOfAKindBurn([card(5), revJ(), card(5), card(5), card(5)], J)).toBe(true);
+    });
+
+    test('reverse joker flips the direction of play', () => {
+      const state = setupGame({
+        players: [
+          player({ hand: [revJ(), card(5)] }),
+          player({ hand: [card(6)] }),
+          player({ hand: [card(6)] }),
+        ],
+        ruleConfig: J,
+      });
+      const r = playCards(state, 0, ['jr']);
+      expect(r.state.direction).toBe(-1);
+      expect(r.state.currentPlayerIndex).toBe(2);
+      expect(r.events.some(e => e.type === 'directionReversed')).toBe(true);
+    });
+
+    test('swap joker trades hands with the chosen player, after drawing', () => {
+      const state = setupGame({
+        players: [
+          player({ hand: [swapJ(), card(5, '♠', 'mine')] }),
+          player({ hand: [card(6, '♠', 'b1')] }),
+          player({ hand: [card(9, '♠', 'c1'), card(9, '♥', 'c2')] }),
+        ],
+        draw: [card(4, '♣', 'drawn')],
+        ruleConfig: J,
+      });
+      const r = playCards(state, 0, ['js'], { swapTargetId: 2 });
+      expect(r.state.players[0].hand.map(c => c.id)).toEqual(['c1', 'c2']);
+      expect(r.state.players[2].hand.map(c => c.id).sort()).toEqual(['drawn', 'mine']);
+      expect(r.state.players[1].hand.map(c => c.id)).toEqual(['b1']);
+      expect(r.events).toContainEqual({ type: 'handsSwapped', playerId: 0, targetId: 2 });
+      expect(r.state.currentPlayerIndex).toBe(1);
+    });
+
+    test('swap joker without a valid target goes to the next player', () => {
+      const state = setupGame({
+        players: [
+          player({ hand: [swapJ(), card(5, '♠', 'mine')] }),
+          player({ hand: [card(6, '♠', 'b1')] }),
+        ],
+        ruleConfig: J,
+      });
+      const r = playCards(state, 0, ['js'], { swapTargetId: 0 }); // self: invalid
+      expect(r.state.players[0].hand.map(c => c.id)).toEqual(['b1']);
+      expect(r.state.players[1].hand.map(c => c.id)).toEqual(['mine']);
+    });
+
+    test('swapping away your last cards for an empty hand puts you out', () => {
+      const state = setupGame({
+        players: [
+          player({ hand: [swapJ(), card(5, '♠', 'mine')] }),
+          player({ hand: [], faceUp: [card(6)] }),
+        ],
+        ruleConfig: J,
+      });
+      const r = playCards(state, 0, ['js'], { swapTargetId: 1 });
+      expect(r.state.players[0].isFinished).toBe(true);
+      expect(r.state.winnerId).toBe(0);
+      expect(r.state.players[1].hand.map(c => c.id)).toEqual(['mine']);
+    });
+
+    test('no swap when the joker was your last card', () => {
+      const state = setupGame({
+        players: [player({ hand: [swapJ()] }), player({ hand: [card(6, '♠', 'b1')] })],
+        ruleConfig: J,
+      });
+      const r = playCards(state, 0, ['js']);
+      expect(r.state.players[0].isFinished).toBe(true);
+      expect(r.events.some(e => e.type === 'handsSwapped')).toBe(false);
+    });
+
+    test('swapTargets lists active opponents only', () => {
+      const state = setupGame({
+        players: [player({ hand: [card(3)] }), player({ isFinished: true }), player({ hand: [card(4)] })],
+        ruleConfig: J,
+      });
+      expect(swapTargets(state, 0)).toEqual([2]);
+    });
+
+    test('bot playing a swap joker targets the smallest hand', () => {
+      const state = setupGame({
+        players: [
+          player({ hand: [swapJ()], isBot: true }),
+          player({ hand: [card(6), card(7), card(9)] }),
+          player({ hand: [card(4)] }),
+        ],
+        pile: [card(14)], // only the joker is playable
+        ruleConfig: J,
+      });
+      const action = decideBotAction(state, 0);
+      expect(action).toEqual({ type: 'play', cardIds: ['js'], swapTargetId: 2 });
     });
   });
 });

@@ -44,6 +44,23 @@ export function PlayingCard({
   }
 
   const red = isRedSuit(card.suit);
+  if (card.joker) {
+    return (
+      <Pressable
+        onPress={onPress}
+        disabled={disabled}
+        style={baseStyle}
+        accessibilityLabel={card.joker === 'reverse' ? 'Reverse joker' : 'Swap joker'}
+      >
+        <Text style={[styles.jokerWord, red && styles.red, small && styles.jokerWordSmall]}>
+          JOKER
+        </Text>
+        <Text style={[styles.jokerIcon, small && styles.smallSuit]}>
+          {card.joker === 'reverse' ? '🔄' : '🔀'}
+        </Text>
+      </Pressable>
+    );
+  }
   return (
     <Pressable onPress={onPress} disabled={disabled} style={baseStyle}>
       <Text
@@ -83,6 +100,9 @@ const styles = StyleSheet.create({
   smallText: { fontSize: 16 },
   smallSuit: { fontSize: 14 },
   red: { color: theme.color.red },
+  jokerWord: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: theme.color.text },
+  jokerWordSmall: { fontSize: 7, letterSpacing: 0.5 },
+  jokerIcon: { fontSize: 22, marginTop: 4 },
   back: { backgroundColor: theme.color.cardBack, borderColor: '#000' },
   backPattern: {
     width: '70%',

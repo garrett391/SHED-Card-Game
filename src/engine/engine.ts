@@ -10,7 +10,7 @@ import {
   Rank,
   RuleConfig,
 } from './types';
-import { createDeck, shuffle, rankLabel } from './cards';
+import { cardLabel, createDeck, shuffle, rankLabel } from './cards';
 import {
   canPlayCardOnTop,
   canPlayMultiple,
@@ -45,7 +45,7 @@ export function createGame(
 
   // Explicitly calculate the deck configuration based on num players
   const deckCount = playerConfigs.length > 4 ? 2 : 1;
-  const deck = shuffle(createDeck(deckCount));
+  const deck = shuffle(createDeck(deckCount, ruleConfig.jokers));
 
   const players: Player[] = playerConfigs.map((cfg, i) => ({
     id: i,
@@ -185,6 +185,10 @@ export function hasPlayableMove(state: GameState, playerIdx: number): boolean {
  * For face-down: pass a single card ID. If the flipped card can't beat the
  * top, the player picks up the pile (with that card added) and the turn ends.
  *
+ * Swap jokers: `opts.swapTargetId` names whose hand to take. If it's
+ * missing or not a valid target (e.g. a blind face-down flip), the swap goes
+ * to the next active player in the direction of play.
+ *
  * Returns the new state plus a list of events the UI can use to animate /
  * narrate what happened.
  */
@@ -192,6 +196,7 @@ export function playCards(
   state: GameState,
   playerIdx: number,
   cardIds: string[],
+  opts: { swapTargetId?: number } = {},
 ): PlayResult {
   if (state.phase !== 'playing') return { state, events: [] };
   if (state.currentPlayerIndex !== playerIdx) return { state, events: [] };
@@ -287,7 +292,9 @@ export function playCards(
   const log: LogEntry[] = [
     ...state.log,
     entry(state.log, 
-      `${player.name} played ${cards.length > 1 ? cards.length + '× ' : ''}${rankLabel(rank)}.`,
+      cards.length === 1
+        ? `${player.name} played ${cards[0].joker ? 'the ' + cardLabel(cards[0]) : rankLabel(rank)}.`
+        : `${player.name} played ${cards.length}× ${rankLabel(rank)}.`,
       playerIdx,
     ),
   ];
@@ -302,6 +309,15 @@ export function playCards(
     reversed = true;
     events.push({ type: 'directionReversed', playerId: playerIdx });
     log.push(entry(log, 'Direction reversed!', playerIdx));
+  }
+
+  // Reverse jokers: each one flips direction (two at once cancel out).
+  const reverseJokers = cards.filter(c => c.joker === 'reverse').length;
+  for (let i = 0; i < reverseJokers; i++) {
+    direction = direction === 1 ? -1 : 1;
+    reversed = true;
+    events.push({ type: 'directionReversed', playerId: playerIdx });
+    log.push(entry(log, 'The joker turns the table around. Direction reversed!', playerIdx));
   }
 
   // sixNineReverse: playing a 9 on a 6 reverses direction (skip if reverseRank already handled it)
@@ -361,6 +377,26 @@ export function playCards(
     }
   }
 
+  // Swap joker: trade hands with the chosen player, after drawing back up.
+  // Skipped if this play emptied all of the player's piles: they're out.
+  const swapper = players[playerIdx];
+  const swapperOut =
+    swapper.hand.length === 0 && swapper.faceUp.length === 0 && swapper.faceDown.length === 0;
+  if (cards.some(c => c.joker === 'swap') && !swapperOut) {
+    const targetId = resolveSwapTarget(players, playerIdx, direction, opts.swapTargetId);
+    if (targetId !== null) {
+      const mine = players[playerIdx].hand;
+      const theirs = players[targetId].hand;
+      players = players.map((p, i) =>
+        i === playerIdx ? { ...p, hand: theirs }
+        : i === targetId ? { ...p, hand: mine }
+        : p,
+      );
+      events.push({ type: 'handsSwapped', playerId: playerIdx, targetId });
+      log.push(entry(log, `${player.name} swaps hands with ${players[targetId].name}!`, playerIdx));
+    }
+  }
+
   // Did this player just go out (all piles empty)?
   const after = players[playerIdx];
   if (after.hand.length === 0 && after.faceUp.length === 0 && after.faceDown.length === 0) {
@@ -416,6 +452,30 @@ export function playCards(
 
   if (phase === 'gameOver') return { state: next, events };
   return { state: advanceTurn(next), events };
+}
+
+/** Players a swap joker played by `playerIdx` could trade hands with. */
+export function swapTargets(state: GameState, playerIdx: number): number[] {
+  return state.players
+    .filter(p => p.id !== playerIdx && !p.isFinished)
+    .map(p => p.id);
+}
+
+/** The requested target if valid, else the next active player in `direction`. */
+function resolveSwapTarget(
+  players: readonly Player[],
+  playerIdx: number,
+  direction: 1 | -1,
+  requested: number | undefined,
+): number | null {
+  const valid = (i: number) => i !== playerIdx && players[i] && !players[i].isFinished;
+  if (requested !== undefined && valid(requested)) return requested;
+  let i = playerIdx;
+  for (let n = 0; n < players.length; n++) {
+    i = (i + direction + players.length) % players.length;
+    if (valid(i)) return i;
+  }
+  return null;
 }
 
 /** Voluntarily (or forced) pick up the entire play pile and end turn. */
