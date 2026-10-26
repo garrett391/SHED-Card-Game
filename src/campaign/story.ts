@@ -63,9 +63,9 @@ export const CINEMATICS: Record<string, Cinematic> = {
         'The 2 resets. The 7 keeps it low.\nThe 10 burns it all.\nAnd the 8? The 8 you never see.',
     },
     {
-      image: null,
+      image: require('../../assets/story/intro-multiples.jpg'),
       caption:
-        'Cards of the same rank may be played together.\nLay down all four, and the pile burns.',
+        'Cards of the same rank may be played together. Lay down all four, and the pile burns.',
     },
     {
       image: require('../../assets/story/its_all_up_here.png'),
