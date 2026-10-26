@@ -17,14 +17,23 @@ import { Image } from 'expo-image';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { playSfx } from '../src/audio/sfx';
 import { CINEMATICS } from '../src/campaign/story';
 import { RULE_PRESETS } from '../src/campaign/presets';
 import { useCampaignStore } from '../src/store/campaignStore';
 
+/** Height of the strip holding ‹ Back and Skip ▸, below the safe area. */
+const TOP_BAR = 52;
+
 export default function CinematicScreen() {
   const router = useRouter();
   const { preset } = useLocalSearchParams<{ preset?: string }>();
+  // Buttons sit in their own strip below the notch / status bar, and the
+  // scene starts under that strip, so the art's frame never runs into them.
+  const insets = useSafeAreaInsets();
+  const topBar = insets.top + TOP_BAR;
+  const bottom = insets.bottom;
   const scenes = preset ? CINEMATICS[preset] : undefined;
 
   const [index, setIndex] = useState(0);
@@ -84,10 +93,11 @@ export default function CinematicScreen() {
   };
 
   const scene = scenes[index];
+  const chipTop = { top: insets.top + (TOP_BAR - 20) / 2 };
 
   return (
     <Pressable style={styles.container} onPress={advance}>
-      <Animated.View style={[styles.sceneWrap, { opacity: fade }]}>
+      <Animated.View style={[styles.sceneWrap, { paddingTop: topBar + 8, paddingBottom: 96 + bottom }, { opacity: fade }]}>
         {scene.image ? (
           <View style={styles.frame}>
             <Image
@@ -125,7 +135,7 @@ export default function CinematicScreen() {
       )}
 
       {/* Progress dots */}
-      <View style={styles.dots} pointerEvents="none">
+      <View style={[styles.dots, { bottom: 56 + bottom }]} pointerEvents="none">
         {scenes.map((_, i) => (
           <View key={i} style={[styles.dot, i === index && styles.dotActive]} />
         ))}
@@ -135,16 +145,16 @@ export default function CinematicScreen() {
           making the left-edge tap zone discoverable without cluttering the
           opening frame. */}
       {index > 0 && (
-        <Pressable onPress={goBack} hitSlop={12} style={styles.back}>
+        <Pressable onPress={goBack} hitSlop={12} style={[styles.back, chipTop]}>
           <Text style={styles.skipText}>‹ Back</Text>
         </Pressable>
       )}
 
-      <Pressable onPress={finish} hitSlop={12} style={styles.skip}>
+      <Pressable onPress={finish} hitSlop={12} style={[styles.skip, chipTop]}>
         <Text style={styles.skipText}>Skip ▸</Text>
       </Pressable>
 
-      <Text style={styles.hint}>tap to continue</Text>
+      <Text style={[styles.hint, { bottom: 28 + bottom }]}>tap to continue</Text>
     </Pressable>
   );
 }
@@ -160,8 +170,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 48,
-    paddingBottom: 96,
+    // paddingTop / paddingBottom are set inline from the safe-area insets.
   },
   frame: {
     // Every scene's art lives in this SAME box; differing aspect ratios
@@ -233,13 +242,11 @@ const styles = StyleSheet.create({
   },
   back: {
     position: 'absolute',
-    top: 54,
-    left: 20,
+    left: 20, // top: set inline (chipTop)
   },
   skip: {
     position: 'absolute',
-    top: 54,
-    right: 20,
+    right: 20, // top: set inline (chipTop)
   },
   skipText: {
     color: 'rgba(232,227,213,0.6)',
