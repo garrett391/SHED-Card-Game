@@ -46,6 +46,14 @@ ladder until both are known; there are no placeholder nodes.
 Chris is the finale, however many nodes come before him. The ladder ends
 at Chaos Shed in the shipped game until the next real table is decided.
 
+The ending, for now (Oct 2026): beating the last node plays a short
+"to be continued" cutscene (`ENDING_ID` in story.ts): the fog in the north
+thins, Chris's tower appears, a light in its window, someone writing. Art
+is cropped from the overworld by the map script. Afterwards the map header
+reads "All N tables restored. Something stirs in the north…" and tapping
+the tower replays the ending. When Chris's table is built, this cutscene
+becomes the lead-in to his node.
+
 Removed (Oct 2026): The 69 (Nina), The OFCOM Standard (Trevor) and The
 Backpacker's Codex (the Backpacker) were AI-generated filler from early
 drafting and are gone from the game. The engine flags they used

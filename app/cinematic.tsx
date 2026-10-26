@@ -3,7 +3,8 @@
  *
  * Route: /cinematic?preset=<id>. Plays CINEMATICS[preset], marks it seen in
  * campaignStore on finish or skip, then replaces to /setup with the same
- * preset so the game flow continues seamlessly.
+ * preset so the game flow continues seamlessly. A cinematic that isn't a
+ * node (the ending) returns to the campaign map instead.
  *
  * Every tap on a map node plays its cutscene; Skip is always available.
  * `seenCinematics` is still recorded, though nothing reads it right now.
@@ -18,6 +19,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { playSfx } from '../src/audio/sfx';
 import { CINEMATICS } from '../src/campaign/story';
+import { RULE_PRESETS } from '../src/campaign/presets';
 import { useCampaignStore } from '../src/store/campaignStore';
 
 export default function CinematicScreen() {
@@ -44,7 +46,10 @@ export default function CinematicScreen() {
 
   const finish = () => {
     useCampaignStore.getState().markCinematicSeen(preset); // idempotent
-    router.replace({ pathname: '/setup', params: { preset } });
+    // A node's cutscene leads to its table; anything else (the ending)
+    // hands back to the map.
+    if (RULE_PRESETS[preset]) router.replace({ pathname: '/setup', params: { preset } });
+    else router.replace('/campaign');
   };
 
   // Fade the current scene out, THEN act — scene swaps happen at opacity 0,

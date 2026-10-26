@@ -6,6 +6,12 @@
     "width": 160,
     "height": 76
   },
+  "tower": {
+    "x": 384,
+    "y": 288,
+    "width": 120,
+    "height": 416
+  },
   "order": [
     "jake-classic",
     "the-spreading",

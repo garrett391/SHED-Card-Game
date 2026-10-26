@@ -7,7 +7,7 @@ import { theme } from '../src/components/theme';
 import { useGameStore } from '../src/store/gameStore';
 import { isUnlocked, useCampaignStore } from '../src/store/campaignStore';
 import { RULE_PRESETS, PRESET_ORDER } from '../src/campaign/presets';
-import { CINEMATICS } from '../src/campaign/story';
+import { CINEMATICS, ENDING_ID } from '../src/campaign/story';
 import { characterByName, endLine, opponentsFor } from '../src/campaign/characters';
 import { CharacterDialogue } from '../src/components/CharacterDialogue';
 
@@ -174,13 +174,15 @@ export default function GameOverScreen() {
         {campaignPresetId ? (
           <>
             {/* Won with a node ahead → march on. Lost → rematch this node.
-                Won the final node → back to the map. */}
+                Won the final node → the ending, which returns to the map. */}
             {humanWon && nextNodeId ? (
               <Button title="Continue campaign  ▸" onPress={continueCampaign} />
             ) : humanWon ? (
               <Button
-                title="Campaign complete — view map"
-                onPress={() => departTo('/campaign')}
+                title="Continue  ▸"
+                onPress={() =>
+                  departTo({ pathname: '/cinematic', params: { preset: ENDING_ID } })
+                }
               />
             ) : (
               <Button

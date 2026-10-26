@@ -21,7 +21,13 @@ export interface Scene {
 
 export type Cinematic = Scene[];
 
-/** Keyed by preset id; plays on first entry to that node. */
+/** The campaign's current ending: plays after the last node is beaten and
+ *  hands back to the map instead of a table. Not a preset id. When Chris's
+ *  table exists, this becomes the lead-in to his node. */
+export const ENDING_ID = 'ending';
+
+/** Keyed by preset id (plays whenever that node is entered from the map),
+ *  plus ENDING_ID. */
 export const CINEMATICS: Record<string, Cinematic> = {
   // ── The origin — plays before your very first game ─────────────────────
   'jake-classic': [
@@ -158,6 +164,34 @@ export const CINEMATICS: Record<string, Cinematic> = {
       image: null,
       caption:
         'The red joker turns the table around. The black joker steals your hand and gives you theirs. You face them together, or not at all.',
+    },
+  ],
+
+  // ── The ending (for now): the fog lifts a little ───────────────────────
+  [ENDING_ID]: [
+    {
+      image: null,
+      caption:
+        "The twins' laughter faded behind them.\nFor the first time in a long while, every table they had visited played true.",
+    },
+    {
+      image: require('../../assets/story/ending-north.png'),
+      caption:
+        'Then the fog in the north began to thin,\nand a tower no map had ever shown rose out of it.',
+    },
+    {
+      image: require('../../assets/story/ending-tower.png'),
+      caption:
+        'In its highest window, a single light.\nSomeone up there was writing.',
+    },
+    {
+      image: null,
+      caption:
+        'And with every stroke of the quill,\nthe rules somewhere changed a little more.',
+    },
+    {
+      image: null,
+      caption: 'To be continued…',
     },
   ],
 };

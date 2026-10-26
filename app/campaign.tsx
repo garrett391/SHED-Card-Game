@@ -32,7 +32,7 @@ import { theme } from '../src/components/theme';
 import { RULE_PRESETS, PRESET_ORDER } from '../src/campaign/presets';
 import { MAP_SCENES, DEFAULT_SCENE } from '../src/campaign/mapMeta';
 import { isUnlocked, useCampaignStore } from '../src/store/campaignStore';
-import { CINEMATICS } from '../src/campaign/story';
+import { CINEMATICS, ENDING_ID } from '../src/campaign/story';
 import OVERWORLD from '../src/campaign/overworld.json';
 
 const MAP_IMAGE = require('../assets/map/overworld.png');
@@ -47,6 +47,7 @@ const LABEL_W = 150;
 type NodeState = 'completed' | 'current' | 'available' | 'locked';
 type NodePos = { x: number; y: number; side: 'left' | 'right' };
 const NODE_POS = OVERWORLD.nodes as Record<string, NodePos>;
+const TOWER = OVERWORLD.tower;
 
 export default function CampaignScreen() {
   const router = useRouter();
@@ -60,6 +61,9 @@ export default function CampaignScreen() {
     PRESET_ORDER.find((id) => isUnlocked(completed, id) && !completed[id]) ??
     null;
   const doneCount = PRESET_ORDER.filter((id) => completed[id]).length;
+  const allDone = doneCount === PRESET_ORDER.length;
+  const playEnding = () =>
+    router.push({ pathname: '/cinematic', params: { preset: ENDING_ID } });
 
   const stateFor = (id: string): NodeState => {
     if (completed[id]) return 'completed';
@@ -90,8 +94,8 @@ export default function CampaignScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.progress}>
-        {doneCount === PRESET_ORDER.length
-          ? '🏆 Every table restored. The Scribe awaits…'
+        {allDone
+          ? `🏆 All ${doneCount} tables restored. Something stirs in the north…`
           : `${doneCount} / ${PRESET_ORDER.length} tables restored`}
       </Text>
       <View style={styles.viewport} onLayout={onLayout}>
@@ -130,6 +134,40 @@ export default function CampaignScreen() {
                   />
                 );
               })}
+              {/* Once every table is restored, Chris's tower (painted
+                  scenery) replays the ending. Not a node: nothing to play
+                  there yet. */}
+              {allDone && (
+                <>
+                  <Pressable
+                    onPress={playEnding}
+                    accessibilityRole="button"
+                    accessibilityLabel="The tower in the north. Replay the ending."
+                    style={{
+                      position: 'absolute',
+                      left: (TOWER.x - TOWER.width / 2) * k,
+                      top: (TOWER.y - TOWER.height / 2) * k,
+                      width: TOWER.width * k,
+                      height: TOWER.height * k,
+                    }}
+                  />
+                  <Pressable
+                    onPress={playEnding}
+                    importantForAccessibility="no-hide-descendants"
+                    accessibilityElementsHidden
+                    style={[
+                      styles.label,
+                      {
+                        left: Math.max(6, TOWER.x * k - LABEL_W / 2),
+                        top: (TOWER.y + TOWER.height / 2) * k + 6,
+                      },
+                    ]}
+                  >
+                    <Text style={styles.labelName}>To be continued…</Text>
+                    <Text style={styles.labelTagline}>Tap the tower to see the ending again</Text>
+                  </Pressable>
+                </>
+              )}
               {NODE_POS[focusId] && (
                 <View
                   pointerEvents="none"
