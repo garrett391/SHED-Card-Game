@@ -137,7 +137,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
       caption: "Justin's schism had fallen, but there was no peace.",
     },
     {
-      image: null,
+      image: require('../../assets/story/wildfire.jpg'),
       caption:
         'Word of the game had spread like wildfire, faster than the disciples could follow. Wherever it landed, the rules came back bent into stranger shapes.',
     },
