@@ -134,8 +134,12 @@ export const CINEMATICS: Record<string, Cinematic> = {
   'super-tens': [
     {
       image: require('../../assets/story/schism-justin-defeated.png'),
+      caption: "Justin's schism had fallen, but there was no peace.",
+    },
+    {
+      image: null,
       caption:
-        "Justin's schism had fallen, but there was no peace. Everywhere they went, the teachings were bending into stranger shapes.",
+        'Word of the game had spread like wildfire, faster than the disciples could follow. Wherever it landed, the rules came back stranger.',
     },
     {
       image: require('../../assets/story/greg-journey1.jpg'),
@@ -145,7 +149,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
     {
       image: require('../../assets/story/greg-journey2.jpg'),
       caption:
-        'Robot peasants worked fields of copper and wire. None had met Jake, yet all of them knew the rules, as Greg remembered them.',
+        'Robot peasants worked fields of copper and wire. None had met Jake, yet all of them knew the rules, as their ruler had taught them.',
     },
     {
       image: require('../../assets/story/greg-computer-lord1.png'),
