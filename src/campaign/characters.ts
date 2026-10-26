@@ -403,30 +403,3 @@ export function endLine(c: Character, playerWon: boolean): string | null {
   if (!pool || pool.length === 0) return null;
   return pool[Math.floor(Math.random() * pool.length)];
 }
-
-// ─── The disciples ───────────────────────────────────────────────────────────
-
-/**
- * The three friends Jake taught. In the campaign the human plays as one of
- * them; the choice is stored in campaignStore and used as the player's name.
- * A null portrait renders as the name's initial.
- */
-export interface Hero {
-  id: string;
-  name: string;
-  portrait: ImageSourcePropType | null;
-}
-
-export const HEROES: Hero[] = [
-  { id: 'erich', name: 'Erich', portrait: require('../../assets/characters/erich.png') },
-  { id: 'nick', name: 'Nick', portrait: require('../../assets/characters/nick.png') },
-  { id: 'garrett', name: 'Garrett', portrait: require('../../assets/characters/garrett.png') },
-];
-
-export function heroById(id: string | null): Hero | null {
-  return HEROES.find((h) => h.id === id) ?? null;
-}
-
-export function heroByName(name: string): Hero | null {
-  return HEROES.find((h) => h.name === name) ?? null;
-}

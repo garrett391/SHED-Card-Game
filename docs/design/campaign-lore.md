@@ -89,12 +89,16 @@ glasses, Garrett is clean-shaven (middle of intro1.png).
 Real life: Jake taught Erich, and Erich taught Nick and Garrett. The story
 has all three learn from Jake because it reads better.
 
-Shipped: the player chooses which disciple to play as on the campaign setup
-screen (`HEROES` in characters.ts, `heroId` in campaignStore). It replaces
-"Player 1" as the human's name in campaign games, with portraits in
-assets/characters/ (erich.png, nick.png, garrett.png).
+Decided (Oct 2026): the player does NOT pick one of the three. A "choose
+your disciple" picker shipped briefly and was removed. It changed only a name
+and a portrait, the cinematics always speak of the three as a group, and it
+blocked the first deal on a choice with no basis. The player stands in for
+the disciples as a whole; in campaign the human seat is named by the player
+(default "Player 1"), same as free play. "You" was rejected as the default
+because engine log lines read "You picks up the pile".
 
-Other candidate uses:
+The disciple portraits (erich.png, nick.png, garrett.png in
+assets/characters/) are kept for later use, e.g.:
 - Interstitial narration voice between nodes ("Nick swore he saw Greg's
   sleeve move").
 - Multiplayer seats when local multiplayer lands (three heroes, three seats).
@@ -122,5 +126,6 @@ Other candidate uses:
   is the ending that all schisms are legitimate tables? (The second reading
   is warmer and matches how card games actually live.)
 - Chris's variant name: The Scribe's Edict? The Manuscript? Errata?
-- Do the three protagonists have distinct roles/personalities, or are they
-  interchangeable player skins?
+- ~~Do the three protagonists have distinct roles/personalities, or are they
+  interchangeable player skins?~~ Neither: they're the story's collective
+  protagonist, not a player choice (see The Protagonists).
