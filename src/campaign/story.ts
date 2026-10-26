@@ -117,7 +117,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
     {
       image: require('../../assets/story/schism-justin1.jpg'),
       caption:
-        'Justin. First of the dissenters. He believed not even the 8 stood above the law.',
+        'The blasphemer was Justin, first of the dissenters. He taught that an 8 could never be played on a 7: not even the 8 stood above the law.',
     },
     {
       image: require('../../assets/story/schism-justin2.png'),
