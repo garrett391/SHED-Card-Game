@@ -231,7 +231,7 @@ export const CHARACTERS: Record<string, Character> = {
     portrait: null,
     quips: [
       'Soft rules make soft players.',
-      'Not even the 10 is above the law now.',
+      'Every 8 we found, we burned.',
       'Justin wrote it. I believe it.',
     ],
     reactions: {
@@ -245,7 +245,9 @@ export const CHARACTERS: Record<string, Character> = {
     name: 'Justin',
     title: 'First heretic of the Schism',
     emoji: '⛪',
-    homeTable: 'second-schism',
+    // His first schism: the Second Schism removes 8s from the deck, which
+    // one seat can't do at a shared table.
+    homeTable: 'justins-schism',
     portrait: require('../../assets/characters/justin.png'),
     quips: [
       'The old rules were too soft.',

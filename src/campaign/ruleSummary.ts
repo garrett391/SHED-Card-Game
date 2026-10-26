@@ -53,10 +53,16 @@ export function variantDiff(config: RuleConfig): string[] {
         `${rankLabel(config.transparentRank)}. The red joker reverses the direction of play. The black joker swaps your hand with another player\'s: you choose who.`,
     );
 
+  // ── Removed ranks ──────────────────────────────────────────────────────────
+  if (config.removedRanks.length > 0)
+    out.push(
+      `There are no ${config.removedRanks.map((r) => rankLabel(r) + 's').join(' or ')} in the deck: they've been taken out before the deal.`,
+    );
+
   // ── Seat rules ─────────────────────────────────────────────────────────────
   if (config.seatRules && !base.seatRules)
     out.push(
-      "Every dissenter plays by the rules of their own table on their turn: Justin's hard 8s and restricted 10s, Greg's 10s that burn through 7s, the twins' jokers. You play by Jake's Classic.",
+      "Every dissenter plays by the rules of their own table on their turn: Justin's hard 8s, Greg's 10s that burn through 7s, the twins' jokers. You play by Jake's Classic.",
     );
 
   // ── Special combo ──────────────────────────────────────────────────────────

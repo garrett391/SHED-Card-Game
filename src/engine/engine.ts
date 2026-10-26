@@ -47,7 +47,8 @@ export function createGame(
   const deckCount = playerConfigs.length > 4 ? 2 : 1;
   // Jokers go in if the table or any seat plays with them.
   const jokers = ruleConfig.jokers || playerConfigs.some(c => c.rules?.jokers);
-  const deck = shuffle(createDeck(deckCount, jokers));
+  const removed = new Set(ruleConfig.removedRanks);
+  const deck = shuffle(createDeck(deckCount, jokers).filter(c => !removed.has(c.rank)));
 
   const players: Player[] = playerConfigs.map((cfg, i) => ({
     id: i,

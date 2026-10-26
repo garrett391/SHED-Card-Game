@@ -125,7 +125,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
         "He preached that Jake's rules were too soft, and that his way was the only true path.",
     },
     {
-      image: require('../../assets/story/schism-justin3.png'),
+      image: require('../../assets/story/schism-approach.jpg'),
       caption:
         'To end the schism, the disciples would have to beat him at his own table, by his own rules.',
     },
@@ -196,11 +196,15 @@ export const CINEMATICS: Record<string, Cinematic> = {
     },
     {
       image: require('../../assets/story/schism-justin2.png'),
-      caption: 'Now he preached a harder law: not even the 10 may burn a face card.',
+      caption: 'Now he preached that the 8 itself was the heresy. As long as one existed, someone would play it on a 7.',
     },
     {
       image: require('../../assets/story/schism-justin3.png'),
-      caption: 'His 8s still bow to the 7. And this time, he does not sit alone.',
+      caption: 'So his followers burned every deck that still played the old way, and every 8 they could find, once and for all.',
+    },
+    {
+      image: null,
+      caption: 'At his new table there are no 8s at all. And this time, he does not sit alone.',
     },
   ],
 

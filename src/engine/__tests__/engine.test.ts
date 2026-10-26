@@ -986,7 +986,7 @@ describe('rule variants', () => {
       for (let n = 0; n < 50; n++) {
         let g = createGame([
           { name: 'You', isBot: true },
-          { name: 'Justin', isBot: true, rules: getPreset('second-schism') },
+          { name: 'Justin', isBot: true, rules: getPreset('justins-schism') },
           { name: 'Greg', isBot: true, rules: superTens },
           { name: 'Gio', isBot: true, rules: getPreset('chaos-shed') },
           { name: 'Tati', isBot: true, rules: getPreset('chaos-shed') },
@@ -998,6 +998,39 @@ describe('rule variants', () => {
           g = a.type === 'pickup'
             ? pickupPile(g, g.currentPlayerIndex).state
             : playCards(g, g.currentPlayerIndex, a.cardIds, { swapTargetId: a.swapTargetId }).state;
+        }
+        expect(g.phase).toBe('gameOver');
+      }
+      restore();
+    });
+  });
+
+  // ── Removed ranks (the Second Schism) ───────────────────────────────────
+  describe('removed ranks', () => {
+    test('the Second Schism deals a deck with no 8s', () => {
+      const g = createGame(
+        [{ name: 'A', isBot: false }, { name: 'B', isBot: true }, { name: 'C', isBot: true }, { name: 'D', isBot: true }],
+        getPreset('second-schism'),
+      );
+      const all = [...g.drawPile, ...g.players.flatMap(p => [...p.hand, ...p.faceUp, ...p.faceDown])];
+      expect(all).toHaveLength(48);
+      expect(all.some(c => c.rank === 8)).toBe(false);
+    });
+
+    test('Second Schism games still finish', () => {
+      const restore = seedRandom(8); // bot-only games: see seededRandom.ts
+      for (let n = 0; n < 50; n++) {
+        let g = createGame(
+          [{ name: 'A', isBot: true }, { name: 'B', isBot: true }, { name: 'C', isBot: true }, { name: 'D', isBot: true }],
+          getPreset('second-schism'),
+        );
+        for (let i = 0; i < 4; i++) g = finishSwap(g, i);
+        let turns = 0;
+        while (g.phase === 'playing' && turns++ < 5000) {
+          const a = decideBotAction(g, g.currentPlayerIndex);
+          g = a.type === 'pickup'
+            ? pickupPile(g, g.currentPlayerIndex).state
+            : playCards(g, g.currentPlayerIndex, a.cardIds).state;
         }
         expect(g.phase).toBe('gameOver');
       }

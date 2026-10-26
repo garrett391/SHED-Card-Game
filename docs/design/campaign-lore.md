@@ -40,7 +40,7 @@ ladder until both are known; there are no placeholder nodes.
 | 3 | Justin's Schism | Justin | Hard 8s: "the old rules were too soft" | Locked |
 | 4 | Super Tens | Greg the Computer Lord | Cheats, denies, rewrites reality verbally | Locked |
 | 5 | Chaos Shed | Gio and Tati, the Chaos Twins | Two jokers: reverse play, swap hands (see below) | Locked |
-| 6 | The Second Schism | Justin, the Acolyte, the Zealot | Justin returns harder: hard 8s, and 10s can't burn face cards | Draft (Oct 2026) |
+| 6 | The Second Schism | Justin, the Acolyte, the Zealot | Justin returns having burned every 8: the deck is dealt without 8s | Draft (Oct 2026) |
 | 7 | The Council of Schisms | Justin, Greg, Gio, Tati | Semi-finale: each plays by their own table's rules on their turn | Draft (Oct 2026) |
 | … | (open slots) | | | |
 | Finale | (unnamed) | **Chris the Scribe** | Holds the pen. Rewrites rules MID-GAME. | Not built |
@@ -56,14 +56,21 @@ reads "All N tables restored. Something stirs beyond the fog…" and tapping
 the tower replays the ending. When Chris's table is built, this cutscene
 becomes the lead-in to his node.
 
+Justin's arc (Oct 2026): his first schism says the 8 must obey the 7
+(hard 8s); when he returns, the 8 itself is the heresy, so his followers
+burn every 8 and his table plays without them (`removedRanks: [8]`). The
+first schism's cutscene ends on the disciples approaching his chapel; the
+card-burning art belongs to his return.
+
 Recurring schisms (from Jake's playtest, Oct 2026): the schism keeps
 coming back, harder each time, as a running theme of disagreement you have
 to keep winning to stay true. The Second Schism is the first return; more
 returns (Justin or others) can fill the open slots. The Council is the
 semi-finale: every dissenter at one table, and the rules change with
 whoever's turn it is (`seatRules` on the preset, `homeTable` on each
-character, `rules` on each seat in the engine). Justin brings his Second
-Schism rules to the Council, Greg his Super Tens, the twins their jokers;
+character, `rules` on each seat in the engine). Justin brings his first
+Schism's hard 8s to the Council (removing 8s can't be a single seat's
+rule at a shared deck), Greg his Super Tens, the twins their jokers;
 the player plays by Jake's Classic. The Acolyte and the Zealot are
 unnamed archetypes, like the Spreading's pupils.
 

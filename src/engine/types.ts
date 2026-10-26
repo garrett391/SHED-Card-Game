@@ -100,6 +100,10 @@ export interface RuleConfig {
   // on the pile, like the transparent rank.
   jokers: boolean;
 
+  // Ranks taken out of the deck before dealing (the Second Schism burns
+  // every 8). Empty = the full deck.
+  removedRanks: Rank[];
+
   // Seat rules: each host plays by the rules of their own table on their
   // turn (the Council). Setup attaches the rules; this flag only describes
   // the table.

@@ -66,10 +66,9 @@ export const RULE_PRESETS: Record<string, RuleConfig> = {
     ...DEFAULT_RULES,
     id: 'second-schism',
     name: 'The Second Schism',
-    description: "Hard 8s, and now the 10 can't burn a face card either. Justin brings two followers.",
-    flavorText: 'Not even the 10 stands above the law.',
-    hardEights: true,
-    burnRankRestricted: true,
+    description: 'Justin has burned every 8. The deck is dealt without them, so nothing escapes a 7. He brings two followers.',
+    flavorText: 'No 8s, no argument.',
+    removedRanks: [8],
   },
 
   // The semi-finale: every dissenter at one table, each by their own rules.

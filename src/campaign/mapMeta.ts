@@ -48,7 +48,7 @@ export const MAP_SCENES: Record<string, MapScene> = {
   'second-schism': {
     emoji: '🕯️',
     color: '#a83246',
-    tagline: 'Justin is back, and his law is harder.',
+    tagline: 'Justin is back, and he has burned every 8.',
   },
   'the-council': {
     emoji: '⚖️',
