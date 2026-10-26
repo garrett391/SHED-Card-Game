@@ -176,6 +176,9 @@ export default function RootLayout() {
           headerTintColor: theme.color.textOnDark,
           contentStyle: { backgroundColor: theme.color.feltBg },
           headerRight: () => <SettingsButton />,
+          // Back arrows carry no caption. Otherwise iOS labels them with the
+          // previous screen's title, which reads as a stray word.
+          headerBackButtonDisplayMode: 'minimal',
         }}
       >
         <Stack.Screen name="index" options={{ title: 'Shed' }} />

@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -233,6 +233,9 @@ export default function SetupScreen() {
 
   return (
     <View style={styles.screen}>
+      {/* "Players" names the free-play roster screen. In the campaign the
+          node's banner below says where you are, so the header stays empty. */}
+      <Stack.Screen options={{ title: campaignPreset ? '' : 'Players' }} />
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={styles.container}
