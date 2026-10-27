@@ -201,7 +201,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
         'Beyond the pass, the desert opened wide. The disciples heard the next table before they saw it: laughter, and the sound of cards hitting the sand.',
     },
     {
-      image: require('../../assets/story/chaos-twins-card.png'),
+      image: require('../../assets/story/twins-intro.jpg'),
       caption:
         'Gio and Tati, the Chaos Twins. They never broke the old rules. They just added two cards nobody could predict.',
     },
