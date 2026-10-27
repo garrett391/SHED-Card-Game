@@ -180,7 +180,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
       caption: 'Past the last of the circuitry, the land dried out. Cables turned to roots, and the roots turned to sand.',
     },
     {
-      image: null, // art to come: the ambush in the canyon
+      image: require('../../assets/story/pass-ambush.jpg'),
       caption: 'In a narrow canyon pass, bandits sprang from the rocks. Nobody crossed without paying the toll.',
     },
     {
