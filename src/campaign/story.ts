@@ -196,7 +196,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
   // ── The Chaos Twins ─────────────────────────────────────────────────────
   'chaos-shed': [
     {
-      image: null, // art to come: the bandits defeated, the Chief questioned
+      image: require('../../assets/story/pass-defeated.jpg'),
       caption:
         'The bandits lost their game, and their nerve. The disciples held up one of the rulebooks: who was writing these?',
     },
