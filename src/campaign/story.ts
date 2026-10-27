@@ -169,12 +169,36 @@ export const CINEMATICS: Record<string, Cinematic> = {
     },
   ],
 
+  // ── The Outlaw Pass ─────────────────────────────────────────────────────
+  'the-pass': [
+    {
+      image: null, // art to come: Greg's hall gone dark
+      caption: "Greg's machines fell silent, every screen frozen mid-thought. His rules ran no more.",
+    },
+    {
+      image: null, // art to come: circuitry giving way to desert
+      caption: 'Past the last of the circuitry, the land dried out. Cables turned to roots, and the roots turned to sand.',
+    },
+    {
+      image: null, // art to come: the ambush in the canyon
+      caption: 'In a narrow canyon pass, bandits sprang from the rocks. Nobody crossed without paying the toll.',
+    },
+    {
+      image: null, // art to come: the wagon of rulebooks, gold quill seal
+      caption: 'Their wagon was piled high with rulebooks, copied by hand and sold in every town. Each was sealed with a golden quill.',
+    },
+    {
+      image: null,
+      caption: 'Out here, a 7 is a stick-up: whenever a bandit plays one, they take your best card and leave you their worst.',
+    },
+  ],
+
   // ── The Chaos Twins ─────────────────────────────────────────────────────
   'chaos-shed': [
     {
-      image: null,
+      image: null, // art to come: deep desert, the big top on the horizon
       caption:
-        'The disciples heard the next table before they saw it: laughter, and the sound of cards hitting the floor.',
+        'Beyond the pass, the desert opened wide. The disciples heard the next table before they saw it: laughter, and the sound of cards hitting the sand.',
     },
     {
       image: require('../../assets/story/chaos-twins-card.png'),
@@ -185,6 +209,10 @@ export const CINEMATICS: Record<string, Cinematic> = {
       image: null,
       caption:
         'The red joker turns the table around. The black joker steals your hand and gives you theirs. You face them together, or not at all.',
+    },
+    {
+      image: null, // art to come: the twins' tent, a quill-sealed rulebook among the props
+      caption: "Tati giggled as she dealt. 'The Scribe says there are no rules. Only drafts.'",
     },
   ],
 

@@ -1037,4 +1037,86 @@ describe('rule variants', () => {
       restore();
     });
   });
+
+  // ── Stick-up (the bandits) ──────────────────────────────────────────────
+  describe('stick-up', () => {
+    const bandit = getPreset('bandit');
+
+    test("a bandit's 7 swaps their lowest card for the next player's highest", () => {
+      const state = setupGame({
+        players: [
+          player({ hand: [card(7, '♠', 'b7'), card(3, '♠', 'b3'), card(9, '♠', 'b9')], rules: bandit }),
+          player({ hand: [card(4, '♥', 'v4'), card(13, '♥', 'vK'), card(5, '♥', 'v5')] }),
+        ],
+        pile: [card(5)],
+      });
+      const r = playCards(state, 0, ['b7']);
+      expect(r.state.players[0].hand.map(c => c.id).sort()).toEqual(['b9', 'vK']);
+      expect(r.state.players[1].hand.map(c => c.id).sort()).toEqual(['b3', 'v4', 'v5']);
+      expect(r.events).toContainEqual(expect.objectContaining({ type: 'cardStolen', playerId: 0, targetId: 1 }));
+    });
+
+    test('only robbers rob: a 7 from a player without stick-up does nothing extra', () => {
+      const state = setupGame({
+        players: [
+          player({ hand: [card(7, '♠', 'h7'), card(3)] }),
+          player({ hand: [card(13, '♥', 'vK')], rules: bandit }),
+        ],
+        pile: [card(5)],
+      });
+      const r = playCards(state, 0, ['h7']);
+      expect(r.events.some(e => e.type === 'cardStolen')).toBe(false);
+      expect(r.state.players[1].hand.map(c => c.id)).toEqual(['vK']);
+    });
+
+    test('no robbery when it would not cost the victim', () => {
+      const state = setupGame({
+        players: [
+          player({ hand: [card(7, '♠', 'b7'), card(9, '♠', 'b9')], rules: bandit }),
+          player({ hand: [card(4, '♥', 'v4')] }),
+        ],
+        pile: [card(5)],
+      });
+      const r = playCards(state, 0, ['b7']);
+      expect(r.events.some(e => e.type === 'cardStolen')).toBe(false);
+    });
+
+    test('robs the next player in the direction of play', () => {
+      const state = { ...setupGame({
+        players: [
+          player({ hand: [card(7, '♠', 'b7'), card(3, '♠', 'b3')], rules: bandit }),
+          player({ hand: [card(12, '♥', 'q')] }),
+          player({ hand: [card(13, '♥', 'k')] }),
+        ],
+        pile: [card(5)],
+      }), direction: -1 as const };
+      const r = playCards(state, 0, ['b7']);
+      expect(r.events).toContainEqual(expect.objectContaining({ type: 'cardStolen', targetId: 2 }));
+    });
+
+    test("bandits skip each other and rob the next player who isn't a bandit", () => {
+      const state = setupGame({
+        players: [
+          player({ hand: [card(7, '♠', 'b7'), card(3, '♠', 'b3')], rules: bandit }),
+          player({ hand: [card(13, '♣', 'partnerK')], rules: bandit }),
+          player({ hand: [card(12, '♥', 'youQ')] }),
+        ],
+        pile: [card(5)],
+      });
+      const r = playCards(state, 0, ['b7']);
+      expect(r.events).toContainEqual(expect.objectContaining({ type: 'cardStolen', targetId: 2 }));
+      expect(r.state.players[1].hand.map(c => c.id)).toEqual(['partnerK']);
+    });
+
+    test('bandit bots play their 7s instead of saving them', () => {
+      const state = setupGame({
+        players: [
+          player({ hand: [card(7, '♠', 'b7'), card(9, '♠', 'b9')], rules: bandit, isBot: true }),
+          player({ hand: [card(13, '♥', 'vK')] }),
+        ],
+        pile: [card(5)],
+      });
+      expect(decideBotAction(state, 0)).toEqual({ type: 'play', cardIds: ['b7'] });
+    });
+  });
 });

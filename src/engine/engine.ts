@@ -407,6 +407,37 @@ export function playCards(
     }
   }
 
+  // Stick-up: a 7 from a player under stick-up rules robs the next player
+  // who isn't a robber too (bandits don't rob each other): the robber's
+  // lowest hand card for the victim's highest. Only when it costs the
+  // victim (their best beats the robber's worst).
+  if (cfg.stickUp && rank === cfg.lowerThanRank) {
+    let targetId: number | null = null;
+    for (let n = 1, i = playerIdx; n < players.length; n++) {
+      i = (i + direction + players.length) % players.length;
+      const p = players[i];
+      if (!p.isFinished && !(p.rules?.stickUp)) { targetId = i; break; }
+    }
+    const robberHand = players[playerIdx].hand;
+    const victimHand = targetId === null ? [] : players[targetId].hand;
+    if (targetId !== null && robberHand.length > 0 && victimHand.length > 0) {
+      const gave = robberHand.reduce((lo, c) => (c.rank < lo.rank ? c : lo));
+      const took = victimHand.reduce((hi, c) => (c.rank > hi.rank ? c : hi));
+      if (took.rank > gave.rank) {
+        players = players.map((p, i) =>
+          i === playerIdx ? { ...p, hand: [...p.hand.filter(c => c.id !== gave.id), took] }
+          : i === targetId ? { ...p, hand: [...p.hand.filter(c => c.id !== took.id), gave] }
+          : p,
+        );
+        events.push({ type: 'cardStolen', playerId: playerIdx, targetId, took, gave });
+        log.push(entry(log,
+          `Stick-up! ${player.name} takes ${players[targetId].name}'s ${cardLabel(took)} and leaves a ${cardLabel(gave)}.`,
+          playerIdx,
+        ));
+      }
+    }
+  }
+
   // Did this player just go out (all piles empty)?
   const after = players[playerIdx];
   if (after.hand.length === 0 && after.faceUp.length === 0 && after.faceDown.length === 0) {

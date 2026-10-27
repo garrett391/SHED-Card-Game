@@ -582,9 +582,125 @@ def paint_greg(cv: Canvas, y0: int, side: str, rng: random.Random, clear: Clear)
     return nx, ny
 
 
+def desert_ground(cv: Canvas, y0: int, y1: int, fade: int = 14) -> None:
+    """Turn the grass in rows y0..y1 into sand dunes, dithering into grass
+    over `fade` rows at each edge so biomes blend instead of meeting in a line."""
+    grass = set(R['grass'])
+    for yy in range(y0 - fade, y1 + fade):
+        edge = min(yy - (y0 - fade), (y1 + fade) - yy) / (2 * fade)   # 0 at the outer edge
+        for xx in range(W):
+            if cv.get(xx, yy) not in grass:
+                continue
+            if edge < 0.5 and noise(xx, yy, 3, 41) > edge * 2:
+                continue                                              # keep some grass in the blend
+            ripple = math.sin(xx / 5 + yy / 3 + noise(xx, yy, 9, 42) * 4)
+            v = 0.45 + 0.18 * ripple + 0.15 * noise(xx, yy, 4, 43)
+            # redder than the road's sand, so the road still reads
+            cv.set(xx, yy, mix(shade(R['sand'][1:], v), R['cliff'][2], 0.38))
+
+
+def cactus(cv: Canvas, x: int, y: int, s: float = 1.0) -> None:
+    """Saguaro; (x, y) is its base."""
+    h = int(14 * s)
+    cv.shadow(x + 3, y + 1, 4 * s, 1.5, 0.65)
+    def col(xx, yy, top, bot):
+        for yv in range(top, bot):
+            cv.set(xx - 1, yv, R['grass'][0])
+            cv.set(xx, yv, R['grass'][2])
+            cv.set(xx + 1, yv, R['grass'][1])
+            cv.set(xx + 2, yv, R['grass'][0])
+        cv.set(xx, top - 1, R['grass'][0])
+        cv.set(xx + 1, top - 1, R['grass'][0])
+    col(x, y, y - h, y + 1)
+    ay = y - int(h * 0.55)
+    for i in range(3):                        # left arm
+        cv.set(x - 2 - i, ay, R['grass'][1])
+        cv.set(x - 2 - i, ay + 1, R['grass'][0])
+    col(x - 5, ay + 1, ay - int(5 * s), ay + 1)
+    by = y - int(h * 0.35)
+    for i in range(3):                        # right arm
+        cv.set(x + 3 + i, by, R['grass'][1])
+        cv.set(x + 3 + i, by + 1, R['grass'][0])
+    col(x + 6, by + 1, by - int(4 * s), by + 1)
+
+
+def mesa(cv: Canvas, cx: int, base: int, w: int, h: int) -> None:
+    """A flat-topped red-rock butte with banded strata; (cx, base) is its foot."""
+    cv.shadow(cx + w * 0.3, base + 2, w * 0.6, 4, 0.6)
+    top = base - h
+    for yy in range(top, base):
+        t = (yy - top) / h
+        half = w / 2 * (0.82 + 0.18 * t) + 2 * noise(cx, yy, 3, 44)
+        for xx in range(int(cx - half), int(cx + half) + 1):
+            lit = (xx - (cx - half)) / (2 * half)
+            band = (yy // 4) % 3
+            base_col = R['cliff'][3] if lit < 0.35 else R['cliff'][2] if lit < 0.7 else R['cliff'][1]
+            if band == 1:
+                base_col = mix(base_col, R['jred'][1], 0.35)
+            if xx in (int(cx - half), int(cx + half)):
+                base_col = INK
+            cv.set(xx, yy, base_col)
+    half = w / 2 * 0.82
+    for xx in range(int(cx - half), int(cx + half) + 1):   # sunlit cap
+        cv.set(xx, top, R['sand'][4] if xx < cx else R['sand'][3])
+        cv.set(xx, top - 1, INK)
+
+
+def paint_pass(cv: Canvas, y0: int, side: str, rng: random.Random, clear: Clear) -> tuple[int, int]:
+    """The Outlaw Pass: a red-rock canyon, the bandits' camp and their wagon
+    of hand-copied rulebooks (each sealed with a gold quill)."""
+    nx, ny = NODE_X[side], y0 + BAND // 2
+    desert_ground(cv, y0, y0 + BAND, fade=18)
+    far = 136 if side == 'left' else 56          # the camp, across the road
+    # canyon walls: buttes crowding both edges of the band
+    for cx, by, w, h in [(18, y0 + 40, 30, 26), (176, y0 + 30, 28, 30),
+                         (14, y0 + 104, 26, 22), (180, y0 + 96, 26, 24)]:
+        if not clear(cx, by - h // 2):
+            mesa(cv, cx, by, w, h)
+    # the bandits' wagon: canvas cover, crates of books with gold quill seals
+    wx, wy = far - 14, y0 + 56
+    cv.shadow(wx + 16, wy + 13, 18, 3.5, 0.6)
+    cv.rect(wx, wy, 30, 9, R['wood'][2])
+    cv.rect(wx, wy, 30, 2, R['wood'][3])
+    cv.outline_rect(wx - 1, wy - 1, 32, 11)
+    for j in range(9):                            # canvas hoop cover
+        half = 15 - abs(j - 4) * 0.4
+        for xx in range(int(wx + 15 - half), int(wx + 15 + half)):
+            t = (xx - wx) / 30
+            cv.set(xx, wy - 10 + j, R['wall'][3] if t < 0.3 else R['wall'][2] if t < 0.75 else R['wall'][1])
+    for xx in range(wx, wx + 30):
+        cv.set(xx, wy - 11, INK)
+    for k in range(4):                            # books spilling out the back
+        bx = wx + 32 + k * 4
+        cv.rect(bx, wy + 3 - (k % 2) * 2, 3, 4, [R['jred'][1], R['purple'][1], R['jblue'][1], R['wood'][1]][k])
+        cv.set(bx + 1, wy + 4 - (k % 2) * 2, R['gold'][3])   # the quill seal
+    for wxx in (wx + 5, wx + 24):                 # wheels
+        cv.disc(wxx, wy + 11, 4, INK)
+        cv.disc(wxx, wy + 11, 2.5, R['wood'][2])
+        cv.set(wxx, wy + 11, INK)
+    # camp: a fire, a lean-to, a WANTED-style signpost
+    campfire(cv, far + 18, y0 + 84)
+    cv.rect(far - 4, y0 + 70, 1, 12, R['wood'][0])
+    cv.rect(far - 9, y0 + 70, 11, 6, R['wood'][3])
+    cv.outline_rect(far - 10, y0 + 69, 13, 8)
+    cv.rect(far - 7, y0 + 72, 7, 1, R['wood'][0])
+    # bleached bones and tumbleweeds
+    for bx, by in [(far + 30, y0 + 100), (far - 20, y0 + 106)]:
+        if not clear(bx, by):
+            cv.rect(bx, by, 6, 1, R['wall'][3])
+            cv.set(bx - 1, by - 1, R['wall'][3])
+            cv.set(bx + 6, by + 1, R['wall'][3])
+    tumble = lambda x, y: cv.blob([(x, y - 2, 2.4)], [R['wood'][0], R['wood'][1], R['wood'][2], R['sand'][2]])
+    scatter(rng, y0 + 6, y0 + BAND - 4, 9, lambda x, y: cactus(cv, x, y, 0.8 + (x % 3) * 0.15),
+            lambda x, y: clear(x, y) or abs(x - far) < 34 and abs(y - y0 - 70) < 30)
+    scatter(rng, y0 + 6, y0 + BAND - 4, 6, tumble, clear)
+    return nx, ny
+
+
 def paint_chaos(cv: Canvas, y0: int, side: str, rng: random.Random, clear: Clear) -> tuple[int, int]:
     """Gio and Tati's carnival: a striped big top, a checker plaza, balloons."""
     nx, ny = NODE_X[side], y0 + BAND // 2
+    desert_ground(cv, y0, y0 + BAND, fade=14)
     tw = 50
     tx = 108 if side == 'left' else 34       # tent's left edge
     # checker plaza in front of the big top
@@ -663,7 +779,7 @@ def paint_chaos(cv: Canvas, y0: int, side: str, rng: random.Random, clear: Clear
     cv.rect(jx + 3, jy - 7, 4, 1, R['jred'][2])
     cv.sprite(jx + 1, jy - 15, ['a.b.c', '.aabc'], {'a': R['jred'][2], 'b': R['jgreen'][2], 'c': R['jblue'][2]})
     off_plaza = lambda x, y: clear(x, y) or ((x - pcx) / 44) ** 2 + ((y - pcy + 16) / 40) ** 2 < 1
-    scatter(rng, y0 + 4, y0 + BAND - 4, 12, lambda x, y: bush(cv, x, y), off_plaza)
+    scatter(rng, y0 + 4, y0 + BAND - 4, 9, lambda x, y: cactus(cv, x, y, 0.8 + (x % 3) * 0.15), off_plaza)
     scatter(rng, y0 + 4, y0 + BAND - 4, 16,
             lambda x, y: cv.set(x, y, [R['jred'][2], R['jgreen'][3], R['gold'][3], R['jpurple'][3]][(x + y) % 4]),
             off_plaza)   # confetti
@@ -854,6 +970,7 @@ REGIONS = [
     ('the-spreading', paint_spreading),
     ('justins-schism', paint_justin),
     ('super-tens', paint_greg),
+    ('the-pass', paint_pass),
     ('chaos-shed', paint_chaos),
     ('second-schism', paint_second_schism),
     ('the-council', paint_council),

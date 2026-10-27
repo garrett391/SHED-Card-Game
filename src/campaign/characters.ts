@@ -281,6 +281,44 @@ export const CHARACTERS: Record<string, Character> = {
       humanPickup: ['Awh, poor baby.', "Try drinking Malibu. It'll help you.", 'I could beat you in my sleep.'],
     },
   },
+  'bandit-chief': {
+    id: 'bandit-chief',
+    name: 'The Bandit Chief',
+    title: 'Holds the pass. Sells the rules.',
+    emoji: '🤠',
+    portrait: null,
+    homeTable: 'bandit',
+    quips: [
+      'Rulebooks! Fresh copies! Every rule you need and a few you don\'t.',
+      'Nobody plays the old way out here. Nobody buys the old way, either.',
+      'Read the fine print, friend. Somebody wrote it very carefully.',
+    ],
+    reactions: {
+      selfPickup: ['Put it on my tab.', 'Well. That was not in the book.'],
+      selfBurn: ['Burn the evidence!'],
+      selfLowerThan: ['Stick \'em up.', 'Seven says hand it over.'],
+      humanPickup: ['Pleasure doing business.', 'Pay the toll, partner.'],
+    },
+  },
+  'bandit-lookout': {
+    id: 'bandit-lookout',
+    name: 'The Lookout',
+    title: 'Saw you coming a mile off',
+    emoji: '🌵',
+    portrait: null,
+    homeTable: 'bandit',
+    quips: [
+      'Saw your dust three valleys back.',
+      'Boss says the book is always right.',
+      'Nice King you got there. Shame if it wandered off.',
+    ],
+    reactions: {
+      selfPickup: ['Ugh. Sand in my cards.', 'That\'s fine. That\'s fine.'],
+      selfBurn: ['Whoo! Fireworks!'],
+      selfLowerThan: ['Toll\'s due.', 'Yoink.'],
+      humanPickup: ['Long way home with all those.', 'Should\'ve paid the toll.'],
+    },
+  },
   gio: {
     id: 'gio',
     name: 'Gio',
@@ -324,6 +362,7 @@ export const CHARACTERS: Record<string, Character> = {
       'Shh. Do you hear that? The deck is giggling.',
       'Order is just chaos that has not heard the punchline yet.',
       'Pick a card. Any card. No, not that one. Hehehe.',
+      'Have you read the book? Everyone has read the book.',
       'I swapped hands with my reflection once. She cheats.',
       'Gio, they think there are rules. Isn\'t that ADORABLE?',
     ],
@@ -350,6 +389,7 @@ export const CHARACTERS: Record<string, Character> = {
  * Which characters host each variant's table. Order matters: these seed the
  * bot slots on setup when arriving from the campaign map. Most tables are a
  * duel; the exceptions are The Spreading (you teach three pupils at once),
+ * the Outlaw Pass (two bandits),
  * the Chaos Twins (you face them together), the Second Schism (Justin
  * brings followers) and the Council (every dissenter at once).
  */
@@ -358,6 +398,7 @@ export const VARIANT_OPPONENTS: Record<string, string[]> = {
   'the-spreading': ['farmhand', 'noble', 'barkeep'],
   'justins-schism': ['justin'],
   'super-tens': ['greg'],
+  'the-pass': ['bandit-chief', 'bandit-lookout'],
   'chaos-shed': ['gio', 'tati'],
   'second-schism': ['justin', 'acolyte', 'zealot'],
   'the-council': ['justin', 'greg', 'gio', 'tati'],

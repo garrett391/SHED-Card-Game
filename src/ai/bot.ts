@@ -69,9 +69,11 @@ export function decideBotAction(state: GameState, playerIdx: number): BotAction 
     powerOrder[cfg.reverseRank] = 2.5; // between lowerThan and reset
   }
 
+  // A robber's 7 is a weapon, not a card to save: play it like any other.
+  const power = (r: Rank) => isPowerCard(r, cfg) && !(cfg.stickUp && r === cfg.lowerThanRank);
   const ranks = Array.from(byRank.keys()).sort((a, b) => {
-    const ap = isPowerCard(a, cfg);
-    const bp = isPowerCard(b, cfg);
+    const ap = power(a);
+    const bp = power(b);
     if (ap && !bp) return 1;       // non-power before power
     if (!ap && bp) return -1;
     if (ap && bp) return (powerOrder[a] ?? 99) - (powerOrder[b] ?? 99);

@@ -22,6 +22,7 @@ export const DEFAULT_RULES: RuleConfig = {
   sixNineReverse: false,
   jokers: false,
   removedRanks: [],
+  stickUp: false,
   seatRules: false,
   lastManStanding: false,
 };

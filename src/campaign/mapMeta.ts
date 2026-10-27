@@ -40,6 +40,11 @@ export const MAP_SCENES: Record<string, MapScene> = {
     color: '#e2712e',
     tagline: 'Nothing stops the burn.',
   },
+  'the-pass': {
+    emoji: '🤠',
+    color: '#c2703a',
+    tagline: 'Bandits hold the canyon. Mind your 7s.',
+  },
   'chaos-shed': {
     emoji: '🎪',
     color: '#8e44ad',

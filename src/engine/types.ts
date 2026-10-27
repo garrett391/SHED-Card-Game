@@ -104,10 +104,17 @@ export interface RuleConfig {
   // every 8). Empty = the full deck.
   removedRanks: Rank[];
 
+  // Stick-up (the bandits): whenever a player under these rules plays the
+  // lowerThan rank (7), they swap their lowest hand card for the next
+  // player's highest. Used as a seat rule, so only the bandits rob.
+  stickUp: boolean;
+
   // Seat rules: each host plays by the rules of their own table on their
   // turn (the Council). Setup attaches the rules; this flag only describes
   // the table.
   seatRules: boolean;
+  /** What the seat rules at this table are, for the rules summary. */
+  seatRulesSummary?: string;
 
   // Gameplay variants
   // Note: voluntary pickup (choosing to take the pile even when you can play)
@@ -151,7 +158,9 @@ export type GameEvent =
   | { type: 'playRejected'; playerId: number; reason: string }
   | { type: 'directionReversed'; playerId: number }
   /** A swap joker traded `playerId`'s hand with `targetId`'s. */
-  | { type: 'handsSwapped'; playerId: number; targetId: number };
+  | { type: 'handsSwapped'; playerId: number; targetId: number }
+  /** Stick-up: `playerId` traded `gave` (their lowest) for `targetId`'s `took` (their highest). */
+  | { type: 'cardStolen'; playerId: number; targetId: number; took: Card; gave: Card };
 
 export interface PlayResult {
   state: GameState;

@@ -840,6 +840,11 @@ function buildBotActionDisplay(
     if (reversed) {
       detail = (detail ? detail + '\n' : '') + '🔄 Direction reversed!';
     }
+    const robbed = events.find((e) => e.type === 'cardStolen');
+    if (robbed && robbed.type === 'cardStolen') {
+      detail = (detail ? detail + '\n' : '') +
+        `🤠 Stick-up! Takes ${playerNameIn(robbed.targetId)}'s ${cardLabel(robbed.took)}, leaves a ${cardLabel(robbed.gave)}`;
+    }
     const swapped = events.find((e) => e.type === 'handsSwapped');
     if (swapped && swapped.type === 'handsSwapped') {
       detail = (detail ? detail + '\n' : '') + `🔀 Swaps hands with ${playerNameIn(swapped.targetId)}!`;
@@ -877,6 +882,9 @@ function summarizeRecent(
         : e.reason === 'tripleTransparent'
         ? `🔥 Triple ${rankLabel(cfg.transparentRank)}s burn the pile`
         : '🔥 Four-of-a-kind burns the pile';
+    }
+    if (e.type === 'cardStolen') {
+      return `🤠 ${playerName(e.playerId)} took ${playerName(e.targetId)}'s ${cardLabel(e.took)} for a ${cardLabel(e.gave)}`;
     }
     if (e.type === 'handsSwapped') {
       return `🔀 ${playerName(e.playerId)} swapped hands with ${playerName(e.targetId)}`;

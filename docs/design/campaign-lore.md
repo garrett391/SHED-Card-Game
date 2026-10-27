@@ -38,10 +38,11 @@ ladder until both are known; there are no placeholder nodes.
 | 1 | Jake's Classic | Jake the Elder | None — the pure teaching (tutorial/origin) | Locked |
 | 2 | The Spreading | The Farmhand, the Noble, the Barkeep | None — Act II made playable: you teach three novice pupils | Locked |
 | 3 | Justin's Schism | Justin | Hard 8s: "the old rules were too soft" | Locked |
-| 4 | Super Tens | Greg the Computer Lord | Cheats, denies, rewrites reality verbally | Locked |
-| 5 | Chaos Shed | Gio and Tati, the Chaos Twins | Two jokers: reverse play, swap hands (see below) | Locked |
-| 6 | The Second Schism | Justin, the Acolyte, the Zealot | Justin returns having burned every 8: the deck is dealt without 8s | Draft (Oct 2026) |
-| 7 | The Council of Schisms | Justin, Greg, Gio, Tati | Semi-finale: each plays by their own table's rules on their turn | Draft (Oct 2026) |
+| 4 | Super Tens | Greg the Computer Lord | Writes his own rules, like code: 10s burn through 7s | Locked |
+| 5 | The Outlaw Pass | The Bandit Chief, the Lookout | Stick-up: a bandit's 7 swaps their lowest card for your highest | Locked (Oct 2026) |
+| 6 | Chaos Shed | Gio and Tati, the Chaos Twins | Two jokers: reverse play, swap hands (see below) | Locked |
+| 7 | The Second Schism | Justin, the Acolyte, the Zealot | Justin returns having burned every 8: the deck is dealt without 8s | Draft (Oct 2026) |
+| 8 | The Council of Schisms | Justin, Greg, Gio, Tati | Semi-finale: each plays by their own table's rules on their turn | Draft (Oct 2026) |
 | … | (open slots) | | | |
 | Finale | (unnamed) | **Chris the Scribe** | Holds the pen. Rewrites rules MID-GAME. | Not built |
 
@@ -101,10 +102,37 @@ Every per-node table is keyed by preset id, so a node is additive:
 4. Optional cinematic in `CINEMATICS` (story.ts).
 5. Its region on the overworld map (see The Campaign Map).
 
+## The Outlaw Pass — the bandits
+
+Between Greg's machine land and the twins' desert, the road runs through a
+red-rock canyon held by bandits (unnamed archetypes: the Bandit Chief and
+the Lookout). They sell hand-copied rulebooks from a wagon, which is how
+strange rules travel faster than the disciples (the wildfire slide).
+
+Rule (`stickUp`, a seat rule from the hidden `bandit` preset): whenever a
+bandit plays a 7, they swap their lowest hand card for the highest card
+of the next player who isn't a bandit (bandits never rob each other), but
+only when it costs the victim. A straight steal would help
+the victim in Shed (one fewer card to shed), hence the swap. Bandit bots
+play 7s eagerly rather than saving them. The table itself plays Jake's
+Classic, so the player never robs.
+
+## Foreshadowing Chris: the golden quill
+
+From the pass on, the Scribe is hinted at, never shown:
+- The bandits' rulebooks are sealed with a golden quill: the rules
+  everyone plays by come from one hand (in real life, Chris's notes).
+- The quill seal recurs, small and easy to miss: on the rulebooks, among
+  Greg's printouts in his defeat scene, in the twins' tent.
+- Tati names him first: "The Scribe says there are no rules. Only drafts."
+  Gio's quip "Have you read the book? Everyone has read the book." hints too.
+- The tower in the fog on the map wears the same quill.
+
 ## Chaos Shed — the Chaos Twins
 
 Gio (red and blue jester) and Tati (purple and green). You face them
-together. Voice: unhinged, Batman's-Joker energy: laughing at the rules,
+together. They live in the desert, beyond the Outlaw Pass; their carnival
+stands on the sand. Voice: unhinged, Batman's-Joker energy: laughing at the rules,
 delighted by fire, talking to the deck. No real-world location.
 
 The joker edition, shipped Oct 2026 (`jokers: true` on the preset):

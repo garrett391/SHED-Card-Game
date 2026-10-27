@@ -62,7 +62,12 @@ export function variantDiff(config: RuleConfig): string[] {
   // ── Seat rules ─────────────────────────────────────────────────────────────
   if (config.seatRules && !base.seatRules)
     out.push(
-      "Every dissenter plays by the rules of their own table on their turn: Justin's hard 8s, Greg's 10s that burn through 7s, the twins' jokers. You play by Jake's Classic.",
+      config.seatRulesSummary ??
+        'Your opponents play by rules of their own on their turns. You play by Jake\'s Classic.',
+    );
+  if (config.stickUp && !base.stickUp)
+    out.push(
+      `Stick-up: whenever you play a ${rankLabel(config.lowerThanRank)}, swap your lowest card for the highest card of the next player who isn't a fellow robber.`,
     );
 
   // ── Special combo ──────────────────────────────────────────────────────────

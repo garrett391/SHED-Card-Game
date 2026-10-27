@@ -42,7 +42,9 @@ interface CampaignStore {
 export function isUnlocked(completed: Record<string, true>, presetId: string): boolean {
   const idx = PRESET_ORDER.indexOf(presetId);
   if (idx <= 0) return true; // first in order, or unknown id (fail open)
-  return Boolean(completed[PRESET_ORDER[idx - 1]]);
+  // A node you've beaten stays open even if a new node is later inserted
+  // before it (the Outlaw Pass went in ahead of Chaos Shed).
+  return Boolean(completed[presetId] || completed[PRESET_ORDER[idx - 1]]);
 }
 
 export const useCampaignStore = create<CampaignStore>()(
