@@ -181,7 +181,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
     },
     {
       image: require('../../assets/story/pass-ambush.jpg'),
-      caption: 'In a narrow canyon pass, bandits sprang from the rocks. Nobody crossed without paying the toll.',
+      caption: 'For days, the only road ran toward the red rocks, and into a narrow canyon pass. Halfway through, bandits sprang from the rocks. Nobody crossed without paying the toll.',
     },
     {
       image: require('../../assets/story/pass-rulebooks.jpg'),
