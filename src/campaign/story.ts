@@ -155,17 +155,17 @@ export const CINEMATICS: Record<string, Cinematic> = {
     {
       image: require('../../assets/story/greg-computer-lord1.png'),
       caption:
-        'At the heart of this strange land sat a table where no rule was ever broken, only remembered differently.',
+        'At the heart of this strange land sat a table where the rules were whatever its master said they were.',
     },
     {
       image: require('../../assets/story/greg-computer-lord2.png'),
       caption:
-        'Its master: Greg, the Computer Lord, keeper of ancient machines. They obeyed him through brackets and an impeccable memory.',
+        'Its master: Greg, the Computer Lord, keeper of ancient machines. He wrote rules the way he wrote code, and his machines ran them without question.',
     },
     {
       image: null,
       caption:
-        'Greg never admitted to changing the rules. He simply explained, with perfect confidence, that 10s had always burned through 7s.',
+        "Greg didn't bother arguing with Jake's rules. He simply wrote his own, and in Greg's rules, 10s burn through 7s.",
     },
   ],
 
