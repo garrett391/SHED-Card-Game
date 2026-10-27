@@ -196,6 +196,16 @@ export const CINEMATICS: Record<string, Cinematic> = {
   // ── The Chaos Twins ─────────────────────────────────────────────────────
   'chaos-shed': [
     {
+      image: null, // art to come: the bandits defeated, the Chief questioned
+      caption:
+        'The bandits lost their game, and their nerve. The disciples held up one of the rulebooks: who was writing these?',
+    },
+    {
+      image: null,
+      caption:
+        "The Chief only shrugged. 'We just copy them. The originals come from somewhere out past the dunes, from someone who signs with a quill.' He pointed into the desert.",
+    },
+    {
       image: require('../../assets/story/twins-desert.jpg'),
       caption:
         'Beyond the pass, the desert opened wide. The disciples heard the next table before they saw it: laughter, and the sound of cards hitting the sand.',
