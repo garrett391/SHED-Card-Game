@@ -211,7 +211,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
         'The red joker turns the table around. The black joker steals your hand and gives you theirs. You face them together, or not at all.',
     },
     {
-      image: null, // art to come: the twins' tent, a quill-sealed rulebook among the props
+      image: require('../../assets/story/twins-scribe.jpg'),
       caption: "Tati giggled as she dealt. 'The Scribe says there are no rules. Only drafts.'",
     },
   ],
