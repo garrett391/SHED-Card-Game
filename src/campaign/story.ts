@@ -176,7 +176,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
       caption: "Greg's machines fell silent, every screen frozen mid-thought. His rules ran no more.",
     },
     {
-      image: null, // art to come: circuitry giving way to desert
+      image: require('../../assets/story/pass-to-desert.jpg'),
       caption: 'Past the last of the circuitry, the land dried out. Cables turned to roots, and the roots turned to sand.',
     },
     {
