@@ -184,7 +184,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
       caption: 'In a narrow canyon pass, bandits sprang from the rocks. Nobody crossed without paying the toll.',
     },
     {
-      image: null, // art to come: the wagon of rulebooks, gold quill seal
+      image: require('../../assets/story/pass-rulebooks.jpg'),
       caption: 'Their wagon was piled high with rulebooks, copied by hand and sold in every town. Each was sealed with a golden quill.',
     },
     {
