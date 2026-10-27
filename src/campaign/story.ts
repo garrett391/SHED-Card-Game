@@ -172,7 +172,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
   // ── The Outlaw Pass ─────────────────────────────────────────────────────
   'the-pass': [
     {
-      image: null, // art to come: Greg's hall gone dark
+      image: require('../../assets/story/pass-greg-fallen.jpg'),
       caption: "Greg's machines fell silent, every screen frozen mid-thought. His rules ran no more.",
     },
     {
