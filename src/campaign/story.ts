@@ -191,11 +191,11 @@ export const CINEMATICS: Record<string, Cinematic> = {
   // ── The schism returns ──────────────────────────────────────────────────
   'second-schism': [
     {
-      image: null,
+      image: require('../../assets/story/second-schism1.jpg'),
       caption: 'Peace never lasts long. Justin had not given up. He had only gone quiet.',
     },
     {
-      image: require('../../assets/story/schism-justin2.png'),
+      image: require('../../assets/story/second-schism2.jpg'),
       caption: 'Now he preached that the 8 itself was the heresy. As long as one existed, someone would play it on a 7.',
     },
     {
@@ -203,7 +203,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
       caption: 'So his followers burned every deck that still played the old way, and every 8 they could find, once and for all.',
     },
     {
-      image: null,
+      image: require('../../assets/story/second-schism4.jpg'),
       caption: 'At his new table there are no 8s at all. And this time, he does not sit alone.',
     },
   ],
