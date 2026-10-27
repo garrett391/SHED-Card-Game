@@ -196,7 +196,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
   // ── The Chaos Twins ─────────────────────────────────────────────────────
   'chaos-shed': [
     {
-      image: null, // art to come: deep desert, the big top on the horizon
+      image: require('../../assets/story/twins-desert.jpg'),
       caption:
         'Beyond the pass, the desert opened wide. The disciples heard the next table before they saw it: laughter, and the sound of cards hitting the sand.',
     },
