@@ -108,7 +108,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
     {
       image: require('../../assets/story/schism-shadow.jpg'),
       caption:
-        'But every golden age casts a shadow. Not everyone who learned the game was content to play it as Jake had taught.',
+        'Every golden age casts a shadow. Not everyone who learned the game was content to play it as Jake had taught.',
     },
     {
       image: require('../../assets/story/schism-theses.jpg'),
