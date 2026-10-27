@@ -163,7 +163,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
         'Its master: Greg, the Computer Lord, keeper of ancient machines. He wrote rules the way he wrote code, and his machines ran them without question.',
     },
     {
-      image: null,
+      image: require('../../assets/story/greg-rules.jpg'),
       caption:
         "Greg didn't bother arguing with Jake's rules. He simply wrote his own, and in Greg's rules, 10s burn through 7s.",
     },
