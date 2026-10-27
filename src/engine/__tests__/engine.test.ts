@@ -1070,6 +1070,19 @@ describe('rule variants', () => {
       expect(ev).toMatchObject({ took: { id: 'vA' }, gave: { id: 'b5' } });
     });
 
+    test('an empty hand is announced as empty', () => {
+      const state = setupGame({
+        players: [
+          player({ name: 'Chief', hand: [card(7, '♠', 'b7'), card(9, '♠', 'b9')], rules: bandit }),
+          player({ name: 'Garrett', hand: [], faceUp: [card(13)] }),
+        ],
+        pile: [card(5)],
+      });
+      const r = playCards(state, 0, ['b7']);
+      expect(r.events).toContainEqual({ type: 'stickUpPassed', playerId: 0, targetId: 1, reason: 'emptyHand' });
+      expect(r.state.log.at(-1)?.text).toBe("Chief goes for Garrett's hand… but it's empty.");
+    });
+
     test("the victim's power cards count as their best", () => {
       const state = setupGame({
         players: [
@@ -1095,16 +1108,18 @@ describe('rule variants', () => {
       expect(r.state.players[1].hand.map(c => c.id)).toEqual(['vK']);
     });
 
-    test('no robbery when it would not cost the victim', () => {
+    test('no robbery when it would not cost the victim, and it says so', () => {
       const state = setupGame({
         players: [
-          player({ hand: [card(7, '♠', 'b7'), card(9, '♠', 'b9')], rules: bandit }),
-          player({ hand: [card(4, '♥', 'v4')] }),
+          player({ name: 'Chief', hand: [card(7, '♠', 'b7'), card(9, '♠', 'b9')], rules: bandit }),
+          player({ name: 'Garrett', hand: [card(4, '♥', 'v4')] }),
         ],
         pile: [card(5)],
       });
       const r = playCards(state, 0, ['b7']);
       expect(r.events.some(e => e.type === 'cardStolen')).toBe(false);
+      expect(r.events).toContainEqual({ type: 'stickUpPassed', playerId: 0, targetId: 1, reason: 'nothingBetter' });
+      expect(r.state.log.at(-1)?.text).toBe("Chief sizes up Garrett's hand… nothing worth taking.");
     });
 
     test('robs the next player in the direction of play', () => {

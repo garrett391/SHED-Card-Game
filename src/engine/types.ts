@@ -160,7 +160,10 @@ export type GameEvent =
   /** A swap joker traded `playerId`'s hand with `targetId`'s. */
   | { type: 'handsSwapped'; playerId: number; targetId: number }
   /** Stick-up: `playerId` traded `gave` (their lowest) for `targetId`'s `took` (their highest). */
-  | { type: 'cardStolen'; playerId: number; targetId: number; took: Card; gave: Card };
+  | { type: 'cardStolen'; playerId: number; targetId: number; took: Card; gave: Card }
+  /** Stick-up considered and passed: the victim's hand was empty, or
+   *  nothing in it beat the robber's worst card. */
+  | { type: 'stickUpPassed'; playerId: number; targetId: number; reason: 'emptyHand' | 'nothingBetter' };
 
 export interface PlayResult {
   state: GameState;

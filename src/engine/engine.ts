@@ -422,11 +422,23 @@ export function playCards(
     }
     const robberHand = players[playerIdx].hand;
     const victimHand = targetId === null ? [] : players[targetId].hand;
-    if (targetId !== null && robberHand.length > 0 && victimHand.length > 0) {
+    // Nothing to swap with: they're out of hand cards themselves.
+    if (targetId !== null && robberHand.length > 0) {
       const worth = (c: Card) => cardWorth(c, cfg);
       const gave = robberHand.reduce((lo, c) => (worth(c) < worth(lo) ? c : lo));
-      const took = victimHand.reduce((hi, c) => (worth(c) > worth(hi) ? c : hi));
-      if (worth(took) > worth(gave)) {
+      const took = victimHand.length === 0 ? null
+        : victimHand.reduce((hi, c) => (worth(c) > worth(hi) ? c : hi));
+      if (took === null || worth(took) <= worth(gave)) {
+        // Say so: a bandit's 7 that silently does nothing reads as a bug.
+        const reason = took === null ? 'emptyHand' : 'nothingBetter';
+        events.push({ type: 'stickUpPassed', playerId: playerIdx, targetId, reason });
+        log.push(entry(log,
+          reason === 'emptyHand'
+            ? `${player.name} goes for ${players[targetId].name}'s hand… but it's empty.`
+            : `${player.name} sizes up ${players[targetId].name}'s hand… nothing worth taking.`,
+          playerIdx,
+        ));
+      } else {
         players = players.map((p, i) =>
           i === playerIdx ? { ...p, hand: [...p.hand.filter(c => c.id !== gave.id), took] }
           : i === targetId ? { ...p, hand: [...p.hand.filter(c => c.id !== took.id), gave] }

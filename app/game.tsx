@@ -845,6 +845,12 @@ function buildBotActionDisplay(
       detail = (detail ? detail + '\n' : '') +
         `🤠 Stick-up! Takes ${playerNameIn(robbed.targetId)}'s ${cardLabel(robbed.took)}, leaves a ${cardLabel(robbed.gave)}`;
     }
+    const passed = events.find((e) => e.type === 'stickUpPassed');
+    if (passed && passed.type === 'stickUpPassed') {
+      detail = (detail ? detail + '\n' : '') + (passed.reason === 'emptyHand'
+        ? `🤠 Goes for ${playerNameIn(passed.targetId)}'s hand… but it's empty`
+        : `🤠 Sizes up ${playerNameIn(passed.targetId)}'s hand… nothing worth taking`);
+    }
     const swapped = events.find((e) => e.type === 'handsSwapped');
     if (swapped && swapped.type === 'handsSwapped') {
       detail = (detail ? detail + '\n' : '') + `🔀 Swaps hands with ${playerNameIn(swapped.targetId)}!`;
@@ -882,6 +888,11 @@ function summarizeRecent(
         : e.reason === 'tripleTransparent'
         ? `🔥 Triple ${rankLabel(cfg.transparentRank)}s burn the pile`
         : '🔥 Four-of-a-kind burns the pile';
+    }
+    if (e.type === 'stickUpPassed') {
+      return e.reason === 'emptyHand'
+        ? `🤠 ${playerName(e.playerId)} found ${playerName(e.targetId)}'s hand empty`
+        : `🤠 ${playerName(e.playerId)} found nothing worth taking from ${playerName(e.targetId)}`;
     }
     if (e.type === 'cardStolen') {
       return `🤠 ${playerName(e.playerId)} took ${playerName(e.targetId)}'s ${cardLabel(e.took)} for a ${cardLabel(e.gave)}`;
