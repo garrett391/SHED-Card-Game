@@ -110,9 +110,12 @@ the Lookout). They sell hand-copied rulebooks from a wagon, which is how
 strange rules travel faster than the disciples (the wildfire slide).
 
 Rule (`stickUp`, a seat rule from the hidden `bandit` preset): whenever a
-bandit plays a 7, they swap their lowest hand card for the highest card
-of the next player who isn't a bandit (bandits never rob each other), but
-only when it costs the victim. A straight steal would help
+bandit plays a 7, they swap their worst hand card for the best card of
+the next player who isn't a bandit. "Best" is by usefulness, not face
+value (`cardWorth`): power cards outrank everything (10 > 2 > 8 > 7), then
+Ace down to 3. (Ranking by face value once let a bandit take an Ace and
+hand over a 2, a gift.) Bandits never rob each other, and only rob when
+it costs the victim. A straight steal would help
 the victim in Shed (one fewer card to shed), hence the swap. Bandit bots
 play 7s eagerly rather than saving them. The table itself plays Jake's
 Classic, so the player never robs.

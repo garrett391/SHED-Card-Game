@@ -90,11 +90,11 @@ export const RULE_PRESETS: Record<string, RuleConfig> = {
     ...DEFAULT_RULES,
     id: 'the-pass',
     name: 'The Outlaw Pass',
-    description: 'Bandits hold the canyon. Whenever one plays a 7, they swap their lowest card for your highest.',
+    description: 'Bandits hold the canyon. Whenever one plays a 7, they swap their worst card for your best (2s, 7s, 8s and 10s count as the best).',
     flavorText: 'Your money or your King.',
     seatRules: true,
     seatRulesSummary:
-      "Stick-up: whenever a bandit plays a 7, they swap their lowest card for your highest. Bandits never rob each other. You play by Jake's Classic.",
+      "Stick-up: whenever a bandit plays a 7, they swap their worst card for your best. Power cards (2, 7, 8, 10) count as the best, then the highest ranks. Bandits never rob each other. You play by Jake's Classic.",
   },
 
   // Seat rules for the bandits. Not a campaign node: absent from
@@ -103,7 +103,7 @@ export const RULE_PRESETS: Record<string, RuleConfig> = {
     ...DEFAULT_RULES,
     id: 'bandit',
     name: 'Stick-up',
-    description: "A 7 robs the next player: the bandit's lowest card for their highest.",
+    description: "A 7 robs the next player: the bandit's worst card for their best.",
     flavorText: 'Hand it over.',
     stickUp: true,
   },

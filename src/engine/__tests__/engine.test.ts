@@ -1056,6 +1056,32 @@ describe('rule variants', () => {
       expect(r.events).toContainEqual(expect.objectContaining({ type: 'cardStolen', playerId: 0, targetId: 1 }));
     });
 
+    test('worth, not face value: the bandit keeps his 2, gives his worst ordinary card', () => {
+      // The playtest case: an Ace taken, a 2 left behind, which is a gift.
+      const state = setupGame({
+        players: [
+          player({ hand: [card(7, '♠', 'b7'), card(2, '♠', 'b2'), card(5, '♠', 'b5')], rules: bandit }),
+          player({ hand: [card(14, '♥', 'vA'), card(4, '♥', 'v4')] }),
+        ],
+        pile: [card(5)],
+      });
+      const r = playCards(state, 0, ['b7']);
+      const ev = r.events.find(e => e.type === 'cardStolen');
+      expect(ev).toMatchObject({ took: { id: 'vA' }, gave: { id: 'b5' } });
+    });
+
+    test("the victim's power cards count as their best", () => {
+      const state = setupGame({
+        players: [
+          player({ hand: [card(7, '♠', 'b7'), card(3, '♠', 'b3')], rules: bandit }),
+          player({ hand: [card(14, '♥', 'vA'), card(10, '♥', 'v10')] }),
+        ],
+        pile: [card(5)],
+      });
+      const ev = playCards(state, 0, ['b7']).events.find(e => e.type === 'cardStolen');
+      expect(ev).toMatchObject({ took: { id: 'v10' }, gave: { id: 'b3' } });
+    });
+
     test('only robbers rob: a 7 from a player without stick-up does nothing extra', () => {
       const state = setupGame({
         players: [

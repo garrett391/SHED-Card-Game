@@ -62,6 +62,22 @@ export function isPowerCard(rank: Rank, config: RuleConfig = DEFAULT_RULES): boo
   return getPowerRanks(config).has(rank);
 }
 
+/**
+ * How useful a card is to hold, for anything that has to pick a "best" or
+ * "worst" card (the bandits' stick-up). Face value alone gets this wrong:
+ * a 2 is a low rank but a reset you can play on anything. So power cards
+ * outrank every ordinary card (lower-than < transparent < reset < burn <
+ * joker), and ordinary cards rank by face value.
+ */
+export function cardWorth(card: Card, config: RuleConfig = DEFAULT_RULES): number {
+  if (card.rank === JOKER_RANK) return 120;
+  if (!isPowerCard(card.rank, config)) return card.rank;
+  if (card.rank === config.burnRank) return 110;
+  if (card.rank === config.resetRank) return 105;
+  if (card.rank === config.transparentRank) return 102;
+  return 100; // lower-than (7), or a wild reverse rank
+}
+
 // ─── Pile inspection ────────────────────────────────────────────────────────────
 
 /**
