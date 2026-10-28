@@ -296,6 +296,22 @@ export default function SetupScreen() {
                 onPress={() => {
                   setSelectedMode(id);
                   setModeExpanded(false);
+                  // Seat-rules tables (the Outlaw Pass, the Council) only
+                  // work with their cast seated: the rules ride on the
+                  // characters. Seat them, keeping the human players.
+                  if (RULE_PRESETS[id].seatRules) {
+                    const cast = opponentsFor(id);
+                    setPlayers((ps) => [
+                      // Keep as many humans as fit beside the cast (the
+                      // Council's four villains leave room for two).
+                      ...ps.filter((p) => !p.isBot).slice(0, MAX_PLAYERS - cast.length),
+                      ...cast.map((c) => ({
+                        name: c.name,
+                        isBot: true,
+                        botStyle: c.botStyle,
+                      })),
+                    ]);
+                  }
                 }}
               />
             );
