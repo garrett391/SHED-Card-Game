@@ -203,7 +203,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
     {
       image: require('../../assets/story/pass-defeated.jpg'),
       caption:
-        'The bandits lost their game, and their nerve. The disciples held up one of the rulebooks: who was writing these?',
+        "The bandits lost their game, and their nerve. The disciples held up one of the rulebooks. 'Who is writing these?'",
     },
     {
       image: null,
