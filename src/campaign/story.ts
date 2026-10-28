@@ -193,7 +193,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
       caption: 'Their wagon was piled high with rulebooks, copied by hand and sold in every town. Each was sealed with a golden quill.',
     },
     {
-      image: null,
+      image: require('../../assets/story/pass-stickup.jpg'),
       caption: 'Out here, a 7 is a stick-up: whenever a bandit plays one, they take your best card and leave you their worst.',
     },
   ],
