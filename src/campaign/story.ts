@@ -234,7 +234,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
   // ── The schism returns ──────────────────────────────────────────────────
   'second-schism': [
     {
-      image: null, // art to come: the Chaos Twins defeated, still laughing
+      image: require('../../assets/story/twins-defeated.jpg'),
       caption:
         "The twins lost, and laughed anyway. When the disciples pressed them about the Scribe, Tati only winked. 'You'll meet. Everyone does, eventually.'",
     },
