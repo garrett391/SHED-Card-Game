@@ -234,8 +234,13 @@ export const CINEMATICS: Record<string, Cinematic> = {
   // ── The schism returns ──────────────────────────────────────────────────
   'second-schism': [
     {
+      image: null, // art to come: the Chaos Twins defeated, still laughing
+      caption:
+        "The twins lost, and laughed anyway. When the disciples pressed them about the Scribe, Tati only winked. 'You'll meet. Everyone does, eventually.'",
+    },
+    {
       image: require('../../assets/story/second-schism1.jpg'),
-      caption: 'Peace never lasts long. Justin had not given up. He had only gone quiet.',
+      caption: 'Peace never lasts long. Far behind them, Justin had not given up. He had only gone quiet.',
     },
     {
       image: require('../../assets/story/second-schism2.jpg'),
