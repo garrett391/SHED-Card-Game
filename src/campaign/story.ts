@@ -168,7 +168,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
         "Greg didn't bother arguing with Jake's rules. He simply wrote his own, and in Greg's rules, 10s burn through 7s.",
     },
     {
-      image: null, // art to come: the disciples sit down across from Greg
+      image: require('../../assets/story/greg-challenge.jpg'),
       caption:
         'There was only one way to shut his rules down: beat the Computer Lord at his own table, by his own code.',
     },
