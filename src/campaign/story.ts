@@ -270,7 +270,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
   // ── The semi-finale: every dissenter at one table ───────────────────────
   'the-council': [
     {
-      image: null, // art to come: Justin defeated in his ruined cathedral
+      image: require('../../assets/story/council-justin-fallen.jpg'),
       caption:
         "Justin's second schism fell harder than his first. Among the ashes of his cathedral, the disciples found the letter.",
     },
