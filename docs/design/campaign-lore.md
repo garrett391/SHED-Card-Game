@@ -130,6 +130,12 @@ From the pass on, the Scribe is hinted at, never shown:
 - Tati names him first: "The Scribe says there are no rules. Only drafts."
   Gio's quip "Have you read the book? Everyone has read the book." hints too.
 - The tower in the fog on the map wears the same quill.
+- The letters: a quill-sealed envelope lies on the floor of Greg's fallen
+  hall; a hooded, faceless visitor hands Justin the same letter and frees
+  him. After Justin's second fall the disciples find it: a summons calling
+  every dissenter to one table. That is the Council, and at its head stands
+  an empty chair with a quill on the seat. The Scribe called it but never
+  appears; the tower in the ending is the first time he is (almost) seen.
 
 ## Chaos Shed — the Chaos Twins
 

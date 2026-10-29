@@ -270,12 +270,19 @@ export const CINEMATICS: Record<string, Cinematic> = {
   // ── The semi-finale: every dissenter at one table ───────────────────────
   'the-council': [
     {
-      image: null,
-      caption: 'One by one, the dissenters had fallen. Then word came that they had stopped fighting each other.',
+      image: null, // art to come: Justin defeated in his ruined cathedral
+      caption:
+        "Justin's second schism fell harder than his first. Among the ashes of his cathedral, the disciples found the letter.",
     },
     {
-      image: null,
-      caption: 'Justin, Greg, Gio and Tati: every schism, gathered at a single table.',
+      image: null, // art to come: the letter, close up, its gold quill seal
+      caption:
+        "It wasn't a pardon. It was a summons, calling every dissenter to a single table. The disciples had seen that seal before, on the floor of Greg's hall.",
+    },
+    {
+      image: null, // art to come: the Council table, an empty chair with a quill on its seat
+      caption:
+        'Justin, Greg, Gio and Tati sat waiting. At the head of the table stood an empty chair, with a quill resting on its seat.',
     },
     {
       image: null,
