@@ -250,6 +250,31 @@ assets/characters/) are kept for later use, e.g.:
   `endLines` in characters.ts (a win pool and a loss pool). Jake has his;
   every other host still needs theirs.
 
+## Backlog
+
+- **A less linear map.** The overworld climbs straight from bottom to top.
+  Let the path wander sideways too: switchbacks, a detour along the
+  desert, regions set side by side instead of stacked. This is all in
+  `scripts/map/build_overworld.py` (region layout and the path between
+  nodes); the map screen may need to pan horizontally as well as
+  vertically if the land gets wider than a phone.
+- **Chris was there all along.** When Chris the Scribe is finally
+  revealed, show that he has been in the background of the whole story,
+  taking notes: in the crowd at Jake's teaching, watching through a
+  window, riding with the bandits, in the stands at the twins' carnival.
+  Plan:
+  1. Settle his look first: one silhouette that reads at a glance
+     (hood, quill, book of notes). He is probably the hooded visitor who
+     freed Justin, so start from that design.
+  2. Paint him small into existing story art (Gemini edits of the
+     current slides), easy to miss on a first playthrough. He's never
+     named or pointed out before the tower.
+  3. At the reveal, a quick montage replays those scenes with him
+     circled or lit up, ending at the tower: "He was there the whole
+     time. Taking notes."
+  This bends the rule "the Scribe is never shown before the tower":
+  he's in plain sight but unseen until the reveal.
+
 ## Open questions
 
 - Inferno framing: full commit (circle numbers, "descend" language, map
