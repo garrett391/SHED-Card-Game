@@ -240,7 +240,13 @@ export const CINEMATICS: Record<string, Cinematic> = {
     },
     {
       image: require('../../assets/story/second-schism1.jpg'),
-      caption: 'Peace never lasts long. Far behind them, Justin had not given up. He had only gone quiet.',
+      caption:
+        'The disciples thought they had brought peace, but peace never lasts long. Far behind them, Justin had not given up. He had only gone quiet.',
+    },
+    {
+      image: null, // art to come: a hooded visitor, an unlocked cell, a quill-sealed letter
+      caption:
+        'One night, he had a visitor. No one saw a face: only a hooded figure, a cell door left unlocked, and a letter sealed with a golden quill.',
     },
     {
       image: require('../../assets/story/second-schism2.jpg'),
