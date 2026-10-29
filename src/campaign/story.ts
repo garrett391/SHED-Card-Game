@@ -246,7 +246,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
     {
       image: require('../../assets/story/second-schism-visitor.jpg'),
       caption:
-        'One night, he had a visitor. No one saw a face: only a hooded figure, a cell door left unlocked, and a sealed letter.',
+        'One night, he had a visitor. By morning, the cell was empty.',
     },
     {
       image: require('../../assets/story/second-schism2.jpg'),
