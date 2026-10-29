@@ -257,6 +257,11 @@ export const CINEMATICS: Record<string, Cinematic> = {
       caption: 'So his followers burned every deck that still played the old way, and every 8 they could find, once and for all.',
     },
     {
+      image: null, // art to come: the disciples approach Justin's cathedral
+      caption:
+        "Word reached the disciples deep in the desert: Justin's followers had seized the great cathedral, and smoke rose from its steps day and night. They turned back.",
+    },
+    {
       image: require('../../assets/story/second-schism4.jpg'),
       caption: 'At his new table there are no 8s at all. And this time, he does not sit alone.',
     },
