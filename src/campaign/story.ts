@@ -221,7 +221,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
         'Gio and Tati, the Chaos Twins. They never broke the old rules. They just added two cards nobody could predict.',
     },
     {
-      image: null,
+      image: require('../../assets/story/twins-jokers.jpg'),
       caption:
         'The red joker turns the table around. The black joker steals your hand and gives you theirs. You face them together, or not at all.',
     },
