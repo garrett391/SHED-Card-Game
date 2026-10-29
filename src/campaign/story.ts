@@ -206,7 +206,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
         "The bandits lost their game, and their nerve. The disciples held up one of the rulebooks. 'Who is writing these?'",
     },
     {
-      image: null,
+      image: require('../../assets/story/pass-answer.jpg'),
       caption:
         "The Chief only shrugged. 'We just copy them. The originals come from somewhere out past the dunes, from someone who signs with a quill.' He pointed into the desert.",
     },
