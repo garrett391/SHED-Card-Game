@@ -1,5 +1,5 @@
 import { Link, useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Constants from 'expo-constants';
 import { Button } from '../src/components/Button';
 import { theme } from '../src/components/theme';
@@ -11,7 +11,7 @@ export default function HomeScreen() {
   const appVersion = Constants.expoConfig?.version ?? '0.0.0';
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
       <View style={styles.hero}>
         <Text style={styles.title}>SHED</Text>
         <Text style={styles.subtitle}>The card game as spake by Jake</Text>
@@ -56,18 +56,20 @@ export default function HomeScreen() {
           v{appVersion}
         </Text>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: theme.color.feltBg },
+  // Scrolls on short screens (phones in a browser) so the footer is never
+  // pushed out of reach; on tall screens it still spreads to fill.
   container: {
-    flex: 1,
+    flexGrow: 1,
     padding: theme.space.xl,
-    backgroundColor: theme.color.feltBg,
     justifyContent: 'space-between',
   },
-  hero: { marginTop: 60, alignItems: 'center' },
+  hero: { marginTop: 32, marginBottom: 32, alignItems: 'center' },
   title: {
     color: theme.color.textOnDark,
     fontSize: 64,
@@ -80,7 +82,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontStyle: 'italic',
   },
-  actions: { marginBottom: 40 },
+  actions: { marginBottom: 32 },
   footerContainer: {
     alignItems: 'center',
     marginBottom: 16,
