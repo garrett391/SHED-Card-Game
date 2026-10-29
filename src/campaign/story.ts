@@ -218,7 +218,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
     {
       image: require('../../assets/story/twins-intro.jpg'),
       caption:
-        'Gio and Tati, the Chaos Twins. They never broke the old rules. They just added two cards nobody could predict.',
+        'The laughter belonged to Gio and Tati, the Chaos Twins. They never broke the old rules. They just added two cards nobody could predict.',
     },
     {
       image: require('../../assets/story/twins-jokers.jpg'),
