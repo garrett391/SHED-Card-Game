@@ -39,7 +39,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
     {
       image: require('../../assets/story/intro1.png'),
       caption:
-        'Erich, Nick and Garrett.\nThey loved games, jokes, and a pint of ale.',
+        'Nick, Garrett and Erich.\nThey loved games, jokes, and a pint of ale.',
     },
     {
       image: require('../../assets/story/intro2.png'),
