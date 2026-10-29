@@ -275,7 +275,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
         "Justin's second schism fell harder than his first. Among the ashes of his cathedral, the disciples found the letter.",
     },
     {
-      image: null, // art to come: the letter, close up, its gold quill seal
+      image: require('../../assets/story/council-summons.jpg'),
       caption:
         "It wasn't a pardon. It was a summons, calling every dissenter to a single table. The disciples had seen that seal before, on the floor of Greg's hall.",
     },
