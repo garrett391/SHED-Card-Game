@@ -134,7 +134,7 @@ From the pass on, the Scribe is hinted at, never shown:
   hall; a hooded, faceless visitor hands Justin the same letter and frees
   him. After Justin's second fall the disciples find it: a summons calling
   every dissenter to one table. That is the Council, and at its head stands
-  an empty chair with a quill on the seat. The Scribe called it but never
+  an empty chair with a quill and inkwell set before it. The Scribe called it but never
   appears; the tower in the ending is the first time he is (almost) seen.
 
 ## Chaos Shed — the Chaos Twins

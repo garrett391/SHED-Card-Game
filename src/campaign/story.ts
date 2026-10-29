@@ -280,9 +280,9 @@ export const CINEMATICS: Record<string, Cinematic> = {
         "It wasn't a pardon. It was a summons, calling every dissenter to a single table. The disciples had seen that seal before, on the floor of Greg's hall.",
     },
     {
-      image: null, // art to come: the Council table, an empty chair with a quill on its seat
+      image: require('../../assets/story/council-table.jpg'),
       caption:
-        'Justin, Greg, Gio and Tati sat waiting. At the head of the table stood an empty chair, with a quill resting on its seat.',
+        'Justin, Greg, Gio and Tati sat waiting. At the head of the table stood an empty chair, a quill and inkwell waiting before it.',
     },
     {
       image: null,
