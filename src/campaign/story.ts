@@ -280,7 +280,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
         "It wasn't a pardon. It was a summons, calling every dissenter to a single table. The disciples had seen that seal before, on the floor of Greg's hall.",
     },
     {
-      image: null, // art to come: the disciples trail Justin by night toward the council
+      image: require('../../assets/story/council-follow.jpg'),
       caption: 'The letter named a night, but no place. So they let Justin go, and followed him.',
     },
     {
