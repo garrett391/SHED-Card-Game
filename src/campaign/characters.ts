@@ -15,7 +15,11 @@
  * to two lines.
  *
  * END LINES: spoken on the campaign results screen, one pool for when the
- * player beats this character and one for when the character wins.
+ * player beats this character and one for when the character wins. A
+ * character who hosts more than one table (Justin, Greg) can give a table
+ * its own pools in `tableEndLines`, keyed by preset id; `endLines` covers
+ * every other table. At a shared table one host with lines, picked at
+ * random, speaks.
  *
  * PLAY STYLE: `botStyle` sets how the character plays their cards (see
  * BotStyle in engine/types.ts). Leave it off for the default strategic bot.
@@ -53,7 +57,14 @@ export interface Character {
   /** Situational lines. Empty pools fall back to generic quips, except
    *  humanBurn, which only fires for characters that have lines for it. */
   reactions: Partial<Record<ReactionKind, string[]>>;
-  endLines?: { playerWon: string[]; playerLost: string[] };
+  endLines?: EndLines;
+  /** Per-table end lines, keyed by preset id. Win over `endLines`. */
+  tableEndLines?: Record<string, EndLines>;
+}
+
+export interface EndLines {
+  playerWon: string[];
+  playerLost: string[];
 }
 
 export const CHARACTERS: Record<string, Character> = {
@@ -161,6 +172,16 @@ export const CHARACTERS: Record<string, Character> = {
         'Should... should I not have played that?',
       ],
     },
+    endLines: {
+      playerWon: [
+        "You won, and I think I understood about half of why. That's twice what I understood yesterday!",
+        "Wait till the cows hear about this. Teach me the burny one again tomorrow?",
+      ],
+      playerLost: [
+        "I WON? Is that allowed? You're a very good teacher. Or I'm a natural. Probably both.",
+        "Don't feel bad. I had the cows to practise on.",
+      ],
+    },
   },
   noble: {
     id: 'noble',
@@ -185,6 +206,16 @@ export const CHARACTERS: Record<string, Character> = {
       selfBurn: ['Naturally. Nobility burns brightest.', 'I meant to do that. Obviously.'],
       humanPickup: ['Even teachers pay taxes.', 'How wonderfully common.'],
     },
+    endLines: {
+      playerWon: [
+        "Beaten by the teacher. Acceptable. The farmhand did not win, which is what matters.",
+        "I shall commission a portrait of this game. You may stand somewhere in the background.",
+      ],
+      playerLost: [
+        "Victory suits me. I expected nothing less of a game played on my good table.",
+        "A noble lesson for the teacher. You may keep the pile, as a gift.",
+      ],
+    },
   },
   barkeep: {
     id: 'barkeep',
@@ -205,6 +236,16 @@ export const CHARACTERS: Record<string, Character> = {
       selfBurn: ["That round's on the house!", 'Cleanest table in the county.'],
       humanPickup: ['Rough night, teacher?', "I'll pour you one after this."],
     },
+    endLines: {
+      playerWon: [
+        "Good game. First round's on the house, second round you teach the regulars.",
+        "Every table in here will be playing this by closing time. Mark my words.",
+      ],
+      playerLost: [
+        "Beat the teacher on my first night! Drinks for everyone. Not you.",
+        "Don't take it hard. Nobody wins against the house.",
+      ],
+    },
   },
   acolyte: {
     id: 'acolyte',
@@ -222,6 +263,16 @@ export const CHARACTERS: Record<string, Character> = {
       selfBurn: ['For the new law!'],
       humanPickup: ['The law is the law.', 'Repent, and pick up.'],
     },
+    endLines: {
+      playerWon: [
+        "Brother Justin will know what to do. He always knows.",
+        "Maybe the soft way wasn't... no. No. I won't think it.",
+      ],
+      playerLost: [
+        "The law provides. I will light a candle for your soft rules.",
+        "You see? Without 8s, there is nowhere to hide.",
+      ],
+    },
   },
   zealot: {
     id: 'zealot',
@@ -238,6 +289,16 @@ export const CHARACTERS: Record<string, Character> = {
       selfPickup: ['The law tests the faithful.', 'Hmph.'],
       selfBurn: ['Burn the heresy!', 'Cleansed.'],
       humanPickup: ['Heretic.', 'Your soft rules cannot save you here.'],
+    },
+    endLines: {
+      playerWon: [
+        "Burn the cards, burn the chapel. The law outlives us both.",
+        "This changes nothing. We will find more 8s, and we will burn them too.",
+      ],
+      playerLost: [
+        "The heresy is ash. Go home and tell Jake.",
+        "No 8s, no mercy. Next time, bring better faith.",
+      ],
     },
   },
   justin: {
@@ -258,6 +319,38 @@ export const CHARACTERS: Record<string, Character> = {
       selfPickup: ['Cowards.', 'A flaw in the rules. Not in me.', 'Noted. For the revision.'],
       selfBurn: ['Even heretics get to burn.', 'Purifying.'],
       humanPickup: ['The old rules would have saved you. Mine will not.', 'Harsh? Correct.'],
+    },
+    tableEndLines: {
+      'justins-schism': {
+        playerWon: [
+          'This proves nothing. The old rules are still too soft, and I will be back to say so.',
+          'A soft win, for soft rules. Enjoy it. Heresies do not stay buried.',
+        ],
+        playerLost: [
+          'You felt that, did you not? The 8 kneels now. Tell Jake.',
+          'Under my law, nothing escapes a 7. Not even you.',
+        ],
+      },
+      'second-schism': {
+        playerWon: [
+          'Twice. Twice you have beaten me, and still the 8 is wrong.',
+          'Burn my chapel, then. Someone has already written the next chapter.',
+        ],
+        playerLost: [
+          'No 8s. No argument. No mercy. That is the true teaching.',
+          'You came back to a chapel without 8s, and you lost in it. Fitting.',
+        ],
+      },
+      'the-council': {
+        playerWon: [
+          'Fine. You have beaten all of us at once. But we were not the ones who set the empty chair.',
+          'Every schism at one table, and every schism falls. Then whose rules are left?',
+        ],
+        playerLost: [
+          'The Council has spoken. Every table, every rule, and none of them Jake\'s.',
+          'Four schisms against one teaching. You were never going to win.',
+        ],
+      },
     },
   },
   greg: {
@@ -280,6 +373,26 @@ export const CHARACTERS: Record<string, Character> = {
       selfBurn: ['Ziggy zoggy ziggy zoggy oy oy oy!', 'Computer Lord wins again.'],
       humanPickup: ['Awh, poor baby.', "Try drinking Malibu. It'll help you.", 'I could beat you in my sleep.'],
     },
+    endLines: {
+      playerWon: [
+        "Rollback. Rollback! Who pushed this to production?",
+        "500 - Internal Server Error. That one is on me. Do not tell anyone.",
+      ],
+      playerLost: [
+        "Computer Lord wins again. The code was always on my side.",
+        "Ziggy zoggy! Have you tried turning your strategy off and on again?",
+      ],
+    },
+    tableEndLines: {
+      'the-council': {
+        playerWon: [
+          'Merge conflict. Four rulebooks, one table, and you broke all of them.',
+        ],
+        playerLost: [
+          'See? Once everyone runs my patch, the bugs are all yours.',
+        ],
+      },
+    },
   },
   'bandit-chief': {
     id: 'bandit-chief',
@@ -299,6 +412,16 @@ export const CHARACTERS: Record<string, Character> = {
       selfLowerThan: ['Stick \'em up.', 'Seven says hand it over.'],
       humanPickup: ['Pleasure doing business.', 'Pay the toll, partner.'],
     },
+    endLines: {
+      playerWon: [
+        "Fine. The pass is yours. But every rule you'll meet past here, someone sold first.",
+        "Take the road, partner. Keep the book, too. You'll be needing the fine print.",
+      ],
+      playerLost: [
+        "Pleasure doing business. Same toll tomorrow.",
+        "Come back when you can afford the whole rulebook.",
+      ],
+    },
   },
   'bandit-lookout': {
     id: 'bandit-lookout',
@@ -317,6 +440,16 @@ export const CHARACTERS: Record<string, Character> = {
       selfBurn: ['Whoo! Fireworks!'],
       selfLowerThan: ['Toll\'s due.', 'Yoink.'],
       humanPickup: ['Long way home with all those.', 'Should\'ve paid the toll.'],
+    },
+    endLines: {
+      playerWon: [
+        "Boss said you'd never get through. Boss says a lot of things.",
+        "Go on, then. Past the pass it's all sand and laughter. Hate the laughter.",
+      ],
+      playerLost: [
+        "Told you I saw you coming. Saw you losing, too.",
+        "Nice King you had there. Had.",
+      ],
     },
   },
   gio: {
@@ -457,9 +590,16 @@ export function powerReaction(rank: Rank, cfg: RuleConfig): ReactionKind | null 
   return null;
 }
 
+/** The end lines a character speaks at a table: that table's own, else
+ *  their general lines. */
+export function endLinesFor(c: Character, presetId?: string): EndLines | undefined {
+  return (presetId && c.tableEndLines?.[presetId]) || c.endLines;
+}
+
 /** A random end-of-game line, or null if the character has none. */
-export function endLine(c: Character, playerWon: boolean): string | null {
-  const pool = playerWon ? c.endLines?.playerWon : c.endLines?.playerLost;
+export function endLine(c: Character, playerWon: boolean, presetId?: string): string | null {
+  const lines = endLinesFor(c, presetId);
+  const pool = playerWon ? lines?.playerWon : lines?.playerLost;
   if (!pool || pool.length === 0) return null;
   return pool[Math.floor(Math.random() * pool.length)];
 }
