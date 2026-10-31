@@ -30,12 +30,16 @@ export default function GameOverScreen() {
   // swap the line mid-read.
   const [hostLine] = useState(() => {
     if (!game || !campaignPresetId) return null;
-    // At a shared table any host with lines may speak, so every voice gets heard.
     const hosts = opponentsFor(campaignPresetId).filter((c) => endLinesFor(c, campaignPresetId));
     if (hosts.length === 0) return null;
-    const host = hosts[Math.floor(Math.random() * hosts.length)];
     const playerWon =
       game.winnerId !== null && !game.players[game.winnerId].isBot;
+    // A host who won gets the last word; otherwise (the player won, or a
+    // host without lines did) any host may speak, so every voice gets heard.
+    const winnerName = game.winnerId !== null ? game.players[game.winnerId].name : null;
+    const host =
+      (!playerWon && hosts.find((c) => c.name === winnerName)) ||
+      hosts[Math.floor(Math.random() * hosts.length)];
     const text = endLine(host, playerWon, campaignPresetId);
     return text ? { host, text } : null;
   });

@@ -258,7 +258,8 @@ assets/characters/) are kept for later use, e.g.:
   `endLines` in characters.ts (a win pool and a loss pool). Every host has
   theirs. A host at more than one table can give a table its own pools
   (`tableEndLines`): Justin's lines change across his first schism, his
-  return and the Council. At a shared table a random host speaks.
+  return and the Council. At a shared table a random host speaks, except
+  that a host who beat you always gets the last word.
 
 ## Backlog
 

@@ -553,21 +553,21 @@ export function characterByName(name: string): Character | null {
   return null;
 }
 
-/** A random quip, or null ~half the time so lines don't spam every turn. */
-export function maybeQuip(c: Character, chance = 0.45): string | null {
+/** A random quip, or null about two times in three so lines don't spam every turn. */
+export function maybeQuip(c: Character, chance = 0.35): string | null {
   if (c.quips.length === 0 || Math.random() > chance) return null;
   return c.quips[Math.floor(Math.random() * c.quips.length)];
 }
 
 /** Chance a line fires, per situation. Burns are the payoff — nearly always. */
 const REACTION_CHANCE: Record<ReactionKind, number> = {
-  selfBurn: 0.9,
-  selfPickup: 0.90,
-  selfReset: 0.7,
-  selfLowerThan: 0.7,
-  selfTransparent: 0.7,
-  humanPickup: 0.6,
-  humanBurn: 0.8,
+  selfBurn: 0.8,
+  selfPickup: 0.75,
+  selfReset: 0.55,
+  selfLowerThan: 0.55,
+  selfTransparent: 0.55,
+  humanPickup: 0.5,
+  humanBurn: 0.7,
 };
 
 /**
