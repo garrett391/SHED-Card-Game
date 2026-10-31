@@ -1083,6 +1083,20 @@ describe('rule variants', () => {
       expect(r.state.log.at(-1)?.text).toBe("Chief goes for Garrett's hand… but it's empty.");
     });
 
+    test('a 7 from the table, with no hand to trade from, is announced', () => {
+      const state = setupGame({
+        players: [
+          player({ name: 'Chief', hand: [], faceUp: [card(7, '♠', 'b7'), card(9, '♠', 'b9')], rules: bandit }),
+          player({ name: 'Garrett', hand: [card(13, '♥', 'vK')] }),
+        ],
+        pile: [card(5)],
+      });
+      const r = playCards(state, 0, ['b7']);
+      expect(r.events).toContainEqual({ type: 'stickUpPassed', playerId: 0, targetId: 1, reason: 'robberEmpty' });
+      expect(r.state.players[1].hand.map(c => c.id)).toEqual(['vK']);
+      expect(r.state.log.at(-1)?.text).toBe('Chief has no hand to trade from. No stick-up.');
+    });
+
     test("the victim's power cards count as their best", () => {
       const state = setupGame({
         players: [
@@ -1118,7 +1132,10 @@ describe('rule variants', () => {
       });
       const r = playCards(state, 0, ['b7']);
       expect(r.events.some(e => e.type === 'cardStolen')).toBe(false);
-      expect(r.events).toContainEqual({ type: 'stickUpPassed', playerId: 0, targetId: 1, reason: 'nothingBetter' });
+      expect(r.events).toContainEqual(expect.objectContaining({
+        type: 'stickUpPassed', playerId: 0, targetId: 1, reason: 'nothingBetter',
+        best: expect.objectContaining({ id: 'v4' }), worst: expect.objectContaining({ id: 'b9' }),
+      }));
       expect(r.state.log.at(-1)?.text).toBe("Chief sizes up Garrett's hand… nothing worth taking.");
     });
 

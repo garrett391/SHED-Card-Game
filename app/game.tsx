@@ -8,6 +8,7 @@ import { OpponentStrip } from '../src/components/OpponentStrip';
 import { PlayingCard } from '../src/components/PlayingCard';
 import { VariantBadge } from '../src/components/VariantBadge';
 import { AchievementToast } from '../src/components/AchievementToast';
+import { StickUp, StickUpCard } from '../src/components/StickUpCard';
 import { theme } from '../src/components/theme';
 import { decideBotAction } from '../src/ai/bot';
 import { rankLabel, cardLabel } from '../src/engine/cards';
@@ -67,6 +68,10 @@ export default function GameScreen() {
     card: Card;
     success: boolean;
   } | null>(null);
+
+  // A bandit's 7 aimed at a human: the stick-up panel, which holds play
+  // until it's dismissed.
+  const [stickUp, setStickUp] = useState<StickUp | null>(null);
 
   // Game history modal
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -135,7 +140,7 @@ export default function GameScreen() {
   // (finalHold), and the face-down flip gate (flipResult — without this a
   // winning flip would route before its card was ever shown).
   useEffect(() => {
-    if (game && game.phase === 'gameOver' && !botAction && !flipResult && !finalHold) {
+    if (game && game.phase === 'gameOver' && !botAction && !flipResult && !finalHold && !stickUp) {
       // A human win of a game launched from the campaign map completes that
       // node; free-play wins never count. markCompleted is idempotent, so
       // re-fires of this effect are harmless.
@@ -148,13 +153,14 @@ export default function GameScreen() {
       }
       router.replace('/game-over');
     }
-  }, [game, router, botAction, flipResult, finalHold, campaignPresetId]);
+  }, [game, router, botAction, flipResult, finalHold, stickUp, campaignPresetId]);
 
   // Bot autoplay.
   useEffect(() => {
     if (!game || game.phase !== 'playing') return;
     if (flipResult) return; // Wait for human to dismiss flip result first
     if (botAction) return;  // Wait for bot action display to clear
+    if (stickUp) return;    // Wait for the stick-up panel to be dismissed
     const current = game.players[game.currentPlayerIndex];
     if (!current.isBot) return;
     if (current.isFinished) return;
@@ -232,9 +238,11 @@ export default function GameScreen() {
         text: captionText(character ? `${character.emoji} ${botName}` : botName, display),
         nonce: Date.now(),
       });
+      const robbery = stickUpFrom(events, useGameStore.getState().game);
+      if (robbery) setStickUp(robbery);
     }, BOT_THINK_MS);
     return () => clearTimeout(timer);
-  }, [game, flipResult, botAction]);
+  }, [game, flipResult, botAction, stickUp]);
 
   // Game sounds, driven by engine events rather than buttons, so every path
   // is covered — human taps, bot turns, forced pickups, failed face-down
@@ -723,6 +731,13 @@ export default function GameScreen() {
         log={game.log}
       />
     </ScrollView>
+    {stickUp && (
+      <StickUpCard
+        stickUp={stickUp}
+        victimIsYou={game.players.filter((p) => !p.isBot).length === 1}
+        onClose={() => setStickUp(null)}
+      />
+    )}
     <AchievementToast earned={earnedThisGame} />
     </View>
   );
@@ -849,6 +864,8 @@ function buildBotActionDisplay(
     if (passed && passed.type === 'stickUpPassed') {
       detail = (detail ? detail + '\n' : '') + (passed.reason === 'emptyHand'
         ? `🤠 Goes for ${playerNameIn(passed.targetId)}'s hand… but it's empty`
+        : passed.reason === 'robberEmpty'
+        ? '🤠 No hand to trade from. No stick-up'
         : `🤠 Sizes up ${playerNameIn(passed.targetId)}'s hand… nothing worth taking`);
     }
     const swapped = events.find((e) => e.type === 'handsSwapped');
@@ -872,6 +889,23 @@ function buildBotActionDisplay(
   return { botName, emoji: '🤖', headline: 'took their turn' };
 }
 
+/** The stick-up panel for a bandit's 7 aimed at a human, if there was one. */
+function stickUpFrom(events: GameEvent[], game: GameState | null): StickUp | null {
+  if (!game) return null;
+  for (const e of events) {
+    if (e.type !== 'cardStolen' && e.type !== 'stickUpPassed') continue;
+    const victim = game.players[e.targetId];
+    if (!victim || victim.isBot) return null;
+    const names = { robber: game.players[e.playerId].name, victim: victim.name };
+    if (e.type === 'cardStolen') return { kind: 'trade', ...names, took: e.took, gave: e.gave };
+    if (e.reason === 'nothingBetter' && e.best && e.worst) {
+      return { kind: 'nothingBetter', ...names, best: e.best, worst: e.worst };
+    }
+    return { kind: e.reason === 'robberEmpty' ? 'robberEmpty' : 'emptyHand', ...names };
+  }
+  return null;
+}
+
 /** Turn a list of engine events into a one-line summary for the UI. */
 function summarizeRecent(
   events: ReturnType<typeof useGameStore.getState>['recentEvents'],
@@ -892,6 +926,8 @@ function summarizeRecent(
     if (e.type === 'stickUpPassed') {
       return e.reason === 'emptyHand'
         ? `🤠 ${playerName(e.playerId)} found ${playerName(e.targetId)}'s hand empty`
+        : e.reason === 'robberEmpty'
+        ? `🤠 ${playerName(e.playerId)} had no hand to trade from`
         : `🤠 ${playerName(e.playerId)} found nothing worth taking from ${playerName(e.targetId)}`;
     }
     if (e.type === 'cardStolen') {

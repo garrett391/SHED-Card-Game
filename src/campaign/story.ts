@@ -194,7 +194,7 @@ export const CINEMATICS: Record<string, Cinematic> = {
     },
     {
       image: require('../../assets/story/pass-stickup.jpg'),
-      caption: 'Out here, a 7 is a stick-up: whenever a bandit plays one, they take your best card and leave you their worst.',
+      caption: 'Out here, a 7 is a stick-up: when a bandit plays one, they take your best card and leave you their worst.',
     },
   ],
 

@@ -67,7 +67,7 @@ export function variantDiff(config: RuleConfig): string[] {
     );
   if (config.stickUp && !base.stickUp)
     out.push(
-      `Stick-up: whenever you play a ${rankLabel(config.lowerThanRank)}, swap your worst card for the best card of the next player who isn't a fellow robber. Power cards count as the best.`,
+      `Stick-up: whenever you play a ${rankLabel(config.lowerThanRank)}, swap your worst card for the best card of the next player who isn't a fellow robber, if theirs is better. Power cards count as the best.`,
     );
 
   // ── Special combo ──────────────────────────────────────────────────────────

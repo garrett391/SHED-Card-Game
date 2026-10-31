@@ -161,9 +161,17 @@ export type GameEvent =
   | { type: 'handsSwapped'; playerId: number; targetId: number }
   /** Stick-up: `playerId` traded `gave` (their lowest) for `targetId`'s `took` (their highest). */
   | { type: 'cardStolen'; playerId: number; targetId: number; took: Card; gave: Card }
-  /** Stick-up considered and passed: the victim's hand was empty, or
-   *  nothing in it beat the robber's worst card. */
-  | { type: 'stickUpPassed'; playerId: number; targetId: number; reason: 'emptyHand' | 'nothingBetter' };
+  /** Stick-up considered and passed: the victim's hand was empty, the
+   *  robber had no hand to trade from, or nothing in the victim's hand beat
+   *  the robber's worst card (`best` and `worst` say which cards, then). */
+  | {
+      type: 'stickUpPassed';
+      playerId: number;
+      targetId: number;
+      reason: 'emptyHand' | 'robberEmpty' | 'nothingBetter';
+      best?: Card;
+      worst?: Card;
+    };
 
 export interface PlayResult {
   state: GameState;

@@ -422,22 +422,28 @@ export function playCards(
     }
     const robberHand = players[playerIdx].hand;
     const victimHand = targetId === null ? [] : players[targetId].hand;
-    // Nothing to swap with: they're out of hand cards themselves.
-    if (targetId !== null && robberHand.length > 0) {
+    // Nothing to swap with: the 7 came from the robber's table cards. Say
+    // so, or the 7 reads as a stick-up that silently didn't happen.
+    if (targetId !== null && robberHand.length === 0) {
+      events.push({ type: 'stickUpPassed', playerId: playerIdx, targetId, reason: 'robberEmpty' });
+      log.push(entry(log, `${player.name} has no hand to trade from. No stick-up.`, playerIdx));
+    } else if (targetId !== null) {
       const worth = (c: Card) => cardWorth(c, cfg);
       const gave = robberHand.reduce((lo, c) => (worth(c) < worth(lo) ? c : lo));
       const took = victimHand.length === 0 ? null
         : victimHand.reduce((hi, c) => (worth(c) > worth(hi) ? c : hi));
       if (took === null || worth(took) <= worth(gave)) {
         // Say so: a bandit's 7 that silently does nothing reads as a bug.
-        const reason = took === null ? 'emptyHand' : 'nothingBetter';
-        events.push({ type: 'stickUpPassed', playerId: playerIdx, targetId, reason });
-        log.push(entry(log,
-          reason === 'emptyHand'
-            ? `${player.name} goes for ${players[targetId].name}'s hand… but it's empty.`
-            : `${player.name} sizes up ${players[targetId].name}'s hand… nothing worth taking.`,
-          playerIdx,
-        ));
+        if (took === null) {
+          events.push({ type: 'stickUpPassed', playerId: playerIdx, targetId, reason: 'emptyHand' });
+          log.push(entry(log, `${player.name} goes for ${players[targetId].name}'s hand… but it's empty.`, playerIdx));
+        } else {
+          events.push({
+            type: 'stickUpPassed', playerId: playerIdx, targetId, reason: 'nothingBetter',
+            best: took, worst: gave,
+          });
+          log.push(entry(log, `${player.name} sizes up ${players[targetId].name}'s hand… nothing worth taking.`, playerIdx));
+        }
       } else {
         players = players.map((p, i) =>
           i === playerIdx ? { ...p, hand: [...p.hand.filter(c => c.id !== gave.id), took] }

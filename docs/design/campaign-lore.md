@@ -120,6 +120,14 @@ the victim in Shed (one fewer card to shed), hence the swap. Bandit bots
 play 7s eagerly rather than saving them. The table itself plays Jake's
 Classic, so the player never robs.
 
+Every bandit 7 aimed at the player opens a wanted-poster panel over the
+table (`StickUpCard`), and play waits until it's dismissed: "STICK-UP!" with
+the card taken and the card given, or "No stick-up this time" with the
+reason in one line (your best didn't beat their worst, your hand was empty,
+or the bandit played the 7 from the table with no hand to trade). Playtest
+feedback (Erich, Oct 2026): a caption alone made it hard to tell why some
+7s traded and others didn't.
+
 ## Foreshadowing Chris: the golden quill
 
 From the pass on, the Scribe is hinted at, never shown:
