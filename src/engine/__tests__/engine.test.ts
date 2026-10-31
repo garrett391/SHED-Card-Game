@@ -1166,6 +1166,44 @@ describe('rule variants', () => {
       expect(r.state.players[1].hand.map(c => c.id)).toEqual(['partnerK']);
     });
 
+    test('never takes a 7: that would only hand the robber his ammo back', () => {
+      const state = setupGame({
+        players: [
+          player({ hand: [card(7, '♠', 'b7'), card(3, '♠', 'b3')], rules: bandit }),
+          player({ hand: [card(7, '♥', 'v7'), card(14, '♥', 'vA')] }),
+        ],
+        pile: [card(5)],
+      });
+      const ev = playCards(state, 0, ['b7']).events.find(e => e.type === 'cardStolen');
+      expect(ev).toMatchObject({ took: { id: 'vA' }, gave: { id: 'b3' } });
+    });
+
+    test('a hand of nothing but 7s has nothing worth taking', () => {
+      const state = setupGame({
+        players: [
+          player({ hand: [card(7, '♠', 'b7'), card(3, '♠', 'b3')], rules: bandit }),
+          player({ hand: [card(7, '♥', 'v7')] }),
+        ],
+        pile: [card(5)],
+      });
+      const r = playCards(state, 0, ['b7']);
+      expect(r.events).toContainEqual({ type: 'stickUpPassed', playerId: 0, targetId: 1, reason: 'nothingBetter' });
+      expect(r.state.players[1].hand.map(c => c.id)).toEqual(['v7']);
+    });
+
+    test('at the Outlaw Pass the player robs too, bandits included', () => {
+      const state = setupGame({
+        players: [
+          player({ hand: [card(7, '♠', 'y7'), card(3, '♠', 'y3')] }),
+          player({ hand: [card(13, '♣', 'bK'), card(4, '♣', 'b4')], rules: bandit }),
+        ],
+        pile: [card(5)],
+        ruleConfig: getPreset('the-pass'),
+      });
+      const ev = playCards(state, 0, ['y7']).events.find(e => e.type === 'cardStolen');
+      expect(ev).toMatchObject({ playerId: 0, targetId: 1, took: { id: 'bK' }, gave: { id: 'y3' } });
+    });
+
     test('bandit bots play their 7s instead of saving them', () => {
       const state = setupGame({
         players: [

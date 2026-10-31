@@ -37,7 +37,11 @@ export type ReactionKind =
   | 'selfLowerThan'
   | 'selfTransparent'
   | 'humanPickup'
-  | 'humanBurn';
+  | 'humanBurn'
+  // The stick-up (bandits): spoken inside the stick-up panel, not as table
+  // talk. `{card}` in a selfRob line is the card they took.
+  | 'selfRob'
+  | 'selfRobPassed';
 
 export interface Character {
   id: string;
@@ -410,6 +414,15 @@ export const CHARACTERS: Record<string, Character> = {
       selfPickup: ['Put it on my tab.', 'Well. That was not in the book.'],
       selfBurn: ['Burn the evidence!'],
       selfLowerThan: ['Stick \'em up.', 'Seven says hand it over.'],
+      selfRob: [
+        'This is a hold up!',
+        'Now just pass over that {card} and no one gets hurt.',
+        'Stick \'em up. The {card}, nice and slow.',
+      ],
+      selfRobPassed: [
+        'I couldn\'t possibly steal from the needy.',
+        'You should be the one robbing!',
+      ],
       humanPickup: ['Pleasure doing business.', 'Pay the toll, partner.'],
     },
     endLines: {
@@ -439,6 +452,14 @@ export const CHARACTERS: Record<string, Character> = {
       selfPickup: ['Ugh. Sand in my cards.', 'That\'s fine. That\'s fine.'],
       selfBurn: ['Whoo! Fireworks!'],
       selfLowerThan: ['Toll\'s due.', 'Yoink.'],
+      selfRob: [
+        'GIMME WHAT YOU GOT!',
+        'Yoink. Thanks for the {card}.',
+      ],
+      selfRobPassed: [
+        'Get along, lil brokie.',
+        'You should be the one robbing!',
+      ],
       humanPickup: ['Long way home with all those.', 'Should\'ve paid the toll.'],
     },
     endLines: {
@@ -568,6 +589,8 @@ const REACTION_CHANCE: Record<ReactionKind, number> = {
   selfTransparent: 0.55,
   humanPickup: 0.5,
   humanBurn: 0.7,
+  selfRob: 0.85,
+  selfRobPassed: 0.85,
 };
 
 /**
@@ -579,6 +602,15 @@ export function maybeReaction(c: Character, kind: ReactionKind): string | null {
   if (!pool || pool.length === 0) return maybeQuip(c);
   if (Math.random() > REACTION_CHANCE[kind]) return null;
   return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/** A bandit's line for the stick-up panel, or null. Unlike maybeReaction
+ *  there's no fallback to generic quips: the panel stays quiet instead. */
+export function robLine(c: Character, kind: 'selfRob' | 'selfRobPassed', card?: string): string | null {
+  const pool = c.reactions[kind];
+  if (!pool || pool.length === 0 || Math.random() > REACTION_CHANCE[kind]) return null;
+  const line = pool[Math.floor(Math.random() * pool.length)];
+  return card ? line.replace('{card}', card) : line.replace(' {card}', '').replace('{card}', 'that');
 }
 
 /** The reaction for a character playing `rank`, if it's a power card with

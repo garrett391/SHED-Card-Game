@@ -4,19 +4,26 @@ import { Card } from '../engine/types';
 import { PlayingCard } from './PlayingCard';
 
 /**
- * The bandits' stick-up, shown as a wanted-poster panel over the table
- * whenever a bandit's 7 targets a human: what was taken and given, or why
- * nothing was. Play waits until it's dismissed, so the trade can't slip by
- * in a caption.
+ * The stick-up at the Outlaw Pass, shown as a wanted-poster panel over the
+ * table whenever a 7 robs (or tries to rob) a human, or a human robs: what
+ * was taken and given, or why nothing was. Play waits until it's dismissed,
+ * so the trade can't slip by in a caption.
  */
-export type StickUp =
-  | { kind: 'trade'; robber: string; victim: string; took: Card; gave: Card }
-  | { kind: 'nothingBetter'; robber: string; victim: string; best: Card; worst: Card }
-  | { kind: 'emptyHand' | 'robberEmpty'; robber: string; victim: string };
+export type StickUp = {
+  robber: string;
+  victim: string;
+  /** The robber's line, already filled in, e.g. "This is a hold up!" */
+  quote?: string;
+} & (
+  | { kind: 'trade'; took: Card; gave: Card }
+  | { kind: 'nothingBetter'; best: Card; worst: Card }
+  | { kind: 'nothingWorth' | 'emptyHand' | 'robberEmpty' }
+);
 
 interface Props {
   stickUp: StickUp;
-  /** The victim is the only human at the table: speak to them as "you". */
+  /** Speak to the single human at the table as "you" when they're involved. */
+  robberIsYou: boolean;
   victimIsYou: boolean;
   onClose: () => void;
 }
@@ -28,19 +35,29 @@ const LEATHER = '#7a4a24';
 const RUST = '#8a2e1b';
 const SAGE = '#2f5d3a';
 
-export function StickUpCard({ stickUp: s, victimIsYou, onClose }: Props) {
-  const you = victimIsYou ? 'you' : s.victim;
-  const your = victimIsYou ? 'your' : `${s.victim}'s`;
-  const Your = victimIsYou ? 'Your' : `${s.victim}'s`;
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-  let title: string;
+export function StickUpCard({ stickUp: s, robberIsYou, victimIsYou, onClose }: Props) {
+  const R = robberIsYou ? 'You' : s.robber;
+  const robs = robberIsYou ? 'rob' : 'robs';
+  const V = victimIsYou ? 'you' : s.victim;
+  const Vs = victimIsYou ? 'your' : `${s.victim}'s`;
+  const Rs = robberIsYou ? 'your' : 'their';
+
+  let title = 'No stick-up this time';
   let line: string;
   let body: React.ReactNode = null;
   let note: string | null = null;
   if (s.kind === 'trade') {
     title = 'STICK-UP!';
-    line = `${s.robber} played a 7 and robs ${you}.`;
-    body = (
+    line = `${R} played a 7 and ${robs} ${V}.`;
+    body = robberIsYou ? (
+      <Swap
+        left={{ label: 'You take', card: s.took, color: SAGE }}
+        right={{ label: 'You give', card: s.gave, color: RUST }}
+        between="⇄"
+      />
+    ) : (
       <Swap
         left={{ label: 'Taken', card: s.took, color: RUST }}
         right={{ label: victimIsYou ? 'You get' : `${s.victim} gets`, card: s.gave, color: SAGE }}
@@ -48,28 +65,32 @@ export function StickUpCard({ stickUp: s, victimIsYou, onClose }: Props) {
       />
     );
   } else if (s.kind === 'nothingBetter') {
-    title = 'No stick-up this time';
-    line = `${s.robber} played a 7 and sized up ${your} hand.`;
+    line = `${R} played a 7 and sized up ${Vs} hand.`;
     body = (
       <Swap
-        left={{ label: `${Your} best`, card: s.best }}
-        right={{ label: 'Their worst', card: s.worst }}
+        left={{ label: `${cap(Vs)} best`, card: s.best }}
+        right={{ label: `${cap(Rs)} worst`, card: s.worst }}
         between="<"
       />
     );
-    note = `${Your} best card isn't worth more than their worst, so ${you} ${victimIsYou ? 'keep' : 'keeps'} ${victimIsYou ? 'your' : 'their'} cards.`;
+    note = `${cap(Vs)} best card isn't worth more than ${Rs} worst, so nobody trades.`;
+  } else if (s.kind === 'nothingWorth') {
+    line = `${R} played a 7 and sized up ${Vs} hand. Nothing worth taking.`;
   } else if (s.kind === 'emptyHand') {
-    title = 'No stick-up this time';
-    line = `${s.robber} played a 7 and went for ${your} hand, but it's empty.`;
+    line = `${R} played a 7 and went for ${Vs} hand, but it's empty.`;
   } else {
-    title = 'No stick-up this time';
-    line = `${s.robber} played a 7 from the table, with no hand to trade.`;
+    line = `${R} played the 7 from the table, with no hand to trade.`;
   }
 
   return (
     <View style={styles.backdrop}>
       <View style={styles.panel} accessibilityRole="alert">
         <Text style={[styles.title, s.kind !== 'trade' && styles.titleQuiet]}>{title}</Text>
+        {s.quote && (
+          <Text style={styles.quote}>
+            <Text style={styles.quoteName}>{s.robber}: </Text>“{s.quote}”
+          </Text>
+        )}
         <Text style={styles.line}>{line}</Text>
         {body}
         {note && <Text style={styles.note}>{note}</Text>}
@@ -78,7 +99,9 @@ export function StickUpCard({ stickUp: s, victimIsYou, onClose }: Props) {
           accessibilityRole="button"
           style={({ pressed }) => [styles.button, pressed && { opacity: 0.75 }]}
         >
-          <Text style={styles.buttonText}>{s.kind === 'trade' ? 'Hand it over' : 'Ride on'}</Text>
+          <Text style={styles.buttonText}>
+            {s.kind !== 'trade' ? 'Ride on' : robberIsYou ? 'Much obliged' : 'Hand it over'}
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -148,6 +171,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   titleQuiet: { fontSize: 26, color: LEATHER },
+  quote: {
+    fontFamily: 'serif',
+    fontSize: 17,
+    fontStyle: 'italic',
+    lineHeight: 22,
+    color: INK,
+    textAlign: 'center',
+  },
+  quoteName: { fontStyle: 'normal', fontWeight: '700', color: LEATHER },
   line: { fontSize: 15, lineHeight: 20, color: INK, textAlign: 'center' },
   swap: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 14 },
   slot: { alignItems: 'center', gap: 8 },

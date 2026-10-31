@@ -409,16 +409,18 @@ export function playCards(
   }
 
   // Stick-up: a 7 from a player under stick-up rules robs the next player
-  // who isn't a robber too (bandits don't rob each other): the robber's
-  // worst hand card for the victim's best, by cardWorth (power cards are
-  // the best). Only when it costs the victim (their best beats the
-  // robber's worst).
+  // who isn't in their gang (seats sharing the robber's own seat rules: the
+  // bandits don't rob each other, but the player at the Pass robs anyone):
+  // the robber's worst hand card for the victim's best, by cardWorth (power
+  // cards are the best). Never a 7: taking one would just reload the robber.
+  // Only when it costs the victim (their best beats the robber's worst).
   if (cfg.stickUp && rank === cfg.lowerThanRank) {
+    const gang = players[playerIdx].rules?.id;
     let targetId: number | null = null;
     for (let n = 1, i = playerIdx; n < players.length; n++) {
       i = (i + direction + players.length) % players.length;
       const p = players[i];
-      if (!p.isFinished && !(p.rules?.stickUp)) { targetId = i; break; }
+      if (!p.isFinished && !(gang && p.rules?.id === gang)) { targetId = i; break; }
     }
     const robberHand = players[playerIdx].hand;
     const victimHand = targetId === null ? [] : players[targetId].hand;
@@ -430,17 +432,19 @@ export function playCards(
     } else if (targetId !== null) {
       const worth = (c: Card) => cardWorth(c, cfg);
       const gave = robberHand.reduce((lo, c) => (worth(c) < worth(lo) ? c : lo));
-      const took = victimHand.length === 0 ? null
-        : victimHand.reduce((hi, c) => (worth(c) > worth(hi) ? c : hi));
+      const takeable = victimHand.filter(c => c.rank !== cfg.lowerThanRank);
+      const took = takeable.length === 0 ? null
+        : takeable.reduce((hi, c) => (worth(c) > worth(hi) ? c : hi));
       if (took === null || worth(took) <= worth(gave)) {
         // Say so: a bandit's 7 that silently does nothing reads as a bug.
-        if (took === null) {
+        if (victimHand.length === 0) {
           events.push({ type: 'stickUpPassed', playerId: playerIdx, targetId, reason: 'emptyHand' });
           log.push(entry(log, `${player.name} goes for ${players[targetId].name}'s hand… but it's empty.`, playerIdx));
         } else {
+          // `best` is absent when the hand held nothing but 7s.
           events.push({
             type: 'stickUpPassed', playerId: playerIdx, targetId, reason: 'nothingBetter',
-            best: took, worst: gave,
+            ...(took ? { best: took, worst: gave } : {}),
           });
           log.push(entry(log, `${player.name} sizes up ${players[targetId].name}'s hand… nothing worth taking.`, playerIdx));
         }

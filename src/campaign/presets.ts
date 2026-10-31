@@ -84,17 +84,19 @@ export const RULE_PRESETS: Record<string, RuleConfig> = {
       "Every dissenter plays by the rules of their own table on their turn: Justin's hard 8s, Greg's 10s that burn through 7s, the twins' jokers. You play by Jake's Classic.",
   },
 
-  // The bandits' canyon. The table plays Jake's rules; the bandits bring
-  // their own seat rules ('bandit' below), so only they rob.
+  // The bandits' canyon. Everyone robs here: the table has stick-up, so
+  // the player's 7 robs too, and the bandits bring their own seat rules
+  // ('bandit' below), which keep them from robbing each other.
   'the-pass': {
     ...DEFAULT_RULES,
     id: 'the-pass',
     name: 'The Outlaw Pass',
-    description: 'Bandits hold the canyon. When one plays a 7, they swap their worst card for your best, if yours is better (2s, 7s, 8s and 10s count as the best).',
+    description: 'Bandits hold the canyon, and every 7 is a stick-up. Whoever plays one swaps their worst card for the next player\'s best, if it\'s better.',
     flavorText: 'Your money or your King.',
     seatRules: true,
+    stickUp: true,
     seatRulesSummary:
-      "Stick-up: when a bandit plays a 7, they swap their worst card for your best, if yours is better. Power cards (2, 7, 8, 10) count as the best, then the highest ranks. Bandits never rob each other. You play by Jake's Classic.",
+      "Stick-up: whoever plays a 7 swaps their worst card for the next player's best, if it's better. Power cards (10, 2, 8) count as the best, then Ace down to 3. 7s are never taken. Bandits never rob each other, but you can rob them.",
   },
 
   // Seat rules for the bandits. Not a campaign node: absent from

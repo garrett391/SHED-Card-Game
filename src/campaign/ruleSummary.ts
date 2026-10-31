@@ -65,9 +65,9 @@ export function variantDiff(config: RuleConfig): string[] {
       config.seatRulesSummary ??
         'Your opponents play by rules of their own on their turns. You play by Jake\'s Classic.',
     );
-  if (config.stickUp && !base.stickUp)
+  if (config.stickUp && !base.stickUp && !config.seatRulesSummary)
     out.push(
-      `Stick-up: whenever you play a ${rankLabel(config.lowerThanRank)}, swap your worst card for the best card of the next player who isn't a fellow robber, if theirs is better. Power cards count as the best.`,
+      `Stick-up: whenever you play a ${rankLabel(config.lowerThanRank)}, swap your worst card for the best card of the next player who isn't a fellow robber, if theirs is better. Power cards count as the best; ${rankLabel(config.lowerThanRank)}s are never taken.`,
     );
 
   // ── Special combo ──────────────────────────────────────────────────────────

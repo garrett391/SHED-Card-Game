@@ -25,6 +25,7 @@ import {
   maybeQuip,
   maybeReaction,
   powerReaction,
+  robLine,
 } from '../src/campaign/characters';
 import { playSfx } from '../src/audio/sfx';
 import { Card, GameEvent, GameState, RuleConfig } from '../src/engine/types';
@@ -69,9 +70,9 @@ export default function GameScreen() {
     success: boolean;
   } | null>(null);
 
-  // A bandit's 7 aimed at a human: the stick-up panel, which holds play
-  // until it's dismissed.
-  const [stickUp, setStickUp] = useState<StickUp | null>(null);
+  // A stick-up involving a human (robbed, or robbing): the stick-up panel,
+  // which holds play until it's dismissed.
+  const [stickUp, setStickUp] = useState<SeatedStickUp | null>(null);
 
   // Game history modal
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -213,10 +214,19 @@ export default function GameScreen() {
       const cfg = latest.game?.ruleConfig ?? game.ruleConfig;
       const display = buildBotActionDisplay(botName, events, cfg);
       const character = characterByName(botName);
+      // A stick-up on a human opens the panel, and the robber's line goes in
+      // it rather than out as table talk.
+      const robbery = stickUpFrom(events, useGameStore.getState().game);
+      if (robbery && character && robbery.kind !== 'robberEmpty') {
+        const quote = robbery.kind === 'trade'
+          ? robLine(character, 'selfRob', cardLabel(robbery.took))
+          : robLine(character, 'selfRobPassed');
+        if (quote) robbery.quote = quote;
+      }
       // Situational line beats generic: their burn > their pickup > their
       // power card > table talk.
       let quip: string | undefined;
-      if (character) {
+      if (character && !robbery) {
         const played = events.find((e) => e.type === 'cardsPlayed');
         const power =
           played && played.type === 'cardsPlayed'
@@ -238,11 +248,18 @@ export default function GameScreen() {
         text: captionText(character ? `${character.emoji} ${botName}` : botName, display),
         nonce: Date.now(),
       });
-      const robbery = stickUpFrom(events, useGameStore.getState().game);
       if (robbery) setStickUp(robbery);
     }, BOT_THINK_MS);
     return () => clearTimeout(timer);
   }, [game, flipResult, botAction, stickUp]);
+
+  // The player's own 7 at the Outlaw Pass: show what they took (bot robbers
+  // open the panel from the bot turn, with their line).
+  useEffect(() => {
+    const g = useGameStore.getState().game;
+    const robbery = stickUpFrom(recentEvents, g);
+    if (robbery && g && !g.players[robbery.robberId].isBot) setStickUp(robbery);
+  }, [recentEvents]);
 
   // Game sounds, driven by engine events rather than buttons, so every path
   // is covered — human taps, bot turns, forced pickups, failed face-down
@@ -734,7 +751,8 @@ export default function GameScreen() {
     {stickUp && (
       <StickUpCard
         stickUp={stickUp}
-        victimIsYou={game.players.filter((p) => !p.isBot).length === 1}
+        robberIsYou={isSoleHuman(game, stickUp.robberId)}
+        victimIsYou={isSoleHuman(game, stickUp.victimId)}
         onClose={() => setStickUp(null)}
       />
     )}
@@ -889,21 +907,35 @@ function buildBotActionDisplay(
   return { botName, emoji: '🤖', headline: 'took their turn' };
 }
 
-/** The stick-up panel for a bandit's 7 aimed at a human, if there was one. */
-function stickUpFrom(events: GameEvent[], game: GameState | null): StickUp | null {
+type SeatedStickUp = StickUp & { robberId: number; victimId: number };
+
+/** The stick-up panel for a 7 that robbed (or tried to rob) a human, or
+ *  that a human played, if there was one. */
+function stickUpFrom(events: GameEvent[], game: GameState | null): SeatedStickUp | null {
   if (!game) return null;
   for (const e of events) {
     if (e.type !== 'cardStolen' && e.type !== 'stickUpPassed') continue;
+    const robber = game.players[e.playerId];
     const victim = game.players[e.targetId];
-    if (!victim || victim.isBot) return null;
-    const names = { robber: game.players[e.playerId].name, victim: victim.name };
-    if (e.type === 'cardStolen') return { kind: 'trade', ...names, took: e.took, gave: e.gave };
-    if (e.reason === 'nothingBetter' && e.best && e.worst) {
-      return { kind: 'nothingBetter', ...names, best: e.best, worst: e.worst };
+    if (!robber || !victim || (robber.isBot && victim.isBot)) return null;
+    const seats = {
+      robber: robber.name, victim: victim.name, robberId: e.playerId, victimId: e.targetId,
+    };
+    if (e.type === 'cardStolen') return { kind: 'trade', ...seats, took: e.took, gave: e.gave };
+    if (e.reason === 'nothingBetter') {
+      return e.best && e.worst
+        ? { kind: 'nothingBetter', ...seats, best: e.best, worst: e.worst }
+        : { kind: 'nothingWorth', ...seats };
     }
-    return { kind: e.reason === 'robberEmpty' ? 'robberEmpty' : 'emptyHand', ...names };
+    return { kind: e.reason, ...seats };
   }
   return null;
+}
+
+/** The player is the only human at the table, so the UI can say "you". */
+function isSoleHuman(game: GameState, playerId: number): boolean {
+  const humans = game.players.filter((p) => !p.isBot);
+  return humans.length === 1 && humans[0].id === playerId;
 }
 
 /** Turn a list of engine events into a one-line summary for the UI. */

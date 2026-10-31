@@ -109,24 +109,29 @@ red-rock canyon held by bandits (unnamed archetypes: the Bandit Chief and
 the Lookout). They sell hand-copied rulebooks from a wagon, which is how
 strange rules travel faster than the disciples (the wildfire slide).
 
-Rule (`stickUp`, a seat rule from the hidden `bandit` preset): whenever a
-bandit plays a 7, they swap their worst hand card for the best card of
-the next player who isn't a bandit. "Best" is by usefulness, not face
-value (`cardWorth`): power cards outrank everything (10 > 2 > 8 > 7), then
+Rule (`stickUp`): whoever plays a 7 at the pass swaps their worst hand
+card for the best card of the next player. "Best" is by usefulness, not
+face value (`cardWorth`): power cards outrank everything (10 > 2 > 8), then
 Ace down to 3. (Ranking by face value once let a bandit take an Ace and
-hand over a 2, a gift.) Bandits never rob each other, and only rob when
-it costs the victim. A straight steal would help
-the victim in Shed (one fewer card to shed), hence the swap. Bandit bots
-play 7s eagerly rather than saving them. The table itself plays Jake's
-Classic, so the player never robs.
+hand over a 2, a gift.) A 7 is never taken: a bandit who took your 7 just
+got his ammo back and could rob forever (playtest, Oct 2026). Only robs
+when it costs the victim. A straight steal would help the victim in Shed
+(one fewer card to shed), hence the swap. Bandit bots play 7s eagerly
+rather than saving them.
 
-Every bandit 7 aimed at the player opens a wanted-poster panel over the
-table (`StickUpCard`), and play waits until it's dismissed: "STICK-UP!" with
-the card taken and the card given, or "No stick-up this time" with the
-reason in one line (your best didn't beat their worst, your hand was empty,
-or the bandit played the 7 from the table with no hand to trade). Playtest
-feedback (Erich, Oct 2026): a caption alone made it hard to tell why some
-7s traded and others didn't.
+Everyone robs here (Oct 2026): the table itself has `stickUp`, so the
+player's 7 robs too, bandits included. The bandits sit under their own
+seat rules (the hidden `bandit` preset), and robbers skip anyone sharing
+their seat rules, so bandits never rob each other.
+
+Every stick-up involving the player, robbed or robbing, opens a
+wanted-poster panel over the table (`StickUpCard`), and play waits until
+it's dismissed: "STICK-UP!" with the card taken and the card given, or "No
+stick-up this time" with the reason in one line. Playtest feedback (Erich,
+Oct 2026): a caption alone made it hard to tell why some 7s traded and
+others didn't. A robbing bandit's line goes in the panel, not as table
+talk (`selfRob`, where `{card}` is the card taken, and `selfRobPassed`).
+Several are Nick's: "This is a hold up!", "Get along, lil brokie."
 
 ## Foreshadowing Chris: the golden quill
 

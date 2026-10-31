@@ -163,7 +163,8 @@ export type GameEvent =
   | { type: 'cardStolen'; playerId: number; targetId: number; took: Card; gave: Card }
   /** Stick-up considered and passed: the victim's hand was empty, the
    *  robber had no hand to trade from, or nothing in the victim's hand beat
-   *  the robber's worst card (`best` and `worst` say which cards, then). */
+   *  the robber's worst card (`best` and `worst` say which cards, then;
+   *  both are absent when the victim held only 7s, which are never taken). */
   | {
       type: 'stickUpPassed';
       playerId: number;
