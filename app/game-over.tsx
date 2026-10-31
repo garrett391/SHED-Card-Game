@@ -255,35 +255,35 @@ export default function GameOverScreen() {
             <Text style={styles.bannerFlavor}>{unlockedPreset.flavorText}</Text>
           </View>
         )}
-      </ScrollView>
 
-      <View style={styles.actions}>
-        <Pressable
-          onPress={primary.onPress}
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
-        >
-          <Text style={styles.primaryText}>{primary.title}</Text>
-        </Pressable>
-        <View style={styles.secondaryRow}>
-          {showMap && (
+        <View style={styles.actions}>
+          <Pressable
+            onPress={primary.onPress}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
+          >
+            <Text style={styles.primaryText}>{primary.title}</Text>
+          </Pressable>
+          <View style={styles.secondaryRow}>
+            {showMap && (
+              <Pressable
+                onPress={() => departTo('/campaign')}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}
+              >
+                <Text style={styles.secondaryText}>Campaign map</Text>
+              </Pressable>
+            )}
             <Pressable
-              onPress={() => departTo('/campaign')}
+              onPress={() => departTo('/')}
               accessibilityRole="button"
               style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}
             >
-              <Text style={styles.secondaryText}>Campaign map</Text>
+              <Text style={styles.secondaryText}>Home</Text>
             </Pressable>
-          )}
-          <Pressable
-            onPress={() => departTo('/')}
-            accessibilityRole="button"
-            style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}
-          >
-            <Text style={styles.secondaryText}>Home</Text>
-          </Pressable>
+          </View>
         </View>
-      </View>
+      </ScrollView>
 
       <GameLogModal visible={logOpen} onClose={() => setLogOpen(false)} log={game.log} />
     </View>
@@ -381,7 +381,9 @@ function Fan({ count }: { count: number }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.color.feltBg },
-  scroll: { padding: 20, paddingBottom: 8, gap: 18 },
+  // Buttons scroll with everything else, pushed to the bottom when there's
+  // room: pinned below a ScrollView they hid the stats on a phone.
+  scroll: { flexGrow: 1, padding: 20, paddingBottom: 28, gap: 18 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   tableName: {
     color: theme.color.textMuted,
@@ -461,7 +463,7 @@ const styles = StyleSheet.create({
   bannerLink: { color: GOLD, fontSize: 13, fontWeight: '700', marginTop: 4 },
   bannerTitle: { color: theme.color.textOnDark, fontSize: 18, fontWeight: '800' },
   bannerFlavor: { color: theme.color.textMuted, fontSize: 14, fontStyle: 'italic' },
-  actions: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 28, gap: 10 },
+  actions: { marginTop: 'auto', paddingTop: 8, gap: 10 },
   primary: {
     height: 54,
     borderRadius: 14,

@@ -407,12 +407,16 @@ export const CHARACTERS: Record<string, Character> = {
     homeTable: 'bandit',
     quips: [
       'Rulebooks! Fresh copies! Every rule you need and a few you don\'t.',
-      'Nobody plays the old way out here. Nobody buys the old way, either.',
-      'Read the fine print, friend. Somebody wrote it very carefully.',
+      'Easy now. Keep your hands where I can see \'em.',
+      'This canyon ain\'t free, partner.',
+      'I\'ve robbed stagecoaches with worse hands than this.',
+      'Nobody leaves the pass richer than they came.',
+      'No sudden moves. Or plays.',
+      'Somebody check that one for a derringer.',
     ],
     reactions: {
-      selfPickup: ['Put it on my tab.', 'Well. That was not in the book.'],
-      selfBurn: ['Burn the evidence!'],
+      selfPickup: ['Put it on my tab.', 'That ain\'t how the job was planned.', 'Nobody saw that.'],
+      selfBurn: ['Burn the evidence!', 'Light \'em up, boys!'],
       selfLowerThan: ['Stick \'em up.', 'Seven says hand it over.'],
       selfRob: [
         'This is a hold up!',
@@ -428,11 +432,11 @@ export const CHARACTERS: Record<string, Character> = {
     endLines: {
       playerWon: [
         "Fine. The pass is yours. But every rule you'll meet past here, someone sold first.",
-        "Take the road, partner. Keep the book, too. You'll be needing the fine print.",
+        "Ride on, then. Ain't nobody ever beat the Chief twice.",
       ],
       playerLost: [
         "Pleasure doing business. Same toll tomorrow.",
-        "Come back when you can afford the whole rulebook.",
+        "Empty your pockets on the way out, partner.",
       ],
     },
   },
@@ -445,8 +449,12 @@ export const CHARACTERS: Record<string, Character> = {
     homeTable: 'bandit',
     quips: [
       'Saw your dust three valleys back.',
-      'Boss says the book is always right.',
       'Nice King you got there. Shame if it wandered off.',
+      'Boss, this one\'s got shifty eyes.',
+      'I call dibs on whatever they\'re holding.',
+      'Quiet. I\'m watching the ridge. And your cards.',
+      'Riders on the ridge! ...No, just tumbleweed.',
+      'Boss says the book is always right.',
     ],
     reactions: {
       selfPickup: ['Ugh. Sand in my cards.', 'That\'s fine. That\'s fine.'],
@@ -574,21 +582,21 @@ export function characterByName(name: string): Character | null {
   return null;
 }
 
-/** A random quip, or null about two times in three so lines don't spam every turn. */
-export function maybeQuip(c: Character, chance = 0.35): string | null {
+/** A random quip, or null about three times in four so lines don't spam every turn. */
+export function maybeQuip(c: Character, chance = 0.25): string | null {
   if (c.quips.length === 0 || Math.random() > chance) return null;
   return c.quips[Math.floor(Math.random() * c.quips.length)];
 }
 
 /** Chance a line fires, per situation. Burns are the payoff — nearly always. */
 const REACTION_CHANCE: Record<ReactionKind, number> = {
-  selfBurn: 0.8,
-  selfPickup: 0.75,
-  selfReset: 0.55,
-  selfLowerThan: 0.55,
-  selfTransparent: 0.55,
-  humanPickup: 0.5,
-  humanBurn: 0.7,
+  selfBurn: 0.7,
+  selfPickup: 0.6,
+  selfReset: 0.4,
+  selfLowerThan: 0.4,
+  selfTransparent: 0.4,
+  humanPickup: 0.4,
+  humanBurn: 0.6,
   selfRob: 0.85,
   selfRobPassed: 0.85,
 };
