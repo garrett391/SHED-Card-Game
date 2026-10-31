@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card } from '../engine/types';
 import { PlayingCard } from './PlayingCard';
+import { theme } from './theme';
 
 /**
  * The stick-up at the Outlaw Pass, shown as a wanted-poster panel over the
@@ -163,14 +164,13 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   title: {
-    fontFamily: 'serif',
+    fontFamily: theme.font.western,
     fontSize: 36,
-    fontWeight: '900',
-    letterSpacing: 1.5,
+    letterSpacing: 1,
     color: RUST,
     textAlign: 'center',
   },
-  titleQuiet: { fontSize: 26, color: LEATHER },
+  titleQuiet: { fontSize: 24, color: LEATHER },
   quote: {
     fontFamily: 'serif',
     fontSize: 17,

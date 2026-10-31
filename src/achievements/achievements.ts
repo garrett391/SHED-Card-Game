@@ -83,6 +83,12 @@ export interface GameStats {
   /** Set when a player flips a 10 from their second-to-last face-down card;
    *  cleared by the next action. Lucky SOB if that action is a winning flip. */
   luckyArmed: number | null;
+  /** Turns taken (plays and pickups), for the results screen. */
+  turns: number;
+  /** Piles burned per player. */
+  burns: number[];
+  /** Cards stolen from each player by a stick-up. */
+  robbed: number[];
 }
 
 export function newGameStats(playerCount: number): GameStats {
@@ -91,6 +97,9 @@ export function newGameStats(playerCount: number): GameStats {
     eightsPlayed: Array(playerCount).fill(0),
     firstPickupBy: null,
     luckyArmed: null,
+    turns: 0,
+    burns: Array(playerCount).fill(0),
+    robbed: Array(playerCount).fill(0),
   };
 }
 
@@ -117,7 +126,12 @@ export function trackAction(
     eightsPlayed: [...stats.eightsPlayed],
     firstPickupBy: stats.firstPickupBy,
     luckyArmed: null, // any action disarms; re-armed below if it qualifies
+    turns: (stats.turns ?? 0) + 1,
+    burns: [...(stats.burns ?? Array(prev.players.length).fill(0))],
+    robbed: [...(stats.robbed ?? Array(prev.players.length).fill(0))],
   };
+  if (events.some((e) => e.type === 'pileBurned')) s.burns[actor] += 1;
+  for (const e of events) if (e.type === 'cardStolen') s.robbed[e.targetId] += 1;
   const topBefore = getEffectiveTopCard(prev.playPile, cfg);
   const source = getPlaySource(p);
 

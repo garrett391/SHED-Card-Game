@@ -3,6 +3,8 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useEffect, useState } from 'react';
+import { useFonts } from 'expo-font';
+import { Rye_400Regular } from '@expo-google-fonts/rye';
 import { theme } from '../src/components/theme';
 import { useRadioStore, STATIONS } from '../src/store/radioStore';
 import { preloadSfx, setSfxMuted, isSfxMuted } from '../src/audio/sfx';
@@ -158,6 +160,9 @@ function SettingsSheet({ visible, onClose }: SettingsSheetProps) {
 
 export default function RootLayout() {
   const init = useRadioStore((s) => s.init);
+  // The Outlaw Pass's Western face. Nothing waits on it: text that uses it
+  // falls back to the system font for the moment it takes to load.
+  useFonts({ Rye_400Regular });
 
   useEffect(() => {
     init();

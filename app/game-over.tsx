@@ -1,20 +1,37 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Button } from '../src/components/Button';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GameLogModal } from '../src/components/GameLogModal';
 import { theme } from '../src/components/theme';
 import { useGameStore } from '../src/store/gameStore';
 import { isUnlocked, useCampaignStore } from '../src/store/campaignStore';
 import { RULE_PRESETS, PRESET_ORDER } from '../src/campaign/presets';
 import { CINEMATICS, ENDING_ID } from '../src/campaign/story';
-import { characterByName, endLine, endLinesFor, opponentsFor } from '../src/campaign/characters';
-import { CharacterDialogue } from '../src/components/CharacterDialogue';
+import {
+  Character,
+  characterByName,
+  endLine,
+  endLinesFor,
+  opponentsFor,
+} from '../src/campaign/characters';
 import { ACHIEVEMENT_BY_ID } from '../src/achievements/achievements';
+import { Player } from '../src/engine/types';
 
+const GOLD = theme.color.accent;
+const LOSS = '#e2603f'; // readable on the felt, unlike theme danger red
+const PANEL = theme.color.feltBgDark;
+const LINE = '#2b5a49';
+
+/**
+ * Final standings: a headline for the player, everyone ranked by how close
+ * they came (winner first, then fewest cards left), the host's parting line
+ * on their own row, a few numbers from the game, then what to do next.
+ * Works the same for free play, the campaign and last-man-standing tables.
+ */
 export default function GameOverScreen() {
   const router = useRouter();
   const game = useGameStore((s) => s.game);
+  const stats = useGameStore((s) => s.stats);
   const reset = useGameStore((s) => s.reset);
   const campaignPresetId = useGameStore((s) => s.campaignPresetId);
   const earnedThisGame = useGameStore((s) => s.earnedThisGame);
@@ -56,23 +73,67 @@ export default function GameOverScreen() {
 
   if (!game) return null;
 
-  const winner =
-    game.winnerId !== null ? game.players[game.winnerId] : null;
+  const winner = game.winnerId !== null ? game.players[game.winnerId] : null;
+  const cardsLeft = (p: Player) => p.hand.length + p.faceUp.length + p.faceDown.length;
 
   // Who counts as a "Shithead" depends on the mode:
   //   - first-out-wins (default): everyone who didn't win first is a shithead.
   //   - last-man-standing: only the single last player left holding cards
   //     (players who shed out in the middle finished safely and are spared).
-  const shitheads = game.lastManStanding
-    ? game.players.filter((p) => p.id === game.shitheadId)
-    : game.players.filter((p) => p.id !== game.winnerId);
+  const isShithead = (p: Player) =>
+    game.lastManStanding ? p.id === game.shitheadId : p.id !== game.winnerId;
 
-  // Last-man-standing only: players who shed all their cards mid-game. They're
-  // neither the winner (on the podium) nor the shithead (still holding cards,
-  // so never isFinished), so this filter naturally excludes both. Empty in
-  // first-out-wins mode, where play stops the instant the first player is out.
-  const safe = game.lastManStanding
-    ? game.players.filter((p) => p.isFinished && p.id !== game.winnerId)
+  // Winner first, then everyone else by how close they came.
+  const standings = [...game.players].sort((a, b) => {
+    if (a.id === game.winnerId) return -1;
+    if (b.id === game.winnerId) return 1;
+    return cardsLeft(a) - cardsLeft(b);
+  });
+
+  // With exactly one human at the table, the screen talks to them.
+  const humans = game.players.filter((p) => !p.isBot);
+  const you = humans.length === 1 ? humans[0] : null;
+  const shitheads = game.players.filter(isShithead);
+  const names = (ps: Player[]) =>
+    ps.length <= 1 ? ps.map((p) => p.name).join('')
+      : `${ps.slice(0, -1).map((p) => p.name).join(', ')} and ${ps[ps.length - 1].name}`;
+
+  let headline: string;
+  let headlineColor: string;
+  let subline: string;
+  if (you && winner?.id === you.id) {
+    headline = 'You win.';
+    headlineColor = GOLD;
+    subline = shitheads.length === 1
+      ? `Out first. ${shitheads[0].name} is the Shithead.`
+      : `Out first. ${names(shitheads)} are the Shitheads.`;
+  } else if (you && isShithead(you)) {
+    headline = "You're the Shithead.";
+    headlineColor = LOSS;
+    const n = cardsLeft(you);
+    subline = `${winner?.name ?? 'Someone'} went out first. You held ${n} card${n === 1 ? '' : 's'}.`;
+  } else if (you) {
+    headline = 'You got out.';
+    headlineColor = theme.color.textOnDark;
+    subline = `${names(shitheads)} ${shitheads.length === 1 ? 'is the Shithead' : 'are the Shitheads'}.`;
+  } else {
+    headline = `${winner?.name ?? 'Nobody'} wins.`;
+    headlineColor = GOLD;
+    subline = `${names(shitheads)} ${shitheads.length === 1 ? 'is the Shithead' : 'are the Shitheads'}.`;
+  }
+
+  // A few numbers from the game: yours with one human, the table's otherwise.
+  const mine = (xs: number[] | undefined) =>
+    !xs ? 0 : you ? xs[you.id] ?? 0 : xs.reduce((a, b) => a + b, 0);
+  const robbing = game.ruleConfig.stickUp || game.players.some((p) => p.rules?.stickUp);
+  const tiles = stats
+    ? [
+        { value: stats.turns ?? 0, label: 'turns' },
+        { value: mine(stats.pickups), label: you ? 'piles you picked up' : 'piles picked up' },
+        robbing
+          ? { value: mine(stats.robbed), label: you ? 'times you were robbed' : 'robberies' }
+          : { value: mine(stats.burns), label: you ? 'piles you burned' : 'piles burned' },
+      ]
     : [];
 
   // ── Campaign continuation ────────────────────────────────────────────────
@@ -84,8 +145,7 @@ export default function GameOverScreen() {
   // it's already beaten), never teleporting across the map to the frontier.
   // After a win the next node is unlocked by definition; the isUnlocked
   // check is belt-and-braces for exotic states. No next node → campaign end.
-  const humanWon =
-    game.winnerId !== null && !game.players[game.winnerId].isBot;
+  const humanWon = winner !== null && !winner.isBot;
   const nextNodeId = (() => {
     if (!campaignPresetId) return null;
     const idx = PRESET_ORDER.indexOf(campaignPresetId);
@@ -111,227 +171,315 @@ export default function GameOverScreen() {
     });
   };
 
+  // Won with a node ahead → march on. Lost → rematch this node. Won the
+  // final node → the ending, which returns to the map.
+  const primary = !campaignPresetId
+    ? { title: 'Play again', onPress: () => departTo('/setup') }
+    : humanWon && nextNodeId
+    ? { title: 'Continue campaign', onPress: continueCampaign }
+    : humanWon
+    ? { title: 'Continue', onPress: () => departTo({ pathname: '/cinematic', params: { preset: ENDING_ID } }) }
+    : { title: 'Try again', onPress: () => departTo({ pathname: '/setup', params: { preset: campaignPresetId } }) };
+  const showMap = !!campaignPresetId && (!humanWon || !!nextNodeId);
+
   return (
     <View style={styles.container}>
-      {/* Review the finished game play-by-play — same 📜 as the game screen */}
-      <Pressable
-        onPress={() => setLogOpen(true)}
-        hitSlop={8}
-        style={styles.logBtn}
-        accessibilityLabel="Review game log"
-        accessibilityRole="button"
-      >
-        <Text style={styles.logBtnIcon}>📜</Text>
-      </Pressable>
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <View style={styles.topRow}>
+          <Text style={styles.tableName}>{game.ruleConfig.name}</Text>
+          <Pressable
+            onPress={() => setLogOpen(true)}
+            hitSlop={8}
+            style={styles.logBtn}
+            accessibilityLabel="Review game log"
+            accessibilityRole="button"
+          >
+            <Text style={styles.logBtnIcon}>📜</Text>
+          </Pressable>
+        </View>
 
-      <View style={styles.podium}>
-        <Text style={styles.label}>🏆 Winner</Text>
-        <Text style={styles.winner}>
-          {winner ? winner.name : '—'}
-          {winner ? botTag(winner) : ''}
-        </Text>
+        <View style={styles.hero}>
+          <Text style={[styles.headline, { color: headlineColor }]}>{headline}</Text>
+          <Text style={styles.subline}>{subline}</Text>
+        </View>
 
-        {safe.length > 0 && (
-          <>
-            <Text style={[styles.label, { marginTop: 28 }]}>✅ Got out safe</Text>
-            {safe.map((p) => (
-              <Text key={p.id} style={styles.safe}>
-                {p.name}
-                {botTag(p)}
-              </Text>
-            ))}
-          </>
-        )}
-
-        {shitheads.length > 0 && (
-          <>
-            <Text style={[styles.label, { marginTop: 28 }]}>
-              {shitheads.length === 1 ? '💩 Shithead' : '💩 Shitheads'}
-            </Text>
-            {shitheads.map((p) => (
-              <Text key={p.id} style={styles.shithead}>
-                {p.name}
-                {botTag(p)}
-              </Text>
-            ))}
-          </>
-        )}
-      </View>
-
-      <View>
-        {hostLine && (
-          <View style={styles.hostLine}>
-            <CharacterDialogue
-              name={hostLine.host.name}
-              text={hostLine.text}
-              portrait={hostLine.host.portrait}
-              emoji={hostLine.host.emoji}
+        <View style={styles.standings}>
+          {standings.map((p, i) => (
+            <StandingRow
+              key={p.id}
+              place={i + 1}
+              player={p}
+              isYou={you?.id === p.id}
+              won={p.id === game.winnerId}
+              shithead={isShithead(p)}
+              cardsLeft={cardsLeft(p)}
+              line={hostLine && hostLine.host.name === p.name ? hostLine.text : null}
             />
+          ))}
+        </View>
+
+        {tiles.length > 0 && (
+          <View style={styles.tiles}>
+            {tiles.map((t) => (
+              <View key={t.label} style={styles.tile}>
+                <Text style={styles.tileValue}>{t.value}</Text>
+                <Text style={styles.tileLabel}>{t.label}</Text>
+              </View>
+            ))}
           </View>
         )}
+
         {earnedThisGame.length > 0 && (
           <Pressable
-            style={styles.achBanner}
+            style={styles.banner}
             onPress={() => router.push('/achievements')}
             accessibilityRole="button"
             accessibilityLabel={`${earnedThisGame.length} achievements unlocked. View all.`}
           >
-            <Text style={styles.achTitle}>
-              🏆 {earnedThisGame.length === 1 ? 'Achievement unlocked' : `${earnedThisGame.length} achievements unlocked`}
+            <Text style={styles.bannerLabel}>
+              {earnedThisGame.length === 1 ? 'Achievement unlocked' : `${earnedThisGame.length} achievements unlocked`}
             </Text>
             {earnedThisGame.map((id) => (
-              <Text key={id} style={styles.achItem}>
+              <Text key={id} style={styles.bannerItem}>
                 {ACHIEVEMENT_BY_ID[id].emoji} {ACHIEVEMENT_BY_ID[id].name}
               </Text>
             ))}
-            <Text style={styles.achLink}>View all ›</Text>
+            <Text style={styles.bannerLink}>View all ›</Text>
           </Pressable>
         )}
+
         {unlockedPreset && (
-          <View style={styles.unlockBanner}>
-            <Text style={styles.unlockTitle}>🔓 New variant unlocked</Text>
-            <Text style={styles.unlockName}>{unlockedPreset.name}</Text>
-            <Text style={styles.unlockFlavor}>"{unlockedPreset.flavorText}"</Text>
+          <View style={styles.banner}>
+            <Text style={styles.bannerLabel}>New table unlocked</Text>
+            <Text style={styles.bannerTitle}>{unlockedPreset.name}</Text>
+            <Text style={styles.bannerFlavor}>{unlockedPreset.flavorText}</Text>
           </View>
         )}
-      </View>
+      </ScrollView>
 
       <View style={styles.actions}>
-        {campaignPresetId ? (
-          <>
-            {/* Won with a node ahead → march on. Lost → rematch this node.
-                Won the final node → the ending, which returns to the map. */}
-            {humanWon && nextNodeId ? (
-              <Button title="Continue campaign  ▸" onPress={continueCampaign} />
-            ) : humanWon ? (
-              <Button
-                title="Continue  ▸"
-                onPress={() =>
-                  departTo({ pathname: '/cinematic', params: { preset: ENDING_ID } })
-                }
-              />
-            ) : (
-              <Button
-                title="Try again"
-                onPress={() =>
-                  departTo({
-                    pathname: '/setup',
-                    params: { preset: campaignPresetId },
-                  })
-                }
-              />
-            )}
-            {(!humanWon || nextNodeId) && (
-              <Button
-                title="Campaign map"
-                variant="ghost"
-                onPress={() => departTo('/campaign')}
-              />
-            )}
-          </>
-        ) : (
-          <Button title="Play again" onPress={() => departTo('/setup')} />
-        )}
-        <Button title="Home" variant="ghost" onPress={() => departTo('/')} />
+        <Pressable
+          onPress={primary.onPress}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
+        >
+          <Text style={styles.primaryText}>{primary.title}</Text>
+        </Pressable>
+        <View style={styles.secondaryRow}>
+          {showMap && (
+            <Pressable
+              onPress={() => departTo('/campaign')}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}
+            >
+              <Text style={styles.secondaryText}>Campaign map</Text>
+            </Pressable>
+          )}
+          <Pressable
+            onPress={() => departTo('/')}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}
+          >
+            <Text style={styles.secondaryText}>Home</Text>
+          </Pressable>
+        </View>
       </View>
 
-      <GameLogModal
-        visible={logOpen}
-        onClose={() => setLogOpen(false)}
-        log={game.log}
-      />
+      <GameLogModal visible={logOpen} onClose={() => setLogOpen(false)} log={game.log} />
     </View>
   );
 }
 
-/** Generic bots get a 🤖 suffix; named campaign characters don't. */
-function botTag(p: { name: string; isBot: boolean }): string {
-  return p.isBot && !characterByName(p.name) ? ' 🤖' : '';
+function StandingRow({
+  place,
+  player,
+  isYou,
+  won,
+  shithead,
+  cardsLeft,
+  line,
+}: {
+  place: number;
+  player: Player;
+  isYou: boolean;
+  won: boolean;
+  shithead: boolean;
+  cardsLeft: number;
+  line: string | null;
+}) {
+  const character = characterByName(player.name);
+  const status = won
+    ? 'Out first · Winner'
+    : shithead
+    ? `Shithead · ${cardsLeft} card${cardsLeft === 1 ? '' : 's'} left`
+    : 'Got out';
+  return (
+    <View style={[styles.row, won && styles.rowWon, isYou && !won && styles.rowYou]}>
+      <View style={styles.rowMain}>
+        <Text style={[styles.place, won && styles.inkDark, isYou && !won && { color: LOSS }]}>
+          {place}
+        </Text>
+        <Avatar player={player} character={character} won={won} />
+        <View style={styles.rowText}>
+          <Text style={[styles.rowName, won && styles.inkDark]} numberOfLines={1}>
+            {player.name}
+            {isYou && <Text style={[styles.you, won && styles.inkDark]}> (you)</Text>}
+            {player.isBot && !character ? ' 🤖' : ''}
+          </Text>
+          <Text
+            style={[
+              styles.rowStatus,
+              won && styles.inkDark,
+              shithead && isYou && { color: LOSS, fontWeight: '700' },
+            ]}
+          >
+            {status}
+          </Text>
+        </View>
+        {cardsLeft > 0 && <Fan count={cardsLeft} />}
+      </View>
+      {line && (
+        <View style={[styles.quote, won ? styles.quoteOnGold : styles.quoteOnFelt]}>
+          <Text style={[styles.quoteText, !won && { color: theme.color.textOnDark }]}>“{line}”</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function Avatar({ player, character, won }: { player: Player; character: Character | null; won: boolean }) {
+  const size = won ? 44 : 40;
+  const frame = [
+    styles.avatar,
+    { width: size, height: size, borderRadius: size / 2 },
+    !player.isBot && styles.avatarHuman,
+  ];
+  if (character?.portrait) {
+    return <Image source={character.portrait} style={frame} resizeMode="cover" />;
+  }
+  return (
+    <View style={frame}>
+      <Text style={styles.avatarText}>
+        {character?.emoji ?? player.name.trim().charAt(0).toUpperCase()}
+      </Text>
+    </View>
+  );
+}
+
+/** The cards a player was stuck with, as a small fan (five at most). */
+function Fan({ count }: { count: number }) {
+  const shown = Math.min(count, 5);
+  return (
+    <View style={styles.fan} accessibilityLabel={`${count} cards left`}>
+      {Array.from({ length: shown }, (_, i) => (
+        <View key={i} style={[styles.fanCard, i > 0 && { marginLeft: -12 }]} />
+      ))}
+      {count > 5 && <Text style={styles.fanMore}>+{count - 5}</Text>}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.color.feltBg,
-    padding: theme.space.xl,
-    justifyContent: 'space-between',
+  container: { flex: 1, backgroundColor: theme.color.feltBg },
+  scroll: { padding: 20, paddingBottom: 8, gap: 18 },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  tableName: {
+    color: theme.color.textMuted,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+    flexShrink: 1,
   },
-  podium: { marginTop: 60, alignItems: 'center' },
   logBtn: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    padding: 8,
-    zIndex: 10,
-  },
-  logBtnIcon: { fontSize: 22 },
-  label: {
-    color: theme.color.textMuted,
-    fontSize: 14,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  winner: {
-    color: theme.color.accent,
-    fontSize: 44,
-    fontWeight: '900',
-    marginTop: 6,
-    textAlign: 'center',
-  },
-  shithead: {
-    color: theme.color.danger,
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  safe: {
-    color: theme.color.textOnDark,
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  actions: { marginBottom: 30 },
-  hostLine: { marginBottom: 16 },
-  achBanner: {
-    marginBottom: 16,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#f4c430',
-    backgroundColor: 'rgba(244,196,48,0.08)',
-  },
-  achTitle: { color: '#f4c430', fontWeight: '800', fontSize: 14, marginBottom: 6 },
-  achItem: { color: theme.color.textOnDark, fontSize: 15, marginTop: 2 },
-  achLink: { color: '#f4c430', fontSize: 12, marginTop: 8, textAlign: 'right' },
-  unlockBanner: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 215, 0, 0.08)',
-    borderColor: 'rgba(255, 215, 0, 0.35)',
+    width: 44,
+    height: 44,
+    borderRadius: 10,
     borderWidth: 1,
-    borderRadius: theme.radius.md,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    marginBottom: 20,
+    borderColor: LINE,
+    backgroundColor: PANEL,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  unlockTitle: {
-    color: theme.color.textMuted,
-    fontSize: 13,
+  logBtnIcon: { fontSize: 20 },
+  hero: { gap: 6 },
+  headline: { fontSize: 42, fontWeight: '900', lineHeight: 46, letterSpacing: -0.5 },
+  subline: { color: '#c9d2ce', fontSize: 15, lineHeight: 21 },
+  standings: { gap: 8 },
+  row: { backgroundColor: PANEL, borderRadius: 14, padding: 12, gap: 10 },
+  rowWon: { backgroundColor: GOLD },
+  rowYou: { borderWidth: 2, borderColor: LOSS, padding: 10 },
+  rowMain: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  place: { width: 20, fontSize: 20, fontWeight: '900', color: theme.color.textMuted },
+  inkDark: { color: '#1a1a1a' },
+  avatar: {
+    backgroundColor: '#7a4a24',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarHuman: { backgroundColor: theme.color.secondary },
+  avatarText: { color: '#f1e3c2', fontSize: 18, fontWeight: '800' },
+  rowText: { flex: 1, gap: 2 },
+  rowName: { color: theme.color.textOnDark, fontSize: 16, fontWeight: '800' },
+  you: { color: theme.color.textMuted, fontWeight: '500' },
+  rowStatus: { color: theme.color.textMuted, fontSize: 13 },
+  fan: { flexDirection: 'row', alignItems: 'center' },
+  fanCard: {
+    width: 22,
+    height: 32,
+    borderRadius: 4,
+    backgroundColor: theme.color.cardBg,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  fanMore: { color: theme.color.textMuted, fontSize: 12, fontWeight: '700', marginLeft: 4 },
+  quote: { borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12 },
+  quoteOnGold: { backgroundColor: '#fff7d6' },
+  quoteOnFelt: { backgroundColor: '#163f32' },
+  quoteText: { color: '#1a1a1a', fontSize: 15, lineHeight: 21 },
+  tiles: { flexDirection: 'row', gap: 8 },
+  tile: { flex: 1, backgroundColor: PANEL, borderRadius: 12, padding: 10, gap: 2 },
+  tileValue: { color: theme.color.textOnDark, fontSize: 22, fontWeight: '900' },
+  tileLabel: { color: theme.color.textMuted, fontSize: 12, lineHeight: 15 },
+  banner: {
+    backgroundColor: PANEL,
+    borderWidth: 1,
+    borderColor: GOLD,
+    borderRadius: 12,
+    padding: 14,
+    gap: 3,
+  },
+  bannerLabel: {
+    color: GOLD,
+    fontSize: 12,
+    fontWeight: '800',
     letterSpacing: 1,
     textTransform: 'uppercase',
-    marginBottom: 4,
   },
-  unlockName: {
-    color: theme.color.accent,
-    fontSize: 22,
-    fontWeight: '700',
-    marginBottom: 6,
+  bannerItem: { color: theme.color.textOnDark, fontSize: 15 },
+  bannerLink: { color: GOLD, fontSize: 13, fontWeight: '700', marginTop: 4 },
+  bannerTitle: { color: theme.color.textOnDark, fontSize: 18, fontWeight: '800' },
+  bannerFlavor: { color: theme.color.textMuted, fontSize: 14, fontStyle: 'italic' },
+  actions: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 28, gap: 10 },
+  primary: {
+    height: 54,
+    borderRadius: 14,
+    backgroundColor: GOLD,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  unlockFlavor: {
-    color: theme.color.textMuted,
-    fontSize: 13,
-    fontStyle: 'italic',
-    textAlign: 'center',
+  primaryText: { color: '#1a1a1a', fontSize: 18, fontWeight: '800' },
+  secondaryRow: { flexDirection: 'row', gap: 10 },
+  secondary: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: LINE,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  secondaryText: { color: theme.color.textOnDark, fontSize: 15, fontWeight: '700' },
+  pressed: { opacity: 0.75 },
 });
