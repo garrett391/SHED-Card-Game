@@ -8,7 +8,7 @@ import { useGameStore } from '../src/store/gameStore';
 import { isUnlocked, useCampaignStore } from '../src/store/campaignStore';
 import { RULE_PRESETS, PRESET_ORDER } from '../src/campaign/presets';
 import { CINEMATICS, ENDING_ID } from '../src/campaign/story';
-import { characterByName, endLine, opponentsFor } from '../src/campaign/characters';
+import { characterByName, endLine, endLinesFor, opponentsFor } from '../src/campaign/characters';
 import { CharacterDialogue } from '../src/components/CharacterDialogue';
 import { ACHIEVEMENT_BY_ID } from '../src/achievements/achievements';
 
@@ -30,11 +30,13 @@ export default function GameOverScreen() {
   // swap the line mid-read.
   const [hostLine] = useState(() => {
     if (!game || !campaignPresetId) return null;
-    const host = opponentsFor(campaignPresetId).find((c) => c.endLines);
-    if (!host) return null;
+    // At a shared table any host with lines may speak, so every voice gets heard.
+    const hosts = opponentsFor(campaignPresetId).filter((c) => endLinesFor(c, campaignPresetId));
+    if (hosts.length === 0) return null;
+    const host = hosts[Math.floor(Math.random() * hosts.length)];
     const playerWon =
       game.winnerId !== null && !game.players[game.winnerId].isBot;
-    const text = endLine(host, playerWon);
+    const text = endLine(host, playerWon, campaignPresetId);
     return text ? { host, text } : null;
   });
 
