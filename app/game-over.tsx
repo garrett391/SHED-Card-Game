@@ -128,12 +128,12 @@ export default function GameOverScreen() {
   const robbing = game.ruleConfig.stickUp || game.players.some((p) => p.rules?.stickUp);
   const tiles = stats
     ? [
-        { value: stats.turns ?? 0, label: 'turns' },
-        { value: mine(stats.pickups), label: you ? 'piles you picked up' : 'piles picked up' },
+        { value: stats.turns ?? 0, label: 'turn' },
+        { value: mine(stats.pickups), label: 'pickup' },
         robbing
-          ? { value: mine(stats.robbed), label: you ? 'times you were robbed' : 'robberies' }
-          : { value: mine(stats.burns), label: you ? 'piles you burned' : 'piles burned' },
-      ]
+          ? { value: mine(stats.robbed), label: you ? 'time robbed' : 'robbery' }
+          : { value: mine(stats.burns), label: 'burn' },
+      ].map((t) => ({ ...t, label: plural(t.value, t.label) }))
     : [];
 
   // ── Campaign continuation ────────────────────────────────────────────────
@@ -364,6 +364,14 @@ function Avatar({ player, character, won }: { player: Player; character: Charact
       </Text>
     </View>
   );
+}
+
+/** "1 pickup", "3 pickups"; the count is shown separately. */
+function plural(n: number, word: string): string {
+  if (n === 1) return word;
+  if (word === 'robbery') return 'robberies';
+  if (word === 'time robbed') return 'times robbed';
+  return word + 's';
 }
 
 /** The cards a player was stuck with, as a small fan (five at most). */
