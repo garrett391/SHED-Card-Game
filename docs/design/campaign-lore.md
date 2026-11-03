@@ -133,12 +133,6 @@ others didn't. A robbing bandit's line goes in the panel, not as table
 talk (`selfRob`, where `{card}` is the card taken, and `selfRobPassed`).
 Several are Nick's: "This is a hold up!", "Get along, lil brokie."
 
-The results screen dresses up for the pass (`PALETTES` in
-app/game-over.tsx): saddle-leather colors, and in place of the headline a
-wanted poster when you lose ("WANTED, caught holding the cards", your name,
-THE SHITHEAD) or "THE PASS IS CLEAR", stamped CLEARED, when you win. Other
-tables can get their own palette and verdict the same way.
-
 ## Foreshadowing Chris: the golden quill
 
 From the pass on, the Scribe is hinted at, never shown:
