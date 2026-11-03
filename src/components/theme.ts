@@ -14,6 +14,7 @@ export const theme = {
     primary: '#2980b9',
     secondary: '#34495e',
     red: '#c0392b',
+    success: '#6fcf8e',   // soft green for good news, e.g. a face-down flip that plays
   },
   radius: { sm: 6, md: 10, lg: 16 },
   /** Loaded in app/_layout.tsx. */

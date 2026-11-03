@@ -195,7 +195,7 @@ export default function GameOverScreen() {
             accessibilityLabel="Review game log"
             accessibilityRole="button"
           >
-            <ScrollText size={20} color={theme.color.textOnDark} strokeWidth={2} />
+            <ScrollText size={20} color={theme.color.textMuted} strokeWidth={2} />
           </Pressable>
         </View>
 
