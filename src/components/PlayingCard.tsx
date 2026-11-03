@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card } from '../engine/types';
 import { isRedSuit, rankLabel } from '../engine/cards';
 import { theme } from './theme';
+import { RotateCcw, Shuffle } from 'lucide-react-native';
 
 interface Props {
   card?: Card;            // omit when faceDown=true with no known card
@@ -55,9 +56,13 @@ export function PlayingCard({
         <Text style={[styles.jokerWord, red && styles.red, small && styles.jokerWordSmall]}>
           JOKER
         </Text>
-        <Text style={[styles.jokerIcon, small && styles.smallSuit]}>
-          {card.joker === 'reverse' ? '🔄' : '🔀'}
-        </Text>
+        <View style={styles.jokerIcon}>
+          {card.joker === 'reverse' ? (
+            <RotateCcw size={small ? 14 : 22} color={red ? theme.color.red : theme.color.text} strokeWidth={2.5} />
+          ) : (
+            <Shuffle size={small ? 14 : 22} color={red ? theme.color.red : theme.color.text} strokeWidth={2.5} />
+          )}
+        </View>
       </Pressable>
     );
   }
@@ -102,7 +107,7 @@ const styles = StyleSheet.create({
   red: { color: theme.color.red },
   jokerWord: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: theme.color.text },
   jokerWordSmall: { fontSize: 7, letterSpacing: 0.5 },
-  jokerIcon: { fontSize: 22, marginTop: 4 },
+  jokerIcon: { marginTop: 4 },
   back: { backgroundColor: theme.color.cardBack, borderColor: '#000' },
   backPattern: {
     width: '70%',

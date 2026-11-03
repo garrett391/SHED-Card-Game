@@ -7,6 +7,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ACHIEVEMENTS } from '../src/achievements/achievements';
 import { useAchievementStore } from '../src/store/achievementStore';
 import { theme } from '../src/components/theme';
+import { Flame } from 'lucide-react-native';
 
 export default function AchievementsScreen() {
   const unlocked = useAchievementStore((s) => s.unlocked);
@@ -15,10 +16,20 @@ export default function AchievementsScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.summary}>
-        {count} / {ACHIEVEMENTS.length} unlocked
-        {streak > 0 ? `  ·  🔥 ${streak} win${streak === 1 ? '' : 's'} in a row` : ''}
-      </Text>
+      <View style={styles.summaryRow}>
+        <Text style={styles.summary}>
+          {count} / {ACHIEVEMENTS.length} unlocked
+          {streak > 0 ? '  ·  ' : ''}
+        </Text>
+        {streak > 0 && (
+          <>
+            <Flame size={13} color="#f08a4b" strokeWidth={2.25} />
+            <Text style={styles.summary}>
+              {streak} win{streak === 1 ? '' : 's'} in a row
+            </Text>
+          </>
+        )}
+      </View>
       {ACHIEVEMENTS.map((a) => {
         const date = unlocked[a.id];
         return (
@@ -51,12 +62,18 @@ const styles = StyleSheet.create({
     minHeight: '100%',
     gap: 10,
   },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    marginBottom: 6,
+  },
   summary: {
     color: theme.color.textMuted,
     textAlign: 'center',
     fontSize: 13,
     letterSpacing: 0.5,
-    marginBottom: 6,
   },
   row: {
     flexDirection: 'row',

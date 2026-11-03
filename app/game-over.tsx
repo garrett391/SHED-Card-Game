@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Bot, ScrollText } from 'lucide-react-native';
 import { GameLogModal } from '../src/components/GameLogModal';
 import { theme } from '../src/components/theme';
 import { useGameStore } from '../src/store/gameStore';
@@ -194,7 +195,7 @@ export default function GameOverScreen() {
             accessibilityLabel="Review game log"
             accessibilityRole="button"
           >
-            <Text style={styles.logBtnIcon}>📜</Text>
+            <ScrollText size={20} color={theme.color.textOnDark} strokeWidth={2} />
           </Pressable>
         </View>
 
@@ -321,11 +322,15 @@ function StandingRow({
         </Text>
         <Avatar player={player} character={character} won={won} />
         <View style={styles.rowText}>
-          <Text style={[styles.rowName, won && styles.inkDark]} numberOfLines={1}>
-            {player.name}
-            {isYou && <Text style={[styles.you, won && styles.inkDark]}> (you)</Text>}
-            {player.isBot && !character ? ' 🤖' : ''}
-          </Text>
+          <View style={styles.nameRow}>
+            <Text style={[styles.rowName, won && styles.inkDark]} numberOfLines={1}>
+              {player.name}
+              {isYou && <Text style={[styles.you, won && styles.inkDark]}> (you)</Text>}
+            </Text>
+            {player.isBot && !character && (
+              <Bot size={15} color={won ? '#1a1a1a' : theme.color.textMuted} strokeWidth={2.25} />
+            )}
+          </View>
           <Text
             style={[
               styles.rowStatus,
@@ -411,7 +416,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logBtnIcon: { fontSize: 20 },
   hero: { gap: 6 },
   headline: { fontSize: 42, fontWeight: '900', lineHeight: 46, letterSpacing: -0.5 },
   subline: { color: '#c9d2ce', fontSize: 15, lineHeight: 21 },
@@ -431,7 +435,8 @@ const styles = StyleSheet.create({
   avatarHuman: { backgroundColor: theme.color.secondary },
   avatarText: { color: '#f1e3c2', fontSize: 18, fontWeight: '800' },
   rowText: { flex: 1, gap: 2 },
-  rowName: { color: theme.color.textOnDark, fontSize: 16, fontWeight: '800' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  rowName: { color: theme.color.textOnDark, fontSize: 16, fontWeight: '800', flexShrink: 1 },
   you: { color: theme.color.textMuted, fontWeight: '500' },
   rowStatus: { color: theme.color.textMuted, fontSize: 13 },
   fan: { flexDirection: 'row', alignItems: 'center' },

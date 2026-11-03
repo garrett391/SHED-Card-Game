@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useFonts } from 'expo-font';
+import { Pause, Play, Settings, Volume2, VolumeX } from 'lucide-react-native';
 import { Rye_400Regular } from '@expo-google-fonts/rye';
 import { theme } from '../src/components/theme';
 import { useRadioStore, STATIONS } from '../src/store/radioStore';
@@ -35,7 +36,7 @@ function SettingsButton() {
         accessibilityLabel="Open settings"
         accessibilityRole="button"
       >
-        <Text style={{ fontSize: 20 }}>⚙️</Text>
+        <Settings size={22} color={theme.color.textOnDark} strokeWidth={2} />
         {/* Tiny now-playing dot keeps radio state glanceable without a
             second sound button in the header. */}
         {isPlaying && <Text style={styles.nowPlayingNote}>♪</Text>}
@@ -95,7 +96,13 @@ function SettingsSheet({ visible, onClose }: SettingsSheetProps) {
             accessibilityState={{ checked: !sfxMuted }}
             accessibilityLabel="Game sound effects"
           >
-            <Text style={styles.stationEmoji}>{sfxMuted ? '🔇' : '🔊'}</Text>
+            <View style={styles.stationIcon}>
+              {sfxMuted ? (
+                <VolumeX size={18} color={theme.color.textMuted} strokeWidth={2} />
+              ) : (
+                <Volume2 size={18} color={theme.color.textOnDark} strokeWidth={2} />
+              )}
+            </View>
             <Text style={styles.sfxLabel}>Card & game sounds</Text>
             <Text style={[styles.sfxState, !sfxMuted && styles.sfxStateOn]}>
               {sfxMuted ? 'Off' : 'On'}
@@ -106,8 +113,14 @@ function SettingsSheet({ visible, onClose }: SettingsSheetProps) {
           <View style={styles.sectionRow}>
             <Text style={styles.sectionLabel}>Radio</Text>
             <Pressable onPress={onToggle} hitSlop={8} style={styles.playPause}>
+              {!isLoading &&
+                (isPlaying ? (
+                  <Pause size={12} color={theme.color.accent} strokeWidth={2.5} />
+                ) : (
+                  <Play size={12} color={theme.color.accent} strokeWidth={2.5} />
+                ))}
               <Text style={styles.playPauseText}>
-                {isLoading ? '…' : isPlaying ? '⏸  Pause' : '▶  Play'}
+                {isLoading ? '…' : isPlaying ? 'Pause' : 'Play'}
               </Text>
             </Pressable>
           </View>
@@ -139,11 +152,14 @@ function SettingsSheet({ visible, onClose }: SettingsSheetProps) {
                   >
                     {station.name}
                   </Text>
-                  {active && (
-                    <Text style={styles.activeDot}>
-                      {isLoading ? '…' : isPlaying ? '♪' : '❚❚'}
-                    </Text>
-                  )}
+                  {active &&
+                    (isLoading ? (
+                      <Text style={styles.activeDot}>…</Text>
+                    ) : isPlaying ? (
+                      <Volume2 size={16} color={theme.color.accent} strokeWidth={2.25} />
+                    ) : (
+                      <Pause size={16} color={theme.color.accent} strokeWidth={2.25} />
+                    ))}
                 </Pressable>
               );
             })}
@@ -301,6 +317,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   playPause: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: theme.radius.sm,
@@ -337,6 +356,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     width: 26,
   },
+  stationIcon: { width: 26 },
   stationRowName: {
     flex: 1,
     color: theme.color.textOnDark,

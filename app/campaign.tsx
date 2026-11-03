@@ -29,6 +29,7 @@ import {
   View,
 } from 'react-native';
 import { theme } from '../src/components/theme';
+import { Lock, Star, Trophy } from 'lucide-react-native';
 import { RULE_PRESETS, PRESET_ORDER } from '../src/campaign/presets';
 import { MAP_SCENES, DEFAULT_SCENE } from '../src/campaign/mapMeta';
 import { isUnlocked, useCampaignStore } from '../src/store/campaignStore';
@@ -93,11 +94,14 @@ export default function CampaignScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.progress}>
-        {allDone
-          ? `🏆 All ${doneCount} tables restored. Something stirs beyond the fog…`
-          : `${doneCount} / ${PRESET_ORDER.length} tables restored`}
-      </Text>
+      <View style={styles.progressRow}>
+        {allDone && <Trophy size={14} color={theme.color.accent} strokeWidth={2.25} />}
+        <Text style={styles.progress}>
+          {allDone
+            ? `All ${doneCount} tables restored. Something stirs beyond the fog…`
+            : `${doneCount} / ${PRESET_ORDER.length} tables restored`}
+        </Text>
+      </View>
       <View style={styles.viewport} onLayout={onLayout}>
         {width > 0 && (
           <ScrollView ref={scrollRef}>
@@ -258,9 +262,13 @@ function MapNode({
             state === 'current' && styles.markerCurrent,
           ]}
         >
-          <Text style={styles.markerText}>
-            {locked ? '🔒' : state === 'completed' ? '★' : scene.emoji}
-          </Text>
+          {locked ? (
+            <Lock size={18} color={theme.color.textOnDark} strokeWidth={2.5} />
+          ) : state === 'completed' ? (
+            <Star size={20} color="#3a2c00" fill="#3a2c00" strokeWidth={2} />
+          ) : (
+            <Text style={styles.markerText}>{scene.emoji}</Text>
+          )}
         </Animated.View>
       </Pressable>
       <Pressable
@@ -294,13 +302,21 @@ const styles = StyleSheet.create({
   viewport: {
     flex: 1,
   },
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: theme.color.feltBgDark,
+  },
   progress: {
     color: theme.color.textMuted,
     textAlign: 'center',
     fontSize: 13,
     letterSpacing: 0.5,
-    paddingVertical: 10,
-    backgroundColor: theme.color.feltBgDark,
+    flexShrink: 1,
   },
   marker: {
     width: MARKER,

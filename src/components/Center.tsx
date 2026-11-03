@@ -4,6 +4,7 @@ import { GameState } from '../engine/types';
 import { getEffectiveTopCard } from '../engine/rules';
 import { PlayingCard } from './PlayingCard';
 import { theme } from './theme';
+import { Flame } from 'lucide-react-native';
 import { rankLabel } from '../engine/cards';
 
 interface Props {
@@ -144,7 +145,7 @@ export function Center({ game, onPickup, isHumanTurn, mustPickup }: Props) {
         <Text style={styles.label}>Burned</Text>
         <View style={styles.stack}>
           <View style={styles.burned}>
-            <Text style={styles.burnedText}>🔥</Text>
+            <Flame size={28} color="#f08a4b" strokeWidth={2} />
           </View>
         </View>
         <Text style={styles.count}>{game.burnedPile.length}</Text>
@@ -186,7 +187,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginHorizontal: 3,
   },
-  burnedText: { fontSize: 28 },
   eight: {
     color: theme.color.accent,
     fontSize: 11,

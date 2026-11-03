@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Button } from '../src/components/Button';
 import { theme } from '../src/components/theme';
+import { Bot, Lock, Swords, User, X } from 'lucide-react-native';
 import { useGameStore } from '../src/store/gameStore';
 import { PlayerConfig, RuleConfig } from '../src/engine/types';
 import { RULE_PRESETS, PRESET_ORDER } from '../src/campaign/presets';
@@ -76,8 +77,9 @@ function ModeCard({
           ]}
           numberOfLines={1}
         >
-          {locked ? `🔒 ${preset.name}` : preset.name}
+          {preset.name}
         </Text>
+        {locked && <Lock size={14} color={theme.color.textMuted} strokeWidth={2.25} />}
       </View>
       {/* Locked variants keep their description hidden — discovering each
           rule twist is part of the campaign's reveal. */}
@@ -257,7 +259,10 @@ export default function SetupScreen() {
         {/* ── Game mode: fixed banner in campaign, picker in free play ── */}
         {campaignPreset ? (
           <View style={styles.campaignBanner}>
-            <Text style={styles.campaignLabel}>⚔️ CAMPAIGN</Text>
+            <View style={styles.campaignLabelRow}>
+              <Swords size={13} color={theme.color.accent} strokeWidth={2.25} />
+              <Text style={styles.campaignLabel}>CAMPAIGN</Text>
+            </View>
             <Text style={styles.campaignName}>{selectedPreset.name}</Text>
             <Text style={styles.modeDesc}>{selectedPreset.description}</Text>
           </View>
@@ -359,10 +364,12 @@ export default function SetupScreen() {
             >
               {character?.portrait ? (
                 <Image source={character.portrait} style={styles.botPortrait} />
+              ) : character ? (
+                <Text style={styles.botEmoji}>{character.emoji}</Text>
+              ) : p.isBot ? (
+                <Bot size={22} color={theme.color.textOnDark} strokeWidth={2} />
               ) : (
-                <Text style={styles.botEmoji}>
-                  {p.isBot ? character?.emoji ?? '🤖' : '🧑'}
-                </Text>
+                <User size={22} color={theme.color.textOnDark} strokeWidth={2} />
               )}
               <Text style={styles.botLabel}>{p.isBot ? 'Bot' : 'Human'}</Text>
             </Pressable>
@@ -378,8 +385,13 @@ export default function SetupScreen() {
               editable={!campaignPreset || !p.isBot}
             />
             {!campaignPreset && players.length > MIN_PLAYERS && (
-              <Pressable onPress={() => removePlayer(i)} style={styles.removeBtn}>
-                <Text style={styles.removeText}>✕</Text>
+              <Pressable
+                onPress={() => removePlayer(i)}
+                style={styles.removeBtn}
+                accessibilityLabel={`Remove ${p.name || 'player'}`}
+                accessibilityRole="button"
+              >
+                <X size={20} color={theme.color.danger} strokeWidth={2.5} />
               </Pressable>
             )}
           </View>
@@ -491,11 +503,11 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 8,
   },
+  campaignLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   campaignLabel: {
     color: theme.color.accent,
     fontSize: 11,
     letterSpacing: 2,
-    marginBottom: 4,
   },
   campaignName: {
     color: theme.color.textOnDark,
@@ -640,6 +652,5 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.color.textMuted,
   },
   removeBtn: { padding: 8 },
-  removeText: { color: theme.color.danger, fontSize: 18, fontWeight: '700' },
   footer: { marginTop: 24 },
 });

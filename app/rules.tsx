@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { theme } from '../src/components/theme';
+import { Check } from 'lucide-react-native';
 import { Button } from '../src/components/Button';
 import { RULE_PRESETS, PRESET_ORDER, getPreset } from '../src/campaign/presets';
 import { variantDiff } from '../src/campaign/ruleSummary';
@@ -218,7 +219,7 @@ export default function RulesScreen() {
                         {p.description}
                       </Text>
                     </View>
-                    {active && <Text style={styles.optionCheck}>✓</Text>}
+                    {active && <Check size={18} color={theme.color.accent} strokeWidth={3} />}
                   </Pressable>
                 );
               })}
@@ -441,11 +442,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     marginTop: 2,
-  },
-  optionCheck: {
-    color: theme.color.accent,
-    fontSize: 16,
-    fontWeight: '800',
-    marginLeft: 10,
   },
 });

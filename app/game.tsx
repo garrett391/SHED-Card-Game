@@ -8,6 +8,7 @@ import { OpponentStrip } from '../src/components/OpponentStrip';
 import { PlayingCard } from '../src/components/PlayingCard';
 import { VariantBadge } from '../src/components/VariantBadge';
 import { AchievementToast } from '../src/components/AchievementToast';
+import { CircleCheck, CircleX, ScrollText } from 'lucide-react-native';
 import { StickUp, StickUpCard } from '../src/components/StickUpCard';
 import { theme } from '../src/components/theme';
 import { decideBotAction } from '../src/ai/bot';
@@ -460,16 +461,21 @@ export default function GameScreen() {
           <View style={styles.flipCardWrap}>
             <PlayingCard card={flipResult.card} />
           </View>
-          <Text
-            style={[
-              styles.flipVerdict,
-              { color: flipResult.success ? theme.color.accent : theme.color.danger },
-            ]}
-          >
-            {flipResult.success
-              ? '✅  It plays!'
-              : '❌  No good — you pick up the pile'}
-          </Text>
+          <View style={styles.flipVerdictRow}>
+            {flipResult.success ? (
+              <CircleCheck size={22} color={theme.color.accent} strokeWidth={2.5} />
+            ) : (
+              <CircleX size={22} color={theme.color.danger} strokeWidth={2.5} />
+            )}
+            <Text
+              style={[
+                styles.flipVerdict,
+                { color: flipResult.success ? theme.color.accent : theme.color.danger },
+              ]}
+            >
+              {flipResult.success ? 'It plays!' : 'No good — you pick up the pile'}
+            </Text>
+          </View>
           <View style={{ marginTop: 24 }}>
             <Button title="Continue" onPress={() => setFlipResult(null)} />
           </View>
@@ -627,7 +633,7 @@ export default function GameScreen() {
           accessibilityLabel="Game history"
           accessibilityRole="button"
         >
-          <Text style={styles.historyBtnText}>📜</Text>
+          <ScrollText size={20} color={theme.color.textOnDark} strokeWidth={2} />
         </Pressable>
       </View>
       <View style={styles.scoreboard}>
@@ -666,7 +672,7 @@ export default function GameScreen() {
         <View style={styles.turnInfo}>
           <Text style={styles.turnText}>
             {game.phase === 'gameOver'
-              ? '🏆 Game over'
+              ? 'Game over'
               : currentPlayer.isBot
               ? `${currentPlayer.name} is thinking…`
               : `${currentPlayer.name}'s turn`}
@@ -1017,9 +1023,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
-  historyBtnText: {
-    fontSize: 18,
-  },
   turnBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1115,6 +1118,7 @@ const styles = StyleSheet.create({
     marginVertical: 20,
     alignItems: 'center',
   },
+  flipVerdictRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 },
   flipVerdict: {
     fontSize: 18,
     fontWeight: '800',

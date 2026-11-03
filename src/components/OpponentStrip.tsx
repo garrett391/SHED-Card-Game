@@ -4,6 +4,7 @@ import { Player } from '../engine/types';
 import { characterByName } from '../campaign/characters';
 import { PlayingCard } from './PlayingCard';
 import { theme } from './theme';
+import { Bot, Check } from 'lucide-react-native';
 
 interface Props {
   player: Player;
@@ -64,7 +65,7 @@ export function OpponentStrip({ player, isCurrent, bubble }: Props) {
     >
       {/* Turn indicator */}
       <View style={[styles.chip, isCurrent && styles.chipActive]}>
-        <Text style={styles.chipText}>{isCurrent ? '🔴' : '⚪'}</Text>
+        <View style={[styles.dot, isCurrent && styles.dotActive]} />
       </View>
       {bubble && (
         <Animated.View
@@ -100,17 +101,31 @@ export function OpponentStrip({ player, isCurrent, bubble }: Props) {
         </View>
       )}
       <View style={styles.nameCol}>
-        <Text
-          style={[styles.name, isCurrent && styles.currentName]}
-          numberOfLines={1}
-        >
-          {player.name}
-          {player.isBot && !character ? ' 🤖' : ''}
-        </Text>
+        <View style={styles.nameRow}>
+          <Text
+            style={[styles.name, isCurrent && styles.currentName]}
+            numberOfLines={1}
+          >
+            {player.name}
+          </Text>
+          {player.isBot && !character && (
+            <Bot
+              size={14}
+              color={isCurrent ? theme.color.accent : theme.color.textMuted}
+              strokeWidth={2.25}
+              accessibilityLabel="Bot"
+            />
+          )}
+        </View>
         <Text style={styles.meta}>
           {player.hand.length} in hand · {player.faceDown.length} down
         </Text>
-        {player.isFinished && <Text style={styles.finished}>OUT ✓</Text>}
+        {player.isFinished && (
+          <View style={styles.finishedRow}>
+            <Check size={11} color={theme.color.accent} strokeWidth={3} />
+            <Text style={styles.finished}>OUT</Text>
+          </View>
+        )}
       </View>
       <View style={styles.cardsRow}>
         {player.faceUp.map((c) => (
@@ -197,11 +212,21 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   chipActive: {},
-  chipText: { fontSize: 12 },
+  // Turn indicator: a hollow ring, filled gold on the current player.
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: theme.color.textMuted,
+  },
+  dotActive: { backgroundColor: theme.color.accent, borderColor: theme.color.accent },
   nameCol: { flex: 1 },
-  name: { color: theme.color.textOnDark, fontWeight: '700', fontSize: 15 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  name: { color: theme.color.textOnDark, fontWeight: '700', fontSize: 15, flexShrink: 1 },
   currentName: { color: theme.color.accent },
   meta: { color: theme.color.textMuted, fontSize: 11, marginTop: 2 },
+  finishedRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   finished: { color: theme.color.accent, fontSize: 11, fontWeight: '700' },
   cardsRow: { flexDirection: 'row' },
 });

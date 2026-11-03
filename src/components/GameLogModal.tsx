@@ -2,6 +2,7 @@ import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LogEntry } from '../engine/types';
 import { theme } from './theme';
+import { Copy, X } from 'lucide-react-native';
 
 interface Props {
   visible: boolean;
@@ -37,10 +38,11 @@ export function GameLogModal({ visible, onClose, log }: Props) {
                 hitSlop={8}
                 style={styles.copyBtn}
               >
-                <Text style={styles.copyText}>📋 Copy</Text>
+                <Copy size={12} color={theme.color.accent} strokeWidth={2.5} />
+                <Text style={styles.copyText}>Copy</Text>
               </Pressable>
-              <Pressable onPress={onClose} hitSlop={8}>
-                <Text style={styles.close}>✕</Text>
+              <Pressable onPress={onClose} hitSlop={8} accessibilityLabel="Close" accessibilityRole="button">
+                <X size={22} color={theme.color.textMuted} strokeWidth={2} />
               </Pressable>
             </View>
           </View>
@@ -101,6 +103,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   copyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: theme.radius.sm,
@@ -109,11 +114,6 @@ const styles = StyleSheet.create({
   copyText: {
     color: theme.color.accent,
     fontSize: 12,
-    fontWeight: '700',
-  },
-  close: {
-    color: theme.color.textMuted,
-    fontSize: 20,
     fontWeight: '700',
   },
   list: {
