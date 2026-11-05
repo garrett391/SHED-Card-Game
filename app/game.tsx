@@ -1,37 +1,40 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Button } from '../src/components/Button';
+import { useEffect, useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollText } from 'lucide-react-native';
+import { ActionCaption, Caption } from '../src/components/ActionCaption';
+import { AchievementToast } from '../src/components/AchievementToast';
 import { Center } from '../src/components/Center';
 import { GameLogModal } from '../src/components/GameLogModal';
+import { HandArea, WatchingHand } from '../src/components/HandArea';
 import { OpponentStrip } from '../src/components/OpponentStrip';
-import { PlayingCard } from '../src/components/PlayingCard';
+import { StickUpCard } from '../src/components/StickUpCard';
+import { FlipResultGate, PassDeviceGate, SwapTargetPicker } from '../src/components/TableGates';
+import { TurnBanner } from '../src/components/TurnBanner';
 import { VariantBadge } from '../src/components/VariantBadge';
-import { AchievementToast } from '../src/components/AchievementToast';
-import { CircleCheck, CircleX, ScrollText } from 'lucide-react-native';
-import { StickUp, StickUpCard } from '../src/components/StickUpCard';
 import { theme } from '../src/components/theme';
-import { decideBotAction } from '../src/ai/bot';
-import { rankLabel, cardLabel } from '../src/engine/cards';
+import { playSfx } from '../src/audio/sfx';
 import {
   getPlayableCardIds,
   getPlaySource,
   hasPlayableMove,
   swapTargets,
 } from '../src/engine/engine';
-import { useGameStore } from '../src/store/gameStore';
+import { Card } from '../src/engine/types';
 import { useCampaignStore } from '../src/store/campaignStore';
+import { useGameStore } from '../src/store/gameStore';
 import {
-  characterByName,
-  maybeQuip,
-  maybeReaction,
-  powerReaction,
-  robLine,
-} from '../src/campaign/characters';
-import { playSfx } from '../src/audio/sfx';
-import { Card, GameEvent, GameState, RuleConfig } from '../src/engine/types';
+  captionText,
+  describeAction,
+  flipOutcome,
+  summarizeRecent,
+} from '../src/table/describeEvents';
+import { isSoleHuman, SeatedStickUp, stickUpFrom } from '../src/table/stickUp';
+import { describeBotTurn, heckle } from '../src/table/tableTalk';
+import { useAutoClear } from '../src/table/useAutoClear';
+import { useBotAutoplay } from '../src/table/useBotAutoplay';
 
-const BOT_THINK_MS = 700;
+/** How long a bot's play (or the winning play) holds the table. */
 const BOT_DISPLAY_MS = 1800;
 
 /**
@@ -45,11 +48,15 @@ const BOT_DISPLAY_MS = 1800;
  *  - Current player's hand area + action buttons
  *
  * Two things drive the UX:
- *  1. Bot turns auto-advance with a small delay so you can see what happened.
- *     The played card is already visible on top of the pile; a short caption
- *     names WHO played (the one thing the pile can't show) and then fades.
+ *  1. Bot turns auto-advance with a small delay so you can see what happened
+ *     (src/table/useBotAutoplay.ts). The played card is already visible on
+ *     top of the pile; a short caption names WHO played (the one thing the
+ *     pile can't show) and then fades.
  *  2. Multi-human games gate turns with "pass device to X" for privacy.
  *     Solo human vs bots skips the gate entirely.
+ *
+ * What the table says lives in src/table/ (captions, summaries, table talk,
+ * stick-ups); the pieces of the screen in src/components/.
  */
 export default function GameScreen() {
   const router = useRouter();
@@ -66,10 +73,7 @@ export default function GameScreen() {
   const campaignPresetId = useGameStore((s) => s.campaignPresetId);
 
   // Face-down flip result: pause to show what was flipped before bots continue.
-  const [flipResult, setFlipResult] = useState<{
-    card: Card;
-    success: boolean;
-  } | null>(null);
+  const [flipResult, setFlipResult] = useState<{ card: Card; success: boolean } | null>(null);
 
   // A stick-up involving a human (robbed, or robbing): the stick-up panel,
   // which holds play until it's dismissed.
@@ -89,48 +93,37 @@ export default function GameScreen() {
 
   // Toast: empty-selection taps and rejected-play reasons
   const [toast, setToast] = useState<string | null>(null);
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 1800);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   // Bot action pacing: while set, the next bot turn is held for BOT_DISPLAY_MS
   // so plays don't blitz past faster than you can read them. Also carries the
   // character's quip, which becomes table talk when the window closes.
-  const [botAction, setBotAction] = useState<{
-    botName: string;
-    playerId: number;   // which strip a follow-up speech bubble attaches to
-    headline: string;   // e.g. "played K♠"
-    detail?: string;    // e.g. "🔥 Burns the pile!"
-    quip?: string;      // in-character one-liner, shown as table talk after
-    card?: Card;        // (unused in UI now; retained from the event builder)
-    emoji: string;      // leading emoji
-  } | null>(null);
+  const [botAction, setBotAction] = useState<{ playerId: number; quip?: string } | null>(null);
 
-  // Ephemeral action caption: a short "Name played X" line above the pile that
-  // fades after a few seconds. Text only — the played card is already on top of
-  // the pile, so re-showing it there just read as a confusing second pile.
-  // nonce restarts the fade for back-to-back plays with identical text.
-  const [actionCaption, setActionCaption] = useState<{
-    emoji: string;
-    text: string;
-    nonce: number;
-  } | null>(null);
+  // Ephemeral action caption: a short "Name played X" line above the pile.
+  const [actionCaption, setActionCaption] = useState<Caption | null>(null);
 
-  // Table talk: an ephemeral speech bubble on a player's strip. Fired when a
-  // bot's interstitial dismisses (so the line lands as a reaction at the
-  // table, not a caption over it). One at a time; nonce restarts the
-  // animation when the same character speaks twice in a row.
+  // Table talk: an ephemeral speech bubble on a player's strip. One at a
+  // time; nonce restarts the animation when the same character speaks twice.
   const [tableTalk, setTableTalk] = useState<{
     playerId: number;
     text: string;
     nonce: number;
   } | null>(null);
 
-  // Track which player we last triggered a bot action for, to avoid
-  // re-firing on every re-render.
-  const lastBotTurnRef = useRef<{ idx: number; epoch: number } | null>(null);
+  useAutoClear(toast, () => setToast(null), 1800);
+  // When a bot's window closes, its quip lands as table talk on its strip.
+  useAutoClear(botAction, () => {
+    if (botAction?.quip) {
+      setTableTalk({ playerId: botAction.playerId, text: botAction.quip, nonce: Date.now() });
+    }
+    setBotAction(null);
+  }, BOT_DISPLAY_MS);
+  // The bubble's fade lives in OpponentStrip; this just retires the state.
+  useAutoClear(tableTalk, () => setTableTalk(null), 3400);
+  // A touch longer than the bot pacing, so the line lingers into the next turn.
+  useAutoClear(actionCaption, () => setActionCaption(null), 2600);
+  // The human's winning play gets the same beat bots get.
+  useAutoClear(finalHold, () => setFinalHold(false), BOT_DISPLAY_MS);
 
   // Bail to home if state was wiped (e.g. dev reload).
   useEffect(() => {
@@ -139,8 +132,8 @@ export default function GameScreen() {
 
   // Route to game-over when phase changes. Wait for every "show the final play"
   // beat to finish first: bot pacing (botAction), the human's winning-play hold
-  // (finalHold), and the face-down flip gate (flipResult — without this a
-  // winning flip would route before its card was ever shown).
+  // (finalHold), the face-down flip gate (flipResult — without this a winning
+  // flip would route before its card was ever shown) and the stick-up panel.
   useEffect(() => {
     if (game && game.phase === 'gameOver' && !botAction && !flipResult && !finalHold && !stickUp) {
       // A human win of a game launched from the campaign map completes that
@@ -157,102 +150,13 @@ export default function GameScreen() {
     }
   }, [game, router, botAction, flipResult, finalHold, stickUp, campaignPresetId]);
 
-  // Bot autoplay.
-  useEffect(() => {
-    if (!game || game.phase !== 'playing') return;
-    if (flipResult) return; // Wait for human to dismiss flip result first
-    if (botAction) return;  // Wait for bot action display to clear
-    if (stickUp) return;    // Wait for the stick-up panel to be dismissed
-    const current = game.players[game.currentPlayerIndex];
-    if (!current.isBot) return;
-    if (current.isFinished) return;
-
-    // Use the game's log length as an "epoch" — any time the state changes
-    // meaningfully, the log grows, so we can re-fire for the same bot if
-    // they get an extra turn.
-    const epoch = game.log.length;
-    const turnIdx = game.currentPlayerIndex;
-    const last = lastBotTurnRef.current;
-    if (last && last.idx === turnIdx && last.epoch === epoch) {
-      return;
-    }
-
-    const botName = current.name;
-
-    const timer = setTimeout(() => {
-      // Re-read latest store state in case something changed.
-      const latest = useGameStore.getState();
-      if (!latest.game || latest.game.phase !== 'playing') return;
-      // Bail if the turn moved on between scheduling and firing. This also makes
-      // effect teardown/re-run (and React StrictMode's double-invoke) safe:
-      // because we haven't claimed the turn yet, a canceled timer leaves nothing
-      // claimed, so the re-run can still schedule and act.
-      if (latest.game.currentPlayerIndex !== turnIdx || latest.game.log.length !== epoch) return;
-      const cur = latest.game.players[turnIdx];
-      if (!cur.isBot || cur.isFinished) return;
-
-      // Claim the turn only now that we're actually committing to act.
-      lastBotTurnRef.current = { idx: turnIdx, epoch };
-
-      const action = decideBotAction(latest.game, turnIdx);
-      if (action.type === 'pickup') {
-        latest.pickup();
-      } else {
-        // Select all bot's chosen cards, then dispatch play.
-        latest.clearSelection();
-        for (const id of action.cardIds) latest.toggleSelect(id);
-        // Face-down source needs the dedicated path.
-        const source = getPlaySource(cur);
-        if (source === 'faceDown') {
-          latest.playFaceDown(action.cardIds[0]);
-        } else {
-          latest.playSelected(action.swapTargetId);
-        }
-      }
-
-      // Capture what just happened for the interstitial display.
-      const events = useGameStore.getState().recentEvents;
-      const cfg = latest.game?.ruleConfig ?? game.ruleConfig;
-      const display = buildBotActionDisplay(botName, events, cfg);
-      const character = characterByName(botName);
-      // A stick-up on a human opens the panel, and the robber's line goes in
-      // it rather than out as table talk.
-      const robbery = stickUpFrom(events, useGameStore.getState().game);
-      if (robbery && character && robbery.kind !== 'robberEmpty') {
-        const quote = robbery.kind === 'trade'
-          ? robLine(character, 'selfRob', cardLabel(robbery.took))
-          : robLine(character, 'selfRobPassed');
-        if (quote) robbery.quote = quote;
-      }
-      // Situational line beats generic: their burn > their pickup > their
-      // power card > table talk.
-      let quip: string | undefined;
-      if (character && !robbery) {
-        const played = events.find((e) => e.type === 'cardsPlayed');
-        const power =
-          played && played.type === 'cardsPlayed'
-            ? powerReaction(played.cards[0].rank, cfg)
-            : null;
-        if (events.some((e) => e.type === 'pileBurned')) {
-          quip = maybeReaction(character, 'selfBurn') ?? undefined;
-        } else if (events.some((e) => e.type === 'pileTakenUp')) {
-          quip = maybeReaction(character, 'selfPickup') ?? undefined;
-        } else if (power) {
-          quip = maybeReaction(character, power) ?? undefined;
-        } else {
-          quip = maybeQuip(character) ?? undefined;
-        }
-      }
-      setBotAction({ ...display, playerId: cur.id, quip });
-      setActionCaption({
-        emoji: display.emoji,
-        text: captionText(character ? `${character.emoji} ${botName}` : botName, display),
-        nonce: Date.now(),
-      });
-      if (robbery) setStickUp(robbery);
-    }, BOT_THINK_MS);
-    return () => clearTimeout(timer);
-  }, [game, flipResult, botAction, stickUp]);
+  // Bot turns, held while anything is on show for the human.
+  useBotAutoplay(game, !!(flipResult || botAction || stickUp), ({ botName, playerId, events, game: after, cfg }) => {
+    const turn = describeBotTurn(botName, events, after, cfg);
+    setBotAction({ playerId, quip: turn.quip });
+    setActionCaption({ emoji: turn.display.emoji, text: turn.caption, nonce: Date.now() });
+    if (turn.robbery) setStickUp(turn.robbery);
+  });
 
   // The player's own 7 at the Outlaw Pass: show what they took (bot robbers
   // open the panel from the bot turn, with their line).
@@ -262,14 +166,14 @@ export default function GameScreen() {
     if (robbery && g && !g.players[robbery.robberId].isBot) setStickUp(robbery);
   }, [recentEvents]);
 
-  // Game sounds, driven by engine events rather than buttons, so every path
-  // is covered — human taps, bot turns, forced pickups, failed face-down
-  // flips. recentEvents is replaced wholesale on each action, so each sound
-  // fires exactly once per action. The two branches are mutually exclusive
-  // in practice (an action emits cardsPlayed OR pileTakenUp, never both — a
-  // failed flip emits faceDownFlipFailed + pileTakenUp); the pickup branch
-  // is checked first as the salient moment just in case that ever changes.
+  // Reactions to every action, driven by engine events rather than buttons,
+  // so every path is covered — human taps, bot turns, forced pickups, failed
+  // face-down flips. recentEvents is replaced wholesale on each action, so
+  // each fires exactly once per action.
   useEffect(() => {
+    // Sound. An action emits cardsPlayed OR pileTakenUp, never both (a failed
+    // flip emits faceDownFlipFailed + pileTakenUp); pickup is checked first
+    // as the salient moment just in case that ever changes.
     if (recentEvents.some((e) => e.type === 'pileTakenUp')) {
       playSfx('cardPickup');
     } else if (recentEvents.some((e) => e.type === 'cardsPlayed')) {
@@ -282,85 +186,14 @@ export default function GameScreen() {
     if (rejection && rejection.type === 'playRejected') {
       setToast(rejection.reason);
     }
-    // A HUMAN picking up or burning the pile invites commentary: a random
-    // character at the table reacts after a short beat (so it reads as a
-    // response, not a simultaneous caption). Bot pickups and burns are
-    // excluded — those characters already speak via their own interstitial
-    // dismissal. Burns only draw lines from characters written to react to
-    // them; everyone else stays quiet.
+    // A human's pickup or burn draws a heckle after a short beat, so it
+    // reads as a response, not a simultaneous caption.
     if (!game) return;
-    const isHuman = (id: number) => game.players[id] ? !game.players[id].isBot : false;
-    const pickup = recentEvents.find((e) => e.type === 'pileTakenUp');
-    const played = recentEvents.find((e) => e.type === 'cardsPlayed');
-    let kind: 'humanPickup' | 'humanBurn' | null = null;
-    if (pickup && pickup.type === 'pileTakenUp' && isHuman(pickup.playerId)) {
-      kind = 'humanPickup';
-    } else if (
-      recentEvents.some((e) => e.type === 'pileBurned') &&
-      played && played.type === 'cardsPlayed' &&
-      isHuman(played.playerId)
-    ) {
-      kind = 'humanBurn';
-    }
-    if (!kind) return;
-    const hecklers = game.players.filter((p) => {
-      if (!p.isBot || p.isFinished) return false;
-      const c = characterByName(p.name);
-      if (!c) return false;
-      return kind === 'humanPickup' || (c.reactions.humanBurn?.length ?? 0) > 0;
-    });
-    if (hecklers.length === 0) return;
-    const h = hecklers[Math.floor(Math.random() * hecklers.length)];
-    const line = maybeReaction(characterByName(h.name)!, kind);
+    const line = heckle(game, recentEvents);
     if (!line) return;
-    const t = setTimeout(
-      () => setTableTalk({ playerId: h.id, text: line, nonce: Date.now() }),
-      600,
-    );
+    const t = setTimeout(() => setTableTalk({ ...line, nonce: Date.now() }), 600);
     return () => clearTimeout(t);
   }, [recentEvents, game]);
-
-  // Auto-dismiss bot action interstitial after BOT_DISPLAY_MS. If the bot
-  // had a quip, it becomes a speech bubble on their strip as the game area
-  // returns — table talk, not a caption.
-  useEffect(() => {
-    if (!botAction) return;
-    const timer = setTimeout(() => {
-      if (botAction.quip) {
-        setTableTalk({
-          playerId: botAction.playerId,
-          text: botAction.quip,
-          nonce: Date.now(),
-        });
-      }
-      setBotAction(null);
-    }, BOT_DISPLAY_MS);
-    return () => clearTimeout(timer);
-  }, [botAction]);
-
-  // Bubble lifetime: cleared after the fade-out completes (timings live in
-  // OpponentStrip; this just retires the state).
-  useEffect(() => {
-    if (!tableTalk) return;
-    const timer = setTimeout(() => setTableTalk(null), 3400);
-    return () => clearTimeout(timer);
-  }, [tableTalk]);
-
-  // Retire the action caption after a short beat so it reads as an ephemeral
-  // notification, not a permanent label. A touch longer than the bot pacing
-  // window so the line lingers briefly into the next turn before fading.
-  useEffect(() => {
-    if (!actionCaption) return;
-    const timer = setTimeout(() => setActionCaption(null), 2600);
-    return () => clearTimeout(timer);
-  }, [actionCaption]);
-
-  // Release the human's winning-play hold after the same beat bots get.
-  useEffect(() => {
-    if (!finalHold) return;
-    const timer = setTimeout(() => setFinalHold(false), BOT_DISPLAY_MS);
-    return () => clearTimeout(timer);
-  }, [finalHold]);
 
   // Auto-reveal hand for solo human (no pass-and-play gate needed).
   const humanCount = useMemo(
@@ -376,16 +209,7 @@ export default function GameScreen() {
     }
   }, [game, handRevealed, humanCount, revealHand]);
 
-  const currentPlayer = useMemo(() => {
-    if (!game) return null;
-    return game.players[game.currentPlayerIndex];
-  }, [game]);
-
-  // Memoized sorted hand to ensure logical visual order (lowest to highest)
-  const sortedHand = useMemo(() => {
-    if (!currentPlayer?.hand) return [];
-    return [...currentPlayer.hand].sort((a, b) => a.rank - b.rank);
-  }, [currentPlayer?.hand]);
+  const currentPlayer = game ? game.players[game.currentPlayerIndex] : null;
 
   if (!game || !currentPlayer) {
     return (
@@ -400,89 +224,11 @@ export default function GameScreen() {
   const isHumanTurn =
     game.phase === 'playing' && !currentPlayer.isBot && !currentPlayer.isFinished;
   const source = getPlaySource(currentPlayer);
-  const playableIds = isHumanTurn
-    ? getPlayableCardIds(game, game.currentPlayerIndex)
-    : [];
+  const playableIds = isHumanTurn ? getPlayableCardIds(game, game.currentPlayerIndex) : [];
   const canPlay = isHumanTurn && hasPlayableMove(game, game.currentPlayerIndex);
-
-  // Pass-and-play gate: hide hand until the human taps "I'm ready".
-  // Skip the gate entirely when only one human is playing (solo vs bots).
-  if (isHumanTurn && !handRevealed && humanCount > 1) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.gate}>
-          <Text style={styles.passLabel}>Pass the device to</Text>
-          <Text style={styles.passName}>{currentPlayer.name}</Text>
-          {recentEvents.length > 0 && (
-            <Text style={styles.lastAction}>
-              {summarizeRecent(recentEvents, game.players, game.ruleConfig)}
-            </Text>
-          )}
-          <Button title="I'm ready" onPress={revealHand} />
-        </View>
-      </View>
-    );
-  }
-
-  // Swap joker target picker.
-  if (swapPicking && isHumanTurn) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.gate}>
-          <Text style={styles.passLabel}>The black joker</Text>
-          <Text style={styles.passName}>Swap hands with…</Text>
-          <View style={{ alignSelf: 'stretch', gap: 10, marginTop: 8 }}>
-            {swapTargets(game, game.currentPlayerIndex).map((id) => {
-              const p = game.players[id];
-              return (
-                <Button
-                  key={id}
-                  title={`${p.name} · ${p.hand.length} card${p.hand.length === 1 ? '' : 's'}`}
-                  onPress={() => {
-                    setSwapPicking(false);
-                    playAndHold(id);
-                  }}
-                />
-              );
-            })}
-            <Button title="Cancel" variant="ghost" onPress={() => setSwapPicking(false)} />
-          </View>
-        </View>
-      </View>
-    );
-  }
-
-  // Face-down flip result gate: show what was flipped before continuing.
-  if (flipResult) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.gate}>
-          <Text style={styles.passLabel}>{currentPlayer.name} flipped…</Text>
-          <View style={styles.flipCardWrap}>
-            <PlayingCard card={flipResult.card} />
-          </View>
-          <View style={styles.flipVerdictRow}>
-            {flipResult.success ? (
-              <CircleCheck size={22} color={theme.color.success} strokeWidth={2.5} />
-            ) : (
-              <CircleX size={22} color={theme.color.danger} strokeWidth={2.5} />
-            )}
-            <Text
-              style={[
-                styles.flipVerdict,
-                { color: flipResult.success ? theme.color.success : theme.color.danger },
-              ]}
-            >
-              {flipResult.success ? 'It plays!' : 'No good — you pick up the pile'}
-            </Text>
-          </View>
-          <View style={{ marginTop: 24 }}>
-            <Button title="Continue" onPress={() => setFlipResult(null)} />
-          </View>
-        </View>
-      </View>
-    );
-  }
+  const recent = recentEvents.length > 0
+    ? summarizeRecent(recentEvents, game.players, game.ruleConfig)
+    : undefined;
 
   // Play the selection. If that play just ended the game, surface it in the
   // caption and hold the game-over route for a beat — otherwise the podium
@@ -493,129 +239,81 @@ export default function GameScreen() {
     playSelected(swapTargetId);
     const latest = useGameStore.getState();
     if (latest.game?.phase === 'gameOver') {
-      const d = buildBotActionDisplay(playerName, latest.recentEvents, latest.game.ruleConfig);
-      setActionCaption({
-        emoji: d.emoji,
-        text: captionText(playerName, d),
-        nonce: Date.now(),
-      });
+      const d = describeAction(latest.recentEvents, latest.game.ruleConfig, latest.game.players);
+      setActionCaption({ emoji: d.emoji, text: captionText(playerName, d), nonce: Date.now() });
       setFinalHold(true);
     }
   }
 
-  // While someone else plays, the lone human keeps their cards in view,
-  // dimmed and untappable, so they can plan ahead. Pass-and-play (several
-  // humans) still hides every hand between turns for privacy.
-  const watcher = humanCount === 1 ? game.players.find((p) => !p.isBot) ?? null : null;
-  const renderWatchingHand = (p: (typeof game.players)[number]) => {
-    const src = getPlaySource(p);
-    if (src === null) {
-      return <Text style={styles.dim}>You're out. Watching {currentPlayer.name}…</Text>;
+  function onPlayPressed() {
+    if (!game || !currentPlayer) return;
+    if (selectedCardIds.length === 0) {
+      setToast('Select a card first');
+      return;
     }
-    const cards =
-      src === 'hand' ? [...p.hand].sort((a, b) => a.rank - b.rank)
-      : src === 'faceUp' ? p.faceUp
-      : p.faceDown;
-    const label =
-      src === 'hand' ? `${p.name}'s hand`
-      : src === 'faceUp' ? 'Mid-game (face-up)'
-      : 'Late game (face-down)';
-    return (
-      <>
-        <Text style={styles.sectionLabel}>
-          {label} <Text style={styles.watchingNote}>· {currentPlayer.name}'s turn</Text>
-        </Text>
-        <View style={styles.cardRow}>
-          {cards.map((c) => (
-            <PlayingCard key={c.id} card={c} faceDown={src === 'faceDown'} dimmed disabled />
-          ))}
-        </View>
-      </>
+    // A swap joker needs a target first, unless there's only one.
+    const selected = [...currentPlayer.hand, ...currentPlayer.faceUp].filter(
+      (c) => selectedCardIds.includes(c.id),
     );
-  };
+    if (
+      selected.some((c) => c.joker === 'swap') &&
+      selected.every((c) => playableIds.includes(c.id)) &&
+      swapTargets(game, game.currentPlayerIndex).length > 1
+    ) {
+      setSwapPicking(true);
+      return;
+    }
+    playAndHold();
+  }
 
-  // Decide what cards to show in the player's bottom area.
-  const renderHandArea = () => {
-    if (source === 'hand') {
-      return (
-        <>
-          <Text style={styles.sectionLabel}>{currentPlayer.name}'s hand</Text>
-          <View style={styles.cardRow}>
-            {sortedHand.map((c) => {
-              const playable = playableIds.includes(c.id);
-              return (
-                <PlayingCard
-                  key={c.id}
-                  card={c}
-                  selected={selectedCardIds.includes(c.id)}
-                  dimmed={!playable}
-                  onPress={() => toggleSelect(c.id)}
-                />
-              );
-            })}
-          </View>
-        </>
-      );
-    }
-    if (source === 'faceUp') {
-      return (
-        <>
-          <Text style={styles.sectionLabel}>Mid-game (face-up)</Text>
-          <View style={styles.cardRow}>
-            {currentPlayer.faceUp.map((c) => {
-              const playable = playableIds.includes(c.id);
-              return (
-                <PlayingCard
-                  key={c.id}
-                  card={c}
-                  selected={selectedCardIds.includes(c.id)}
-                  dimmed={!playable}
-                  onPress={() => toggleSelect(c.id)}
-                />
-              );
-            })}
-          </View>
-        </>
-      );
-    }
-    if (source === 'faceDown') {
-      return (
-        <>
-          <Text style={styles.sectionLabel}>
-            Late game — blind flip. Pick one.
-          </Text>
-          <View style={styles.cardRow}>
-            {currentPlayer.faceDown.map((c) => (
-              <PlayingCard
-                key={c.id}
-                faceDown
-                onPress={() => {
-                  playFaceDown(c.id);
-                  // Read latest events to determine flip outcome
-                  const latest = useGameStore.getState();
-                  const events = latest.recentEvents;
-                  const failed = events.find(
-                    (e) => e.type === 'faceDownFlipFailed',
-                  );
-                  if (failed && failed.type === 'faceDownFlipFailed') {
-                    setFlipResult({ card: failed.card, success: false });
-                  } else {
-                    const played = events.find(
-                      (e) => e.type === 'cardsPlayed' && e.source === 'faceDown',
-                    );
-                    if (played && played.type === 'cardsPlayed') {
-                      setFlipResult({ card: played.cards[0], success: true });
-                    }
-                  }
-                }}
-              />
-            ))}
-          </View>
-        </>
-      );
-    }
-    return <Text style={styles.dim}>No cards left</Text>;
-  };
+  function onFlip(cardId: string) {
+    playFaceDown(cardId);
+    const outcome = flipOutcome(useGameStore.getState().recentEvents);
+    if (outcome) setFlipResult(outcome);
+  }
+
+  // Pass-and-play gate: hide hand until the human taps "I'm ready".
+  // Skip the gate entirely when only one human is playing (solo vs bots).
+  if (isHumanTurn && !handRevealed && humanCount > 1) {
+    return <PassDeviceGate name={currentPlayer.name} lastAction={recent} onReady={revealHand} />;
+  }
+
+  if (swapPicking && isHumanTurn) {
+    return (
+      <SwapTargetPicker
+        targets={swapTargets(game, game.currentPlayerIndex).map((id) => game.players[id])}
+        onPick={(id) => {
+          setSwapPicking(false);
+          playAndHold(id);
+        }}
+        onCancel={() => setSwapPicking(false)}
+      />
+    );
+  }
+
+  if (flipResult) {
+    return (
+      <FlipResultGate
+        playerName={currentPlayer.name}
+        card={flipResult.card}
+        success={flipResult.success}
+        onContinue={() => setFlipResult(null)}
+      />
+    );
+  }
+
+  // While someone else plays, the lone human keeps their cards in view.
+  // Pass-and-play (several humans) still hides every hand between turns.
+  const watcher = humanCount === 1 ? game.players.find((p) => !p.isBot) ?? null : null;
+
+  const turnTitle =
+    (game.phase === 'gameOver'
+      ? 'Game over'
+      : currentPlayer.isBot
+      ? `${currentPlayer.name} is thinking…`
+      : `${currentPlayer.name}'s turn`) +
+    // Seat-rules tables: name whose rules this turn is played by.
+    (game.phase !== 'gameOver' && currentPlayer.rules ? ` · ${currentPlayer.rules.name}` : '');
 
   return (
     <View style={{ flex: 1 }}>
@@ -647,17 +345,7 @@ export default function GameScreen() {
         ))}
       </View>
 
-      {/* Ephemeral action caption — who just played what. Text above the pile
-          (never a card), so it can't be mistaken for a second pile. Reserved
-          height keeps the layout from jumping as it fades in and out. */}
-      <View style={styles.captionZone}>
-        {actionCaption && (
-          <ActionCaption
-            caption={actionCaption}
-            highlighted={!!botAction || finalHold}
-          />
-        )}
-      </View>
+      <ActionCaption caption={actionCaption} highlighted={!!botAction || finalHold} />
 
       {/* Center: draw / pile / burned — pile is tappable for pickup */}
       <Center
@@ -667,67 +355,12 @@ export default function GameScreen() {
         mustPickup={isHumanTurn && !canPlay}
       />
 
-      {/* Turn banner — info left, play button right */}
-      <View style={styles.turnBanner}>
-        <View style={styles.turnInfo}>
-          <Text style={styles.turnText}>
-            {game.phase === 'gameOver'
-              ? 'Game over'
-              : currentPlayer.isBot
-              ? `${currentPlayer.name} is thinking…`
-              : `${currentPlayer.name}'s turn`}
-            {/* Seat-rules tables: name whose rules this turn is played by. */}
-            {game.phase !== 'gameOver' && currentPlayer.rules
-              ? ` · ${currentPlayer.rules.name}`
-              : ''}
-          </Text>
-          {recentEvents.length > 0 && (
-            <Text style={styles.recent}>{summarizeRecent(recentEvents, game.players, game.ruleConfig)}</Text>
-          )}
-        </View>
-        {isHumanTurn && source !== 'faceDown' && canPlay && (
-          <Pressable
-            onPress={() => {
-              if (selectedCardIds.length === 0) {
-                setToast('Select a card first');
-                return;
-              }
-              // A swap joker needs a target first, unless there's only one.
-              const selected = [...currentPlayer.hand, ...currentPlayer.faceUp].filter(
-                (c) => selectedCardIds.includes(c.id),
-              );
-              const legal = getPlayableCardIds(game, game.currentPlayerIndex);
-              if (
-                selected.some((c) => c.joker === 'swap') &&
-                selected.every((c) => legal.includes(c.id)) &&
-                swapTargets(game, game.currentPlayerIndex).length > 1
-              ) {
-                setSwapPicking(true);
-                return;
-              }
-              playAndHold();
-            }}
-            style={({ pressed }) => [
-              styles.playBtn,
-              selectedCardIds.length > 0
-                ? styles.playBtnActive
-                : styles.playBtnDim,
-              pressed && { opacity: 0.7 },
-            ]}
-          >
-            <Text
-              style={[
-                styles.playBtnText,
-                selectedCardIds.length === 0 && styles.playBtnTextDim,
-              ]}
-            >
-              {selectedCardIds.length > 1
-                ? `Play ${selectedCardIds.length}`
-                : 'Play'}
-            </Text>
-          </Pressable>
-        )}
-      </View>
+      <TurnBanner
+        title={turnTitle}
+        recent={recent}
+        selectedCount={selectedCardIds.length}
+        onPlay={isHumanTurn && source !== 'faceDown' && canPlay ? onPlayPressed : undefined}
+      />
 
       {/* Toast: empty selection / rejected play */}
       {toast && (
@@ -739,9 +372,15 @@ export default function GameScreen() {
       {/* Player area */}
       <View style={styles.playerArea}>
         {isHumanTurn ? (
-          renderHandArea()
+          <HandArea
+            player={currentPlayer}
+            playableIds={playableIds}
+            selectedIds={selectedCardIds}
+            onToggle={toggleSelect}
+            onFlip={onFlip}
+          />
         ) : game.phase === 'gameOver' ? null : watcher ? (
-          renderWatchingHand(watcher)
+          <WatchingHand player={watcher} currentName={currentPlayer.name} />
         ) : (
           <Text style={styles.dim}>Waiting for {currentPlayer.name}…</Text>
         )}
@@ -765,237 +404,6 @@ export default function GameScreen() {
     <AchievementToast earned={earnedThisGame} />
     </View>
   );
-}
-
-/** Compose the caption line: "Name played X" plus any effect, on one line. */
-function captionText(
-  name: string,
-  display: { headline: string; detail?: string },
-): string {
-  const effect = display.detail ? ' · ' + display.detail.replace(/\n/g, ' · ') : '';
-  return `${name} ${display.headline}${effect}`;
-}
-
-/**
- * Ephemeral caption above the pile: fades in, holds, fades out — keyed on
- * nonce so consecutive identical lines still re-animate (mirrors the
- * table-talk bubble timing). Text only; the played card lives on the pile.
- */
-function ActionCaption({
-  caption,
-  highlighted,
-}: {
-  caption: { emoji: string; text: string; nonce: number };
-  highlighted: boolean;
-}) {
-  const anim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    anim.setValue(0);
-    const seq = Animated.sequence([
-      Animated.timing(anim, { toValue: 1, duration: 200, useNativeDriver: true }),
-      Animated.delay(2000),
-      Animated.timing(anim, { toValue: 0, duration: 400, useNativeDriver: true }),
-    ]);
-    seq.start();
-    return () => seq.stop();
-  }, [caption.nonce, anim]);
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={[
-        styles.caption,
-        highlighted && styles.captionActive,
-        {
-          opacity: anim,
-          transform: [
-            {
-              translateY: anim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [6, 0],
-              }),
-            },
-          ],
-        },
-      ]}
-    >
-      <Text style={styles.captionText} numberOfLines={2}>
-        {caption.emoji} {caption.text}
-      </Text>
-    </Animated.View>
-  );
-}
-
-/** Build a display object from bot action events (headline + effect + card). */
-function buildBotActionDisplay(
-  botName: string,
-  events: GameEvent[],
-  cfg: RuleConfig,
-): { botName: string; headline: string; detail?: string; card?: Card; emoji: string } {
-  const playerNameIn = (id: number) =>
-    useGameStore.getState().game?.players[id]?.name ?? 'someone';
-  // Check for pile pickup
-  const pickup = events.find((e) => e.type === 'pileTakenUp');
-  if (pickup && pickup.type === 'pileTakenUp') {
-    // Check if it was a failed face-down flip
-    const flipFail = events.find((e) => e.type === 'faceDownFlipFailed');
-    if (flipFail && flipFail.type === 'faceDownFlipFailed') {
-      return {
-        botName,
-        emoji: '🙈',
-        headline: `flipped ${cardLabel(flipFail.card)}`,
-        detail: `No good — picks up ${pickup.cardCount} cards`,
-        card: flipFail.card,
-      };
-    }
-    return {
-      botName,
-      emoji: '📥',
-      headline: `picked up the pile`,
-      detail: `${pickup.cardCount} cards`,
-    };
-  }
-
-  // Check for cards played
-  const played = events.find((e) => e.type === 'cardsPlayed');
-  if (played && played.type === 'cardsPlayed') {
-    const n = played.cards.length;
-    const label = n === 1
-      ? `played ${played.cards[0].joker ? 'the ' : ''}${cardLabel(played.cards[0])}`
-      : `played ${n}× ${rankLabel(played.cards[0].rank)}`;
-
-    // Check for burn
-    const burn = events.find((e) => e.type === 'pileBurned');
-    const finished = events.find((e) => e.type === 'playerFinished');
-    const reversed = events.find((e) => e.type === 'directionReversed');
-
-    let detail: string | undefined;
-    if (burn && burn.type === 'pileBurned') {
-      detail = burn.reason === 'burnRank'
-        ? '🔥 Burns the pile!'
-        : burn.reason === 'tripleTransparent'
-        ? `🔥 Triple ${rankLabel(cfg.transparentRank)}s — burns the pile!`
-        : '🔥 Four-of-a-kind — burns the pile!';
-    }
-    if (reversed) {
-      detail = (detail ? detail + '\n' : '') + '🔄 Direction reversed!';
-    }
-    const robbed = events.find((e) => e.type === 'cardStolen');
-    if (robbed && robbed.type === 'cardStolen') {
-      detail = (detail ? detail + '\n' : '') +
-        `🤠 Stick-up! Takes ${playerNameIn(robbed.targetId)}'s ${cardLabel(robbed.took)}, leaves a ${cardLabel(robbed.gave)}`;
-    }
-    const passed = events.find((e) => e.type === 'stickUpPassed');
-    if (passed && passed.type === 'stickUpPassed') {
-      detail = (detail ? detail + '\n' : '') + (passed.reason === 'emptyHand'
-        ? `🤠 Goes for ${playerNameIn(passed.targetId)}'s hand… but it's empty`
-        : passed.reason === 'robberEmpty'
-        ? '🤠 No hand to trade from. No stick-up'
-        : `🤠 Sizes up ${playerNameIn(passed.targetId)}'s hand… nothing worth taking`);
-    }
-    const swapped = events.find((e) => e.type === 'handsSwapped');
-    if (swapped && swapped.type === 'handsSwapped') {
-      detail = (detail ? detail + '\n' : '') + `🔀 Swaps hands with ${playerNameIn(swapped.targetId)}!`;
-    }
-    if (finished) {
-      detail = (detail ? detail + '\n' : '') + '🏆 Out of the game!';
-    }
-
-    return {
-      botName,
-      emoji: '🃏',
-      headline: label,
-      detail,
-      card: played.cards[0],
-    };
-  }
-
-  // Fallback
-  return { botName, emoji: '🤖', headline: 'took their turn' };
-}
-
-type SeatedStickUp = StickUp & { robberId: number; victimId: number };
-
-/** The stick-up panel for a 7 that robbed (or tried to rob) a human, or
- *  that a human played, if there was one. */
-function stickUpFrom(events: GameEvent[], game: GameState | null): SeatedStickUp | null {
-  if (!game) return null;
-  for (const e of events) {
-    if (e.type !== 'cardStolen' && e.type !== 'stickUpPassed') continue;
-    const robber = game.players[e.playerId];
-    const victim = game.players[e.targetId];
-    if (!robber || !victim || (robber.isBot && victim.isBot)) return null;
-    const seats = {
-      robber: robber.name, victim: victim.name, robberId: e.playerId, victimId: e.targetId,
-    };
-    if (e.type === 'cardStolen') return { kind: 'trade', ...seats, took: e.took, gave: e.gave };
-    if (e.reason === 'nothingBetter') {
-      return e.best && e.worst
-        ? { kind: 'nothingBetter', ...seats, best: e.best, worst: e.worst }
-        : { kind: 'nothingWorth', ...seats };
-    }
-    return { kind: e.reason, ...seats };
-  }
-  return null;
-}
-
-/** The player is the only human at the table, so the UI can say "you". */
-function isSoleHuman(game: GameState, playerId: number): boolean {
-  const humans = game.players.filter((p) => !p.isBot);
-  return humans.length === 1 && humans[0].id === playerId;
-}
-
-/** Turn a list of engine events into a one-line summary for the UI. */
-function summarizeRecent(
-  events: ReturnType<typeof useGameStore.getState>['recentEvents'],
-  players: GameState['players'],
-  cfg: RuleConfig,
-): string {
-  const playerName = (id: number) => players?.find((p) => p.id === id)?.name ?? 'Someone';
-
-  // Walk most-impactful → least.
-  for (const e of events) {
-    if (e.type === 'pileBurned') {
-      return e.reason === 'burnRank'
-        ? `🔥 ${rankLabel(cfg.burnRank)} burns the pile`
-        : e.reason === 'tripleTransparent'
-        ? `🔥 Triple ${rankLabel(cfg.transparentRank)}s burn the pile`
-        : '🔥 Four-of-a-kind burns the pile';
-    }
-    if (e.type === 'stickUpPassed') {
-      return e.reason === 'emptyHand'
-        ? `🤠 ${playerName(e.playerId)} found ${playerName(e.targetId)}'s hand empty`
-        : e.reason === 'robberEmpty'
-        ? `🤠 ${playerName(e.playerId)} had no hand to trade from`
-        : `🤠 ${playerName(e.playerId)} found nothing worth taking from ${playerName(e.targetId)}`;
-    }
-    if (e.type === 'cardStolen') {
-      return `🤠 ${playerName(e.playerId)} took ${playerName(e.targetId)}'s ${cardLabel(e.took)} for a ${cardLabel(e.gave)}`;
-    }
-    if (e.type === 'handsSwapped') {
-      return `🔀 ${playerName(e.playerId)} swapped hands with ${playerName(e.targetId)}`;
-    }
-    if (e.type === 'directionReversed') {
-      return '🔄 Direction reversed!';
-    }
-    if (e.type === 'faceDownFlipFailed') {
-      return `Face-down flip failed — pile picked up.`;
-    }
-    if (e.type === 'pileTakenUp') {
-      return `${playerName(e.playerId)} picked up the pile (${e.cardCount} cards)`;
-    }
-    if (e.type === 'playerFinished') {
-      return `🏆 ${playerName(e.playerId)} finished!`;
-    }
-  }
-  for (const e of events) {
-    if (e.type === 'cardsPlayed') {
-      const n = e.cards.length;
-      const label = e.cards[0].joker && n === 1 ? cardLabel(e.cards[0]) : rankLabel(e.cards[0].rank);
-      const played = n === 1 ? `played ${label}` : `played ${n}× ${label}`;
-      return `${playerName(e.playerId)} ${played}`;
-    }
-  }
-  return '';
 }
 
 const styles = StyleSheet.create({
@@ -1023,48 +431,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
-  turnBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginVertical: 6,
-    backgroundColor: theme.color.feltBgDark,
-    borderRadius: theme.radius.md,
-  },
-  turnInfo: {
-    flex: 1,
-  },
-  turnText: {
-    color: theme.color.accent,
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  recent: {
-    color: theme.color.textMuted,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  playBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: theme.radius.md,
-    marginLeft: 10,
-  },
-  playBtnActive: {
-    backgroundColor: theme.color.primary,
-  },
-  playBtnDim: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  playBtnText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  playBtnTextDim: {
-    color: theme.color.textMuted,
-  },
   toast: {
     alignItems: 'center',
     paddingVertical: 6,
@@ -1078,75 +444,5 @@ const styles = StyleSheet.create({
     marginTop: 8,
     minHeight: 140,
   },
-  watchingNote: {
-    color: theme.color.textMuted,
-    fontWeight: '400',
-  },
-  sectionLabel: {
-    color: theme.color.textOnDark,
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingVertical: 16, // room for selected lift
-  },
   dim: { color: theme.color.textMuted, fontStyle: 'italic' },
-  gate: {
-    flex: 1,
-    marginTop: 100,
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-  passLabel: { color: theme.color.textMuted, fontSize: 16 },
-  passName: {
-    color: theme.color.accent,
-    fontSize: 48,
-    fontWeight: '900',
-    marginVertical: 12,
-    textAlign: 'center',
-  },
-  lastAction: {
-    color: theme.color.textOnDark,
-    fontSize: 14,
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  flipCardWrap: {
-    marginVertical: 20,
-    alignItems: 'center',
-  },
-  flipVerdictRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 },
-  flipVerdict: {
-    fontSize: 18,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  // Ephemeral action caption above the pile
-  captionZone: {
-    height: 46,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  caption: {
-    maxWidth: '92%',
-    backgroundColor: theme.color.feltBgDark,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-  },
-  captionActive: {
-    borderColor: theme.color.accent,
-  },
-  captionText: {
-    color: theme.color.textOnDark,
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
 });

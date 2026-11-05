@@ -1,8 +1,8 @@
-/** Engine, bot and campaign-data Jest config — UI is tested manually for now. */
+/** Engine, bot, campaign-data and table-logic Jest config — screens are tested manually for now. */
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/src/engine', '<rootDir>/src/ai', '<rootDir>/src/campaign', '<rootDir>/src/achievements', '<rootDir>/src/store'],
+  roots: ['<rootDir>/src/engine', '<rootDir>/src/ai', '<rootDir>/src/campaign', '<rootDir>/src/achievements', '<rootDir>/src/store', '<rootDir>/src/table'],
   moduleNameMapper: {
     '^@react-native-async-storage/async-storage$': '@react-native-async-storage/async-storage/jest/async-storage-mock',
     // Character portraits are require()d PNGs; tests only need a placeholder.
