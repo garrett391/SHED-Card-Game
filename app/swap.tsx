@@ -9,7 +9,7 @@ import { useGameStore } from '../src/store/gameStore';
 
 /**
  * Pre-game swap screen. We walk through each player one at a time.
- * Bots don't swap (their face-up cards are luck-of-the-deal).
+ * Bots swap off-screen (see decideBotSwaps in src/ai/bot.ts).
  *
  * Privacy pattern: each human gets a "pass device to X" cover screen,
  * tap to reveal, swap, tap Done — then we advance to the next player.
@@ -19,6 +19,7 @@ export default function SwapScreen() {
   const game = useGameStore((s) => s.game);
   const swap = useGameStore((s) => s.swap);
   const finishSwap = useGameStore((s) => s.finishSwap);
+  const botSwap = useGameStore((s) => s.botSwap);
   const handRevealed = useGameStore((s) => s.handRevealed);
   const revealHand = useGameStore((s) => s.revealHand);
   const hideHand = useGameStore((s) => s.hideHand);
@@ -45,7 +46,7 @@ export default function SwapScreen() {
       (game.swapsComplete[idx] || game.players[idx].isBot)
     ) {
       if (game.players[idx].isBot && !game.swapsComplete[idx]) {
-        finishSwap(idx);
+        botSwap(idx);
       }
       idx++;
     }
@@ -53,7 +54,7 @@ export default function SwapScreen() {
       setActiveIdx(idx);
       hideHand();
     }
-  }, [game, activeIdx, finishSwap, hideHand]);
+  }, [game, activeIdx, botSwap, hideHand]);
 
   // When all swaps done, jump to the table.
   useEffect(() => {

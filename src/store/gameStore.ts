@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { GameEvent, GameState, PlayerConfig, RuleConfig } from '../engine/types';
 import { DEFAULT_RULES } from '../engine/rules';
 import * as engine from '../engine/engine';
+import { decideBotSwaps } from '../ai/bot';
 import {
   AchievementId,
   gameOverAchievements,
@@ -42,6 +43,8 @@ interface GameStore {
   // swap phase
   swap: (playerIdx: number, handCardId: string, faceUpCardId: string) => void;
   finishSwap: (playerIdx: number) => void;
+  /** A bot's whole swap turn: its chosen swaps, then done. */
+  botSwap: (playerIdx: number) => void;
 
   // playing phase
   toggleSelect: (cardId: string) => void;
@@ -101,6 +104,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
         ? { game: engine.finishSwap(s.game, playerIdx), handRevealed: false }
         : s,
     ),
+
+  botSwap: (playerIdx) =>
+    set((s) => {
+      if (!s.game) return s;
+      let game = s.game;
+      for (const { handCardId, faceUpCardId } of decideBotSwaps(game, playerIdx)) {
+        game = engine.swapCards(game, playerIdx, handCardId, faceUpCardId);
+      }
+      return { game: engine.finishSwap(game, playerIdx), handRevealed: false };
+    }),
 
   toggleSelect: (id) =>
     set((s) => {

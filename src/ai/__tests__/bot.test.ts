@@ -1,6 +1,7 @@
-import { decideBotAction } from '../bot';
-import { createGame, finishSwap, pickupPile, playCards } from '../../engine/engine';
-import { DEFAULT_RULES } from '../../engine/rules';
+import { decideBotAction, decideBotSwaps } from '../bot';
+import { createGame, finishSwap, pickupPile, playCards, swapCards } from '../../engine/engine';
+import { cardWorth, DEFAULT_RULES } from '../../engine/rules';
+import { JOKER_RANK } from '../../engine/cards';
 import { Card, GameState, Player, Rank, Suit } from '../../engine/types';
 
 // ─── helpers (same shapes as the engine tests) ───────────────────────────
@@ -159,5 +160,90 @@ describe('decideBotAction', () => {
       // (face-up and face-down play), not just the opening hands.
       expect(finished).toBeGreaterThan(0);
     });
+  });
+});
+
+describe('decideBotSwaps', () => {
+  const swapPhase = (p: Partial<Player>): GameState => ({
+    ...setupGame({ players: [player(p), player()] }),
+    phase: 'swap',
+    swapsComplete: [false, false],
+  });
+  const apply = (g: GameState, idx: number) =>
+    decideBotSwaps(g, idx).reduce(
+      (s, { handCardId, faceUpCardId }) => swapCards(s, idx, handCardId, faceUpCardId),
+      g,
+    );
+  const ids = (cards: Card[]) => cards.map((c) => c.id).sort();
+
+  test('puts its three most useful cards face-up', () => {
+    const g = swapPhase({
+      faceUp: [card(3), card(5, '♥'), card(9)],
+      hand: [card(10), card(14), card(4, '♦')],
+    });
+    const after = apply(g, 0).players[0];
+    expect(ids(after.faceUp)).toEqual(ids([card(10), card(14), card(9)]));
+    expect(ids(after.hand)).toEqual(ids([card(3), card(5, '♥'), card(4, '♦')]));
+  });
+
+  test('ranks by usefulness: a 2 goes up before a king', () => {
+    const g = swapPhase({
+      faceUp: [card(13), card(12), card(11)],
+      hand: [card(2), card(3), card(4)],
+    });
+    const up = apply(g, 0).players[0].faceUp.map((c) => c.rank).sort((a, b) => a - b);
+    expect(up).toEqual([2, 12, 13]);
+  });
+
+  test('does nothing when the face-up cards are already the best', () => {
+    const g = swapPhase({
+      faceUp: [card(10), card(2), card(14)],
+      hand: [card(3), card(4), card(5)],
+    });
+    expect(decideBotSwaps(g, 0)).toEqual([]);
+  });
+
+  test('keeps the swap joker in hand', () => {
+    const g = {
+      ...swapPhase({
+        faceUp: [card(3), card(4), card(5)],
+        hand: [
+          { id: 'jb', rank: JOKER_RANK, suit: '♠' as Suit, joker: 'swap' as const },
+          { id: 'jr', rank: JOKER_RANK, suit: '♥' as Suit, joker: 'reverse' as const },
+          card(10),
+        ],
+      }),
+      ruleConfig: { ...DEFAULT_RULES, jokers: true },
+    };
+    const after = apply(g, 0).players[0];
+    expect(after.hand.map((c) => c.id)).toContain('jb');
+    expect(after.faceUp.map((c) => c.id)).toEqual(expect.arrayContaining(['jr', '10♠']));
+  });
+
+  test('novices keep the cards they were dealt', () => {
+    const g = swapPhase({
+      botStyle: 'novice',
+      faceUp: [card(3), card(4), card(5)],
+      hand: [card(10), card(14), card(2)],
+    });
+    expect(decideBotSwaps(g, 0)).toEqual([]);
+  });
+
+  test('on a real deal, no hand card is worth more than the weakest face-up card', () => {
+    for (let n = 0; n < 50; n++) {
+      let g = createGame(
+        Array.from({ length: 4 }, (_, i) => ({ name: `B${i}`, isBot: true })),
+        DEFAULT_RULES,
+      );
+      for (let i = 0; i < 4; i++) g = apply(g, i);
+      for (const p of g.players) {
+        expect(p.hand).toHaveLength(3);
+        expect(p.faceUp).toHaveLength(3);
+        const weakestUp = Math.min(...p.faceUp.map((c) => cardWorth(c)));
+        for (const c of p.hand) expect(cardWorth(c)).toBeLessThanOrEqual(weakestUp);
+      }
+      for (let i = 0; i < 4; i++) g = finishSwap(g, i);
+      expect(g.phase).toBe('playing');
+    }
   });
 });

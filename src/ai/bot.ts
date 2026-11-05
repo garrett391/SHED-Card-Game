@@ -1,5 +1,5 @@
-import { GameState, Rank } from '../engine/types';
-import { canPlayCardOnTop, getEffectiveTopCard, isPowerCard } from '../engine/rules';
+import { Card, GameState, Rank, RuleConfig } from '../engine/types';
+import { canPlayCardOnTop, cardWorth, getEffectiveTopCard, isPowerCard } from '../engine/rules';
 import { getPlaySource, rulesFor, swapTargets } from '../engine/engine';
 import { JOKER_RANK } from '../engine/cards';
 
@@ -86,6 +86,42 @@ export function decideBotAction(state: GameState, playerIdx: number): BotAction 
   return swapping
     ? { type: 'play', cardIds, swapTargetId: pickSwapTarget(state, playerIdx) }
     : { type: 'play', cardIds };
+}
+
+export interface BotSwap {
+  handCardId: string;
+  faceUpCardId: string;
+}
+
+/**
+ * The pre-game swap: which hand cards a bot trades for face-up cards.
+ *
+ * Face-up cards are played late, when there's no hand left to fall back on,
+ * so a strategic bot puts its three most useful cards there (by cardWorth,
+ * under its own seat's rules) and keeps the rest in hand. The one exception
+ * is the swap joker: played from face-up, with an empty hand, it would trade
+ * nothing for someone else's cards, so it stays in hand.
+ *
+ * Novices don't know the trick and keep the cards they were dealt.
+ */
+export function decideBotSwaps(state: GameState, playerIdx: number): BotSwap[] {
+  const player = state.players[playerIdx];
+  if (!player || player.botStyle === 'novice') return [];
+  const cfg = rulesFor(state, playerIdx);
+  const worth = (c: Card) => faceUpWorth(c, cfg);
+
+  // Rank all six cards; the top ones (as many as there are face-up slots) go up.
+  const pool = [...player.faceUp, ...player.hand];
+  const up = new Set(
+    [...pool].sort((a, b) => worth(b) - worth(a)).slice(0, player.faceUp.length).map((c) => c.id),
+  );
+  const goingUp = player.hand.filter((c) => up.has(c.id));
+  const goingDown = player.faceUp.filter((c) => !up.has(c.id));
+  return goingUp.map((c, i) => ({ handCardId: c.id, faceUpCardId: goingDown[i].id }));
+}
+
+function faceUpWorth(card: Card, cfg: RuleConfig): number {
+  return card.joker === 'swap' ? -1 : cardWorth(card, cfg);
 }
 
 /** Steal the smallest hand at the table (ties go to the earliest seat). */
