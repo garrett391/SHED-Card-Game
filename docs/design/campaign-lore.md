@@ -264,6 +264,14 @@ assets/characters/) are kept for later use, e.g.:
 - Pre-game dialogue: first visit to each node plays a short
   CharacterDialogue exchange (disciple vs. dissenter) before the deal.
   Beats live in src/campaign/story.ts, keyed by preset id.
+- How the hosts play (Nov 2026): each has a `botStyle` in characters.ts,
+  picked to fit them (strategy.md has the styles). Jake plays the plain
+  strategic game; the pupils are novices; Justin, the Lookout and the
+  Acolyte are cowards (smallest card first); the Bandit Chief and Tati are
+  schemers (they loot small piles with power cards in them, then burn); Gio
+  and the Zealot are reckless (biggest card first, jokers at once); Greg is
+  sharp: the Computer Lord plays every option out before he moves, and is
+  the strongest bot in the game.
 - Post-game: the node's host speaks one line on the results screen, from
   `endLines` in characters.ts (a win pool and a loss pool). Every host has
   theirs. A host at more than one table can give a table its own pools

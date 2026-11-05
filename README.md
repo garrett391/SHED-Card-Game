@@ -8,8 +8,8 @@ A cross-platform (iOS / Android / Web) mobile app for the card game
 ## What's in the app
 
 - 2–6 player **pass-and-play** local multiplayer on one device
-- Mix any number of **humans and bots** (heuristic AI that swaps its best
-  cards face-up before the deal)
+- Mix any number of **humans and bots**; every campaign host has their own
+  play style, from a beginner to Greg, who thinks ahead
 - Full ruleset:
   - Meets-or-beats
   - Power cards: **2** (reset), **7** (force ≤7), **8** (invisible/skip), **10** (burn)
@@ -101,7 +101,7 @@ and full integration scenarios.
 │   │   ├── engine.ts           createGame, playCards, pickupPile, etc.
 │   │   └── __tests__/          Jest unit tests
 │   ├── ai/
-│   │   └── bot.ts              Heuristic bot: swap, play, joker targets
+│   │   └── bot.ts              The bots: the swap, six play styles, joker targets
 │   ├── campaign/
 │   │   ├── presets.ts          Rule-variant presets and the ladder order
 │   │   ├── characters.ts       Hosts, portraits, table talk, end lines
@@ -175,24 +175,26 @@ Because the engine is pure and serializable:
 The `GameEvent` array returned from each engine action is designed to
 power both the UI banner and a future replay / animation system.
 
-## Tweaking the bot
+## Tweaking the bots
 
-`src/ai/bot.ts` is small and self-contained. Strategy notes are in the
-doc comments. Today a bot:
+`src/ai/bot.ts` is small and self-contained; each style is described in
+its doc comment. Every bot swaps its three most useful cards face-up before
+the deal (novices keep what they were dealt), then plays by its style:
 
-- Swaps its three most useful cards face-up before the deal (novice bots,
-  like the Spreading's pupils, keep what they were dealt)
-- Plays all of its lowest legal ordinary rank, saving power cards and
-  jokers for when nothing else plays
-- Points a swap joker at the smallest hand
+| Style | How it plays | Who |
+|-------|--------------|-----|
+| strategic | Lowest ordinary card first, all copies; power cards saved | Jake, free-play bots |
+| sharp | Plays every option out in dozens of reshuffled deals of the cards it can't see, and picks what wins most | Greg |
+| schemer | Strategic, but loots small piles with 2s or 10s in them while the deck lasts, then burns | the Bandit Chief, Tati |
+| coward | The smallest card it can play (a 2 counts as small) | Justin, the Lookout, the Acolyte |
+| reckless | The biggest ordinary card it can play; throws jokers at once | Gio, the Zealot |
+| novice | One legal card at random | the Spreading's pupils |
 
-Every host plays the same way; only the rules differ. Play-style ideas
-for bosses are in docs/design/strategy.md. To make it harder:
-
-- Track opponent card counts and avoid playing 7s into someone with low cards
-- Save 2s for when the pile is about to overwhelm you
-- Hold a 10 until the pile is large
-- Prefer to burn during your own extra turn so you don't gift the next player a clean pile
+A host's style is `botStyle` in src/campaign/characters.ts. Against three
+strategic bots (a fair share is 25%), sharp wins about a third of its
+games, strategic, schemer and coward a fifth to a quarter, reckless about
+a tenth (a fifth with jokers) and novices rarely. Free-play bots are
+strategic. The style ideas came from docs/design/strategy.md.
 
 ## License
 

@@ -19,11 +19,16 @@ export interface Card {
 }
 
 // How a bot picks among its legal plays. The engine only carries this; it is
-// interpreted by src/ai/bot.ts.
-//   strategic — the default heuristic.
+// interpreted by src/ai/bot.ts, which describes each style.
+//   strategic — the default: lowest ordinary card first, power cards saved.
+//   sharp     — strategic, plus blocking a next player who's close to out.
+//   schemer   — strategic, plus hoarding small piles with power cards in
+//               them while the deck lasts, and burning once it's gone.
+//   coward    — the smallest card it can play.
+//   reckless  — the biggest card it can play.
 //   novice    — one legal card at random: never unloads a set, never saves a
 //               power card. For characters who are still learning the game.
-export type BotStyle = 'strategic' | 'novice';
+export type BotStyle = 'strategic' | 'sharp' | 'schemer' | 'coward' | 'reckless' | 'novice';
 
 export interface PlayerConfig {
   name: string;

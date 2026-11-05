@@ -1,8 +1,11 @@
-import { decideBotAction, decideBotSwaps } from '../bot';
+import { decideBotAction, decideBotSwaps, SEARCH } from '../bot';
 import { createGame, finishSwap, pickupPile, playCards, swapCards } from '../../engine/engine';
 import { cardWorth, DEFAULT_RULES } from '../../engine/rules';
 import { JOKER_RANK } from '../../engine/cards';
-import { Card, GameState, Player, Rank, Suit } from '../../engine/types';
+import { BotStyle, Card, GameState, Player, PlayerConfig, Rank, Suit } from '../../engine/types';
+import { getPreset, PRESET_ORDER, RULE_PRESETS } from '../../campaign/presets';
+import { opponentsFor } from '../../campaign/characters';
+import { seedRandom } from '../../testing/seededRandom';
 
 // ─── helpers (same shapes as the engine tests) ───────────────────────────
 function card(rank: Rank, suit: Suit = '♠', id = `${rank}${suit}`): Card {
@@ -161,6 +164,167 @@ describe('decideBotAction', () => {
       expect(finished).toBeGreaterThan(0);
     });
   });
+});
+
+// A deck still to draw from (the cards themselves don't matter).
+const DECK = [card(3, '♣', 'd1'), card(4, '♣', 'd2'), card(5, '♣', 'd3')];
+const withDeck = (g: GameState): GameState => ({ ...g, drawPile: DECK });
+const ids = (a: { type: string; cardIds?: string[] }) => (a.type === 'play' ? a.cardIds : a.type);
+
+describe('play styles', () => {
+  describe('coward', () => {
+    const coward = (hand: Card[], pile: Card[] = []) =>
+      setupGame({ players: [player({ hand, botStyle: 'coward' }), player()], pile });
+
+    test('plays its smallest card, a 2 included, one at a time while the deck lasts', () => {
+      const g = withDeck(coward([card(5), card(2), card(13), card(5, '♥')]));
+      expect(ids(decideBotAction(g, 0))).toEqual(['2♠']);
+      const noTwo = withDeck(coward([card(5), card(13), card(5, '♥')]));
+      expect(ids(decideBotAction(noTwo, 0))).toEqual(['5♠']);
+    });
+
+    test('unloads every copy once the deck is gone', () => {
+      const g = coward([card(5), card(13), card(5, '♥')]);
+      expect(ids(decideBotAction(g, 0))).toEqual(['5♠', '5♥']);
+    });
+  });
+
+  describe('reckless', () => {
+    const reckless = (hand: Card[], pile: Card[] = [card(3)]) =>
+      setupGame({ players: [player({ hand, botStyle: 'reckless' }), player()], pile });
+
+    test('plays its biggest ordinary card and saves its 2s and 10s', () => {
+      const g = withDeck(reckless([card(4), card(13), card(10), card(2), card(13, '♥')]));
+      expect(ids(decideBotAction(g, 0))).toEqual(['13♠']);
+    });
+
+    test('throws a joker the moment it can', () => {
+      const joker: Card = { id: 'jr', rank: JOKER_RANK, suit: '♥', joker: 'reverse' };
+      const g = withDeck(reckless([card(4), card(13), joker]));
+      expect(ids(decideBotAction(g, 0))).toEqual(['jr']);
+    });
+
+    test('falls back to the cheapest power card when nothing ordinary plays', () => {
+      const g = reckless([card(4), card(10), card(2)], [card(14)]);
+      expect(ids(decideBotAction(g, 0))).toEqual(['2♠']);
+    });
+
+    test('unloads every copy once the deck is gone', () => {
+      const g = reckless([card(4), card(13), card(13, '♥')]);
+      expect(ids(decideBotAction(g, 0))).toEqual(['13♠', '13♥']);
+    });
+  });
+
+  describe('schemer', () => {
+    const schemer = (hand: Card[], pile: Card[]) =>
+      setupGame({ players: [player({ hand, botStyle: 'schemer' }), player()], pile });
+    const HAND = [card(4), card(9), card(12)];
+
+    test('takes up a small pile with a power card in it while the deck lasts', () => {
+      expect(decideBotAction(withDeck(schemer(HAND, [card(5), card(2)])), 0)).toEqual({ type: 'pickup' });
+      expect(decideBotAction(withDeck(schemer(HAND, [card(10, '♥')])), 0)).toEqual({ type: 'pickup' });
+    });
+
+    test('plays as usual into a big pile, a pile without power cards, or with a full hand', () => {
+      const big = [card(3), card(2), card(5), card(3, '♥')];
+      expect(ids(decideBotAction(withDeck(schemer(HAND, big)), 0))).toEqual(['4♠']);
+      expect(ids(decideBotAction(withDeck(schemer(HAND, [card(3), card(4, '♥')])), 0))).toEqual(['4♠']);
+      const full = [...HAND, card(5), card(6), card(7), card(11)];
+      expect(ids(decideBotAction(withDeck(schemer(full, [card(2)])), 0))).toEqual(['4♠']);
+    });
+
+    test('stops hoarding and burns once the deck is gone', () => {
+      expect(ids(decideBotAction(schemer([card(4), card(10)], [card(3), card(2)]), 0))).toEqual(['10♠']);
+    });
+
+    test('completes a four of a kind to burn, too', () => {
+      const pile = [card(6, '♥'), card(6, '♦'), card(6, '♣')];
+      expect(ids(decideBotAction(schemer([card(9), card(6)], pile), 0))).toEqual(['6♠']);
+    });
+  });
+
+  describe('sharp', () => {
+    test('plays the card the next player can\'t answer when they\'re about to go out', () => {
+      // The deck is gone. A 4 lets the opponent's 6 out; a 9 makes them pick
+      // up, and the 4 then goes out. The strategic move would be the 4.
+      const g = setupGame({
+        players: [
+          player({ hand: [card(4), card(9)], botStyle: 'sharp' }),
+          player({ hand: [card(6, '♥')] }),
+        ],
+      });
+      expect(ids(decideBotAction({ ...g, players: g.players.map((p, i) => (i === 0 ? p : { ...p, botStyle: undefined })) }, 0)))
+        .toEqual(['9♠']);
+      expect(ids(decideBotAction({ ...g, players: g.players.map((p) => ({ ...p, botStyle: 'strategic' as BotStyle })) }, 0)))
+        .toEqual(['4♠']);
+    });
+
+    test('never looks at hidden cards: the same table with the hidden cards moved gets the same move', () => {
+      const seen = { hand: [card(4), card(9), card(12)], botStyle: 'sharp' as BotStyle };
+      const a = setupGame({
+        players: [player(seen), player({ hand: [card(6, '♥')], faceDown: [card(13, '♥')] })],
+        pile: [card(3)],
+      });
+      const b = setupGame({
+        players: [player(seen), player({ hand: [card(13, '♥')], faceDown: [card(6, '♥')] })],
+        pile: [card(3)],
+      });
+      for (const seed of [1, 2, 3]) {
+        let restore = seedRandom(seed);
+        const first = decideBotAction(withDeck(a), 0);
+        restore();
+        restore = seedRandom(seed);
+        const second = decideBotAction(withDeck(b), 0);
+        restore();
+        expect(second).toEqual(first);
+      }
+    });
+  });
+
+  // The campaign's real tables, with a strategic bot in the human's seat:
+  // every decision must be one the engine accepts (an action that left the
+  // state untouched would freeze the real game on that bot's turn), and
+  // the games should end. No assertion that every one does: bots left to
+  // each other can settle into a standoff no human would tolerate.
+  test('every campaign table plays out with its hosts\' styles', () => {
+    const restore = seedRandom(2027);
+    // A lighter search for the sharp host: this checks the moves, not the strength.
+    const full = { ...SEARCH };
+    Object.assign(SEARCH, { worlds: 4, minWorlds: 4 });
+    for (const id of PRESET_ORDER) {
+      const preset = getPreset(id);
+      const cast = opponentsFor(id);
+      let finished = 0;
+      const games = 12;
+      for (let n = 0; n < games; n++) {
+        const lineup: PlayerConfig[] = [
+          { name: 'Stand-in', isBot: true },
+          ...cast.map((c) => {
+            const home = preset.seatRules && c.homeTable ? RULE_PRESETS[c.homeTable] : undefined;
+            return { name: c.name, isBot: true, botStyle: c.botStyle, ...(home ? { rules: home } : {}) };
+          }),
+        ];
+        let g = createGame(lineup, preset);
+        for (let i = 0; i < g.players.length; i++) {
+          for (const sw of decideBotSwaps(g, i)) g = swapCards(g, i, sw.handCardId, sw.faceUpCardId);
+          g = finishSwap(g, i);
+        }
+        for (let turn = 0; g.phase === 'playing' && turn < 1500; turn++) {
+          const idx = g.currentPlayerIndex;
+          const action = decideBotAction(g, idx);
+          const next = action.type === 'pickup'
+            ? pickupPile(g, idx).state
+            : playCards(g, idx, action.cardIds, { swapTargetId: action.swapTargetId }).state;
+          expect(next).not.toBe(g);
+          g = next;
+        }
+        if (g.phase === 'gameOver') finished++;
+      }
+      expect(finished).toBeGreaterThanOrEqual(games - 2);
+    }
+    Object.assign(SEARCH, full);
+    restore();
+  }, 120000);
 });
 
 describe('decideBotSwaps', () => {

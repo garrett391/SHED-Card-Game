@@ -1,6 +1,21 @@
 # Player Strategies
 An attempt to lay out play style for bots and bosses
 
+**Shipped Nov 2026** as bot styles in `src/ai/bot.ts` (see the README's
+"Tweaking the bots" for who plays which):
+- Dickhead → `reckless`: biggest card first. Playing literally every big
+  card, 2s and 10s included, won under a tenth of its games against
+  strategic bots, so it saves its 2s and 10s like anyone and throws
+  jokers at once instead.
+- Coward → `coward`, as written: a 2 counts as small.
+- Schemer → `schemer`: "pick up the pile" became taking up small piles
+  (3 cards or fewer) with a 2, 10 or joker in them, while the deck lasts
+  and until their hand reaches 7. Late game, burns when able.
+- Nick Strat isn't a style of its own: Nick sits on the player's side.
+  Its core (watch the next player, play what they can't answer) is part of
+  `sharp`, Greg's style, which plays out its options instead of following
+  rules. The taunts would make good table talk.
+
 ## Dickhead Strat
 ### Early game
 - Play largest available card

@@ -257,6 +257,8 @@ export const CHARACTERS: Record<string, Character> = {
     title: "Justin's newest follower",
     emoji: '🕯️',
     portrait: null,
+    // Copies Justin: always the smallest card.
+    botStyle: 'coward',
     quips: [
       'Brother Justin says the 8 must kneel.',
       'I used to play the soft way. I am ashamed.',
@@ -284,6 +286,8 @@ export const CHARACTERS: Record<string, Character> = {
     title: "Justin's most devoted follower",
     emoji: '🔥',
     portrait: null,
+    // All fire: the biggest card going.
+    botStyle: 'reckless',
     quips: [
       'Soft rules make soft players.',
       'Every 8 we found, we burned.',
@@ -314,6 +318,8 @@ export const CHARACTERS: Record<string, Character> = {
     // one seat can't do at a shared table.
     homeTable: 'justins-schism',
     portrait: require('../../assets/characters/justin.png'),
+    // Plays it safe: always the smallest card he can.
+    botStyle: 'coward',
     quips: [
       'The old rules were too soft.',
       'An 8 is not above the law.',
@@ -364,6 +370,8 @@ export const CHARACTERS: Record<string, Character> = {
     emoji: '🖥️',
     homeTable: 'super-tens',
     portrait: require('../../assets/characters/greg.png'),
+    // The machine thinks ahead: he plays every option out before he moves.
+    botStyle: 'sharp',
     quips: [
       'That move is legal. Trust me, I used to program.',
       "In MY version of the rules, I'm always right.",
@@ -404,6 +412,8 @@ export const CHARACTERS: Record<string, Character> = {
     title: 'Holds the pass. Sells the rules.',
     emoji: '🤠',
     portrait: null,
+    // Loots small piles with 2s and 10s in them, then burns.
+    botStyle: 'schemer',
     homeTable: 'bandit',
     quips: [
       'Rulebooks! Fresh copies! Every rule you need and a few you don\'t.',
@@ -446,6 +456,8 @@ export const CHARACTERS: Record<string, Character> = {
     title: 'Saw you coming a mile off',
     emoji: '🌵',
     portrait: null,
+    // Jumpy: always the smallest card going.
+    botStyle: 'coward',
     homeTable: 'bandit',
     quips: [
       'Saw your dust three valleys back.',
@@ -488,6 +500,8 @@ export const CHARACTERS: Record<string, Character> = {
     emoji: '🤡',
     homeTable: 'chaos-shed',
     portrait: require('../../assets/characters/gio.png'),
+    // Big cards first, and a joker the moment one turns up.
+    botStyle: 'reckless',
     quips: [
       'Ha! Ha ha. Sorry. I just pictured your face two turns from now.',
       'Rules are jokes nobody laughs at anymore. I laugh at all of them.',
@@ -520,6 +534,8 @@ export const CHARACTERS: Record<string, Character> = {
     emoji: '🎭',
     homeTable: 'chaos-shed',
     portrait: require('../../assets/characters/tati.png'),
+    // Hoards the power cards while the deck lasts, then burns.
+    botStyle: 'schemer',
     quips: [
       'Shh. Do you hear that? The deck is giggling.',
       'Order is just chaos that has not heard the punchline yet.',
