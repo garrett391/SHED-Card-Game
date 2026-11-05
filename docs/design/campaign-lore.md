@@ -41,13 +41,13 @@ ladder until both are known; there are no placeholder nodes.
 | 4 | Super Tens | Greg the Computer Lord | Writes his own rules, like code: 10s burn through 7s | Locked |
 | 5 | The Outlaw Pass | The Bandit Chief, the Lookout | Stick-up: a bandit's 7 swaps their lowest card for your highest | Locked (Oct 2026) |
 | 6 | Chaos Shed | Gio and Tati, the Chaos Twins | Two jokers: reverse play, swap hands (see below) | Locked |
-| 7 | The Second Schism | Justin, the Acolyte, the Zealot | Justin returns having burned every 8: the deck is dealt without 8s | Draft (Oct 2026) |
-| 8 | The Council of Schisms | Justin, Greg, Gio, Tati | Semi-finale: each plays by their own table's rules on their turn | Draft (Oct 2026) |
+| 7 | The Second Schism | Justin, the Acolyte, the Zealot | Justin returns having burned every 8: the deck is dealt without 8s | Locked (Oct 2026) |
+| 8 | The Council of Schisms | Justin, Greg, Gio, Tati | Semi-finale: each plays by their own table's rules on their turn | Locked (Oct 2026) |
 | … | (open slots) | | | |
 | Finale | (unnamed) | **Chris the Scribe** | Holds the pen. Rewrites rules MID-GAME. | Not built |
 
-Chris is the finale, however many nodes come before him. The ladder ends
-at Chaos Shed in the shipped game until the next real table is decided.
+Chris is the finale, however many nodes come before him. The shipped
+ladder ends at the Council of Schisms until the next real table is decided.
 
 The ending, for now (Oct 2026): beating the last node plays a short
 "to be continued" cutscene (`ENDING_ID` in story.ts): the fog at the edge
@@ -177,8 +177,11 @@ Shipped Oct 2026: a Super Mario World-style 16-bit overworld (repainted from 8-b
 heroes stand at the current node and the map climbs from the bottom:
 Jake's old wood (forest and campfire), the village of The Spreading
 (cottages, pond, wheat), Justin's chapel on a plateau with its graveyard,
-Greg's machine keep in an ashland of lava, and Gio and Tati's carnival
-(big top, checker plaza, balloons). Above the last node, a fog bank hides
+Greg's machine keep in an ashland of lava, the Outlaw Pass (red-rock
+canyon, the bandits' camp and their wagon of quill-sealed rulebooks), Gio
+and Tati's carnival (big top, checker plaza, balloons), Justin's dark
+cathedral for the Second Schism (red banners, burning cards), and the
+Council's round table in a ring of pillars. Above the last node, a fog bank hides
 the rest of the land, with Chris's tower and quill rising out of it. The
 tower is scenery, not a node.
 
