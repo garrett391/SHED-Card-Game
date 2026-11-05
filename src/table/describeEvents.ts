@@ -79,8 +79,11 @@ export function describeAction(
     if (swapped && swapped.type === 'handsSwapped') {
       effects.push(`🔀 Swaps hands with ${nameOf(swapped.targetId)}!`);
     }
-    if (events.some((e) => e.type === 'playerFinished')) {
-      effects.push('🏆 Out of the game!');
+    for (const e of events) {
+      if (e.type !== 'playerFinished') continue;
+      effects.push(e.playerId === played.playerId
+        ? '🏆 Out of the game!'
+        : `🏆 ${nameOf(e.playerId)} is out!`);
     }
 
     return {

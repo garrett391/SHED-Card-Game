@@ -910,6 +910,41 @@ describe('rule variants', () => {
       expect(r.state.players[1].hand.map(c => c.id)).toEqual(['mine']);
     });
 
+    test('handing over an empty hand puts out a player whose hand was all they had', () => {
+      const state = setupGame({
+        players: [
+          player({ hand: [swapJ()], faceUp: [card(9)] }),
+          player({ hand: [card(6, '♠', 'b1')] }),
+          player({ hand: [card(8, '♠', 'c1')], faceDown: [card(3)] }),
+        ],
+        ruleConfig: J,
+      });
+      const r = playCards(state, 0, ['js'], { swapTargetId: 1 });
+      expect(r.state.players[0].hand.map(c => c.id)).toEqual(['b1']);
+      expect(r.state.players[1].isFinished).toBe(true);
+      expect(r.events).toContainEqual({ type: 'playerFinished', playerId: 1 });
+      expect(r.state.winnerId).toBe(1);
+      expect(r.state.phase).toBe('gameOver');
+    });
+
+    test('last man standing: the emptied player is out and play skips them', () => {
+      const state = {
+        ...setupGame({
+          players: [
+            player({ hand: [swapJ()], faceUp: [card(9)] }),
+            player({ hand: [card(6, '♠', 'b1')] }),
+            player({ hand: [card(8, '♠', 'c1')], faceDown: [card(3)] }),
+          ],
+          ruleConfig: J,
+        }),
+        lastManStanding: true,
+      };
+      const r = playCards(state, 0, ['js'], { swapTargetId: 1 });
+      expect(r.state.players[1].isFinished).toBe(true);
+      expect(r.state.phase).toBe('playing');
+      expect(r.state.currentPlayerIndex).toBe(2);
+    });
+
     test('no swap when the joker was your last card', () => {
       const state = setupGame({
         players: [player({ hand: [swapJ()] }), player({ hand: [card(6, '♠', 'b1')] })],

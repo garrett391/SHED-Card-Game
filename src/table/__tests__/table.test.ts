@@ -51,6 +51,18 @@ describe('describeAction', () => {
     expect(captionText('Jake', d)).toBe('Jake played 10♠ · 🔥 Burns the pile! · 🏆 Out of the game!');
   });
 
+  test('a swap joker that puts the other player out says who', () => {
+    const joker: Card = { id: 'js', rank: 15 as Rank, suit: '♠', joker: 'swap' };
+    const events: GameEvent[] = [
+      { type: 'cardsPlayed', playerId: 1, cards: [joker], source: 'hand' },
+      { type: 'handsSwapped', playerId: 1, targetId: 2 },
+      { type: 'playerFinished', playerId: 2 },
+    ];
+    expect(describeAction(events, DEFAULT_RULES, game.players).detail).toBe(
+      '🔀 Swaps hands with Bot!\n🏆 Bot is out!',
+    );
+  });
+
   test('a set counts its cards', () => {
     const events: GameEvent[] = [
       { type: 'cardsPlayed', playerId: 2, cards: [card(13), card(13, '♥')], source: 'hand' },

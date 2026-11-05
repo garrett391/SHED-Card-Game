@@ -405,6 +405,14 @@ export function playCards(
       );
       events.push({ type: 'handsSwapped', playerId: playerIdx, targetId });
       log.push(entry(log, `${player.name} swaps hands with ${players[targetId].name}!`, playerIdx));
+      // Handing over an empty hand puts the other player out, if their hand
+      // was all they had left.
+      const target = players[targetId];
+      if (target.hand.length === 0 && target.faceUp.length === 0 && target.faceDown.length === 0) {
+        players = players.map((p, i) => (i === targetId ? { ...p, isFinished: true } : p));
+        events.push({ type: 'playerFinished', playerId: targetId });
+        log.push(entry(log, `${target.name} is out!`, targetId));
+      }
     }
   }
 
@@ -475,9 +483,11 @@ export function playCards(
   let winnerId = state.winnerId;
   let shitheadId = state.shitheadId;
 
-  // First player to finish wins; mark winner so we never overwrite.
-  if (winnerId === null && events.some(e => e.type === 'playerFinished')) {
-    winnerId = playerIdx;
+  // First player to finish wins; mark winner so we never overwrite. Usually
+  // that's whoever just played, but a swap joker can put the other player out.
+  const firstOut = events.find(e => e.type === 'playerFinished');
+  if (winnerId === null && firstOut && firstOut.type === 'playerFinished') {
+    winnerId = firstOut.playerId;
   }
 
   const remaining = players.filter(p => !p.isFinished);

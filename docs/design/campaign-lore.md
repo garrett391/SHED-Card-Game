@@ -165,7 +165,9 @@ The joker edition, shipped Oct 2026 (`jokers: true` on the preset):
 - Black joker: swaps your hand with another player's, after you draw back
   up to three. You choose who; a blind face-down flip swaps with the next
   player. If the joker was your last card you're out and nothing swaps.
-  Swapping for an empty hand can put you out.
+  Swapping for an empty hand can put you out, and handing over an empty
+  hand puts the other player out if their hand was all they had left
+  (until Nov 2026 the engine missed this and the game froze on their turn).
 - Bots save jokers for last and steal the smallest hand.
 
 The 9 no longer reverses in Chaos Shed; it was a stand-in until jokers
