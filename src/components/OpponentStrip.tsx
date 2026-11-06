@@ -14,6 +14,11 @@ interface Props {
 }
 
 /** A horizontal strip showing a player: name, hand count, face-up cards, face-down count. */
+/** How long table talk stays fully readable, and its whole life on screen
+ *  (fade in, hold, fade out). The table screen retires it after BUBBLE_MS. */
+const BUBBLE_HOLD_MS = 4000;
+export const BUBBLE_MS = 220 + BUBBLE_HOLD_MS + 450;
+
 export function OpponentStrip({ player, isCurrent, bubble }: Props) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   // Speech bubble: fade/slide in, hold, fade out. Runs per nonce so the same
@@ -27,7 +32,7 @@ export function OpponentStrip({ player, isCurrent, bubble }: Props) {
     bubbleAnim.setValue(0);
     const seq = Animated.sequence([
       Animated.timing(bubbleAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
-      Animated.delay(2400),
+      Animated.delay(BUBBLE_HOLD_MS),
       Animated.timing(bubbleAnim, { toValue: 0, duration: 450, useNativeDriver: true }),
     ]);
     seq.start();

@@ -7,7 +7,7 @@ import { AchievementToast } from '../src/components/AchievementToast';
 import { Center } from '../src/components/Center';
 import { GameLogModal } from '../src/components/GameLogModal';
 import { HandArea, WatchingHand } from '../src/components/HandArea';
-import { OpponentStrip } from '../src/components/OpponentStrip';
+import { BUBBLE_MS, OpponentStrip } from '../src/components/OpponentStrip';
 import { StickUpCard } from '../src/components/StickUpCard';
 import { FlipResultGate, PassDeviceGate, SwapTargetPicker } from '../src/components/TableGates';
 import { TurnBanner } from '../src/components/TurnBanner';
@@ -119,7 +119,7 @@ export default function GameScreen() {
     setBotAction(null);
   }, BOT_DISPLAY_MS);
   // The bubble's fade lives in OpponentStrip; this just retires the state.
-  useAutoClear(tableTalk, () => setTableTalk(null), 3400);
+  useAutoClear(tableTalk, () => setTableTalk(null), BUBBLE_MS);
   // A touch longer than the bot pacing, so the line lingers into the next turn.
   useAutoClear(actionCaption, () => setActionCaption(null), 2600);
   // The human's winning play gets the same beat bots get.
