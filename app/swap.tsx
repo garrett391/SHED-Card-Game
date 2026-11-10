@@ -73,11 +73,14 @@ export default function SwapScreen() {
   // Auto-reveal for solo human (no pass-and-play privacy needed).
   const humanCount = game ? game.players.filter((p) => !p.isBot).length : 0;
 
+  // Only once there's a game to count humans in: while a saved game is
+  // still loading there are none, and revealing then would skip the gate
+  // for a pass-and-play table.
   useEffect(() => {
-    if (!handRevealed && humanCount <= 1) {
+    if (game && !handRevealed && humanCount <= 1) {
       revealHand();
     }
-  }, [handRevealed, humanCount, revealHand]);
+  }, [game, handRevealed, humanCount, revealHand]);
 
   if (!game || !activePlayer) {
     return (
@@ -145,13 +148,17 @@ export default function SwapScreen() {
     hideHand();
   };
 
+  // Sized so all three rows and the Done button fit a phone screen: the
+  // two rows you trade between must be visible together. The face-down
+  // cards are only a reminder, so they're drawn small.
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <View style={styles.screen}>
+    <ScrollView contentContainerStyle={styles.swapContent}>
       <Text style={styles.who}>{activePlayer.name}'s swap</Text>
       <VariantBadge config={game.ruleConfig} />
       <Text style={styles.hint}>
-        Tap one hand card + one face-up card to swap them. Repeat as needed.
-        {'\n'}This is your only chance before play begins — choose wisely!
+        Tap a hand card and a face-up card to swap them. This is your only
+        chance before play begins.
       </Text>
 
       <Text style={styles.section}>Face-up (mid-game)</Text>
@@ -169,7 +176,7 @@ export default function SwapScreen() {
       <Text style={styles.section}>Face-down (late game)</Text>
       <View style={styles.row}>
         {activePlayer.faceDown.map((c) => (
-          <PlayingCard key={c.id} faceDown />
+          <PlayingCard key={c.id} faceDown small />
         ))}
       </View>
 
@@ -185,14 +192,17 @@ export default function SwapScreen() {
         ))}
       </View>
 
-      <View style={styles.footer}>
-        <Button title="Done — next player" onPress={done} />
-      </View>
     </ScrollView>
+    <View style={styles.footer}>
+      <Button title="Done — next player" onPress={done} />
+    </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: theme.color.feltBg },
+  swapContent: { padding: theme.space.md, paddingBottom: theme.space.sm },
   container: {
     padding: theme.space.lg,
     paddingBottom: 60,
@@ -231,20 +241,27 @@ const styles = StyleSheet.create({
     color: theme.color.textMuted,
     fontSize: 13,
     textAlign: 'center',
-    marginBottom: 18,
+    marginBottom: 4,
   },
   section: {
     color: theme.color.textOnDark,
     fontSize: 13,
     fontWeight: '600',
-    marginTop: 18,
-    marginBottom: 6,
+    marginTop: 10,
+    marginBottom: 2,
   },
   row: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingVertical: 16, // room for selected card lift
+    paddingTop: 16, // room for selected card lift
+    paddingBottom: 4,
   },
-  footer: { marginTop: 28 },
+  footer: {
+    paddingHorizontal: theme.space.lg,
+    paddingTop: theme.space.sm,
+    paddingBottom: theme.space.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.10)',
+  },
   dim: { color: theme.color.textMuted, textAlign: 'center', marginTop: 80 },
 });

@@ -59,6 +59,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     marginVertical: 3,
+    // The height it has with the Play button, kept when the button's away.
+    minHeight: 54,
     backgroundColor: theme.color.feltBgDark,
     borderRadius: theme.radius.md,
   },

@@ -402,13 +402,12 @@ export default function SetupScreen() {
           <Button title="+ Add player" variant="ghost" onPress={addPlayer} />
         )}
 
-        <View style={styles.footer}>
-          <Button
-            title="Deal cards"
-            onPress={start}
-          />
-        </View>
       </ScrollView>
+
+      {/* Docked under the list, so dealing never needs a scroll. */}
+      <View style={styles.footer}>
+        <Button title="Deal cards" onPress={start} />
+      </View>
 
       {/* Floating scroll-down cue — only visible while content sits below the fold */}
       <Animated.View
@@ -423,7 +422,7 @@ export default function SetupScreen() {
             })
           }
           accessibilityRole="button"
-          accessibilityLabel="Scroll down for players and deal"
+          accessibilityLabel="Scroll down for more players"
           style={styles.scrollCuePill}
           hitSlop={8}
         >
@@ -439,14 +438,15 @@ export default function SetupScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  container: { padding: theme.space.lg, paddingBottom: 40 },
+  container: { padding: theme.space.lg, paddingBottom: theme.space.lg },
 
   // Floating scroll-down cue
   scrollCue: {
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 16,
+    // Clear of the docked Deal button.
+    bottom: 92,
     alignItems: 'center',
   },
   scrollCuePill: {
@@ -643,6 +643,9 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    // On the web an input won't shrink below its default width without
+    // this, and pushes the remove button off a phone screen.
+    minWidth: 0,
     marginHorizontal: 10,
     fontSize: 16,
     color: theme.color.textOnDark,
@@ -652,5 +655,11 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.color.textMuted,
   },
   removeBtn: { padding: 8 },
-  footer: { marginTop: 24 },
+  footer: {
+    paddingHorizontal: theme.space.lg,
+    paddingTop: theme.space.sm,
+    paddingBottom: theme.space.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.10)',
+  },
 });

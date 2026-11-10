@@ -151,10 +151,13 @@ export function Center({ game, onPickup, isHumanTurn, mustPickup }: Props) {
       );
     }
 
+    // Same frame and hint line as the tappable pile, left blank, so the
+    // table doesn't shift when the turn passes.
     return (
       <View style={styles.column}>
         <Text style={styles.label}>Pile</Text>
-        {pileContent}
+        <View style={[styles.pileTappable, styles.pileIdle]}>{pileContent}</View>
+        <Text style={styles.pickupHint}> </Text>
       </View>
     );
   };
@@ -234,7 +237,7 @@ const styles = StyleSheet.create({
   pileGlow: {
     borderWidth: 3,
     borderRadius: theme.radius.md + 4,
-    padding: 4,
+    padding: 3, // border + padding matches pileTappable, so nothing shifts
     alignItems: 'center',
     // Shadow for the glow effect (iOS)
     shadowColor: theme.color.accent,
@@ -250,6 +253,7 @@ const styles = StyleSheet.create({
     padding: 4,
     alignItems: 'center',
   },
+  pileIdle: { borderColor: 'transparent' },
   // First tap of a voluntary pickup: the pile asks to be tapped again
   pileConfirming: {
     borderColor: theme.color.accent,

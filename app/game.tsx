@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.space.md,
     paddingTop: theme.space.xs,
     // Lets the last strip scroll clear of the floating caption.
-    paddingBottom: 20,
+    paddingBottom: 14,
   },
   // The badge sits centred; the log button rides the right edge.
   tableHeader: { justifyContent: 'center', zIndex: 10 },
@@ -493,9 +493,9 @@ const styles = StyleSheet.create({
     top: -24,
     zIndex: 5,
   },
-  playerArea: { flexGrow: 0, marginTop: 2 },
-  // Tall enough for one row of cards, so the dock doesn't jump between
-  // your turn and everyone else's.
-  playerAreaContent: { minHeight: 128 },
+  // Always at least one row of cards tall, so the dock doesn't jump
+  // between your turn and everyone else's.
+  playerArea: { flexGrow: 0, marginTop: 2, minHeight: 128 },
+  playerAreaContent: {},
   dim: { color: theme.color.textMuted, fontStyle: 'italic' },
 });
