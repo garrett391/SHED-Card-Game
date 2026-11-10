@@ -150,6 +150,16 @@ From the pass on, the Scribe is hinted at, never shown:
   an empty chair with a quill and inkwell set before it. The Scribe called it but never
   appears; the tower in the ending is the first time he is (almost) seen.
 
+**The tutorial.** Chris teaches the tutorial, but only as "Chris, a Shed
+enthusiast": a friendly stranger who knows the rules. He is never called
+the Scribe there, and nothing in it mentions a quill, a book or keeping
+the rules. The campaign's "Scribe" stays faceless and unnamed, so the
+reveal at the tower is that the man who taught you is the one holding the
+pen. (In real life everyone learns the rules from Chris's notes.) His
+tutorial portrait is hooded, like the visitor who frees Justin; that is
+left as a hint for now, and an unhooded tutorial portrait is the fix if
+it gives too much away.
+
 ## Chaos Shed — the Chaos Twins
 
 Gio (red and blue jester) and Tati (purple and green). You face them

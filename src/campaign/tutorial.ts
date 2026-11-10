@@ -107,7 +107,7 @@ export const LESSONS: Lesson[] = [
     id: 'welcome',
     title: 'Welcome',
     intro: [
-      "Ah — a new face at the table! I'm Chris, keeper of the rules of Shed. Let me show you the ropes.",
+      "Ah — a new face at the table! I'm Chris, a Shed enthusiast. Let me show you the ropes.",
       'The aim is simple: be the first to get rid of all your cards. Any soul still clutching their cards is a Shithead.',
       'You play from three stacks in order — your hand first, then your three face-up cards, and finally your face-down cards, flipped blind. Empty all three and you are out.',
     ],

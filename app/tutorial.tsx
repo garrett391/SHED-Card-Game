@@ -206,10 +206,12 @@ export default function TutorialScreen() {
         </View>
       )}
 
-      {/* Chris */}
+      {/* Chris. Here he is only a Shed enthusiast: the tutorial must not
+          name him the Scribe, or the campaign's reveal is spent before it
+          starts (see docs/design/campaign-lore.md, Foreshadowing Chris). */}
       <View style={styles.dialogueWrap}>
         <CharacterDialogue
-          name="Chris the Scribe"
+          name="Chris, a Shed enthusiast"
           text={text}
           portrait={CHRIS_PORTRAIT}
           onAdvance={() => {
