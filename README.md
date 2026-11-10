@@ -122,6 +122,7 @@ and full integration scenarios.
 │   │   ├── stickUp.ts          Which stick-ups get the wanted-poster panel
 │   │   ├── useBotAutoplay.ts   Plays bot turns at a readable pace
 │   │   ├── pacing.ts           Bot-turn timings for each game speed
+│   │   ├── handLayout.ts       When a big hand switches to small cards
 │   │   └── useAutoClear.ts     Retires short-lived UI state
 │   ├── achievements/
 │   │   └── achievements.ts     What each achievement is and how it's detected

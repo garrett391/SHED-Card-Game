@@ -31,6 +31,7 @@ export function HandArea({
   onToggle,
   onSelectRank,
   onFlip,
+  compact,
 }: {
   player: Player;
   playableIds: readonly string[];
@@ -39,6 +40,8 @@ export function HandArea({
   /** Long-press a card: select its whole set. */
   onSelectRank: (cardId: string) => void;
   onFlip: (cardId: string) => void;
+  /** Small cards, for a hand too big for two rows. */
+  compact?: boolean;
 }) {
   const source = getPlaySource(player);
   // Lowest to highest, so the hand reads in order.
@@ -62,6 +65,7 @@ export function HandArea({
               card={c}
               selected={selectedIds.includes(c.id)}
               dimmed={!playableIds.includes(c.id)}
+              small={compact}
               onPress={() => onToggle(c.id)}
               onLongPress={() => onSelectRank(c.id)}
             />
@@ -76,7 +80,7 @@ export function HandArea({
         <Text style={styles.sectionLabel}>Late game — blind flip. Pick one.</Text>
         <View style={styles.cardRow}>
           {player.faceDown.map((c) => (
-            <PlayingCard key={c.id} faceDown onPress={() => onFlip(c.id)} />
+            <PlayingCard key={c.id} faceDown small={compact} onPress={() => onFlip(c.id)} />
           ))}
         </View>
       </>
@@ -89,7 +93,15 @@ export function HandArea({
  * While someone else plays, the lone human keeps their cards in view,
  * dimmed and untappable, so they can plan ahead.
  */
-export function WatchingHand({ player, currentName }: { player: Player; currentName: string }) {
+export function WatchingHand({
+  player,
+  currentName,
+  compact,
+}: {
+  player: Player;
+  currentName: string;
+  compact?: boolean;
+}) {
   const src = getPlaySource(player);
   if (src === null) {
     return <Text style={styles.dim}>You're out. Watching {currentName}…</Text>;
@@ -109,7 +121,7 @@ export function WatchingHand({ player, currentName }: { player: Player; currentN
       </Text>
       <View style={styles.cardRow}>
         {cards.map((c) => (
-          <PlayingCard key={c.id} card={c} faceDown={src === 'faceDown'} dimmed disabled />
+          <PlayingCard key={c.id} card={c} faceDown={src === 'faceDown'} small={compact} dimmed disabled />
         ))}
       </View>
     </>
@@ -130,7 +142,9 @@ const styles = StyleSheet.create({
   cardRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingVertical: 16, // room for selected lift
+    paddingTop: 16, // room for selected lift
+    paddingBottom: 4,
+    rowGap: 6,
   },
   dim: { color: theme.color.textMuted, fontStyle: 'italic' },
 });

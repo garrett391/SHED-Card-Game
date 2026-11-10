@@ -198,11 +198,15 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 2,
     paddingHorizontal: 10,
     borderRadius: theme.radius.md,
     backgroundColor: theme.color.feltBgDark,
-    marginVertical: 3,
+    marginVertical: 2,
+    // Same outline width as the current player's, so a strip doesn't
+    // change size when the turn reaches it.
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   current: {
     borderWidth: 2,

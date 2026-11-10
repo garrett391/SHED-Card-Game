@@ -9,12 +9,16 @@ import { theme } from './theme';
 export function TurnBanner({
   title,
   recent,
+  notice,
   selectedCount,
   onPlay,
 }: {
   title: string;
   /** The last action, one line; omitted before anyone has played. */
   recent?: string;
+  /** A short-lived message (why a play was refused) shown in place of
+   *  `recent`, so nothing below it moves. */
+  notice?: string;
   selectedCount: number;
   /** Shows the Play button. */
   onPlay?: () => void;
@@ -24,7 +28,11 @@ export function TurnBanner({
     <View style={styles.banner}>
       <View style={styles.info}>
         <Text style={styles.title}>{title}</Text>
-        {recent !== undefined && <Text style={styles.recent}>{recent}</Text>}
+        {notice !== undefined ? (
+          <Text style={[styles.recent, styles.notice]}>{notice}</Text>
+        ) : (
+          recent !== undefined && <Text style={styles.recent}>{recent}</Text>
+        )}
       </View>
       {onPlay && (
         <Pressable
@@ -50,7 +58,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 12,
-    marginVertical: 6,
+    marginVertical: 3,
     backgroundColor: theme.color.feltBgDark,
     borderRadius: theme.radius.md,
   },
@@ -67,6 +75,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
+  notice: { color: theme.color.accent, fontWeight: '600' },
   playBtn: {
     paddingVertical: 10,
     paddingHorizontal: 18,

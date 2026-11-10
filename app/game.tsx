@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScrollText } from 'lucide-react-native';
 import { ActionCaption, Caption } from '../src/components/ActionCaption';
 import { AchievementToast } from '../src/components/AchievementToast';
@@ -20,7 +21,7 @@ import {
   hasPlayableMove,
   swapTargets,
 } from '../src/engine/engine';
-import { Card } from '../src/engine/types';
+import { Card, Player } from '../src/engine/types';
 import { useCampaignStore } from '../src/store/campaignStore';
 import { useGameHydrated, useGameStore } from '../src/store/gameStore';
 import { useProfileStore } from '../src/store/profileStore';
@@ -30,6 +31,7 @@ import {
   flipOutcome,
   summarizeRecent,
 } from '../src/table/describeEvents';
+import { needsCompactHand } from '../src/table/handLayout';
 import { pacingFor } from '../src/table/pacing';
 import { isSoleHuman, SeatedStickUp, stickUpFrom } from '../src/table/stickUp';
 import { describeBotTurn, heckle } from '../src/table/tableTalk';
@@ -39,12 +41,15 @@ import { useBotAutoplay } from '../src/table/useBotAutoplay';
 /**
  * Main table screen.
  *
- * Layout (top → bottom):
- *  - Player scoreboard (ALL players, fixed order, turn indicator on active)
- *  - Action caption (ephemeral "who played what", fades after a beat)
- *  - Center area (draw / pile / burned)
- *  - Turn banner + recent events
- *  - Current player's hand area + action buttons
+ * Layout: built to fit a phone screen without scrolling to reach your cards.
+ *  - Top, scrolling: variant badge + log button, then the player scoreboard
+ *    (ALL players, fixed order, turn indicator on active). It follows the
+ *    turn, so at a big table the player who's up is always in view.
+ *  - Bottom, docked: action caption (ephemeral "who played what", floating
+ *    over the dock's top edge), center area (draw / pile / burned), turn
+ *    banner + recent events + Play, and the current player's hand. A hand
+ *    too big for two rows switches to small cards, and scrolls within the
+ *    dock if it still doesn't fit.
  *
  * Two things drive the UX:
  *  1. Bot turns auto-advance with a small delay so you can see what happened
@@ -94,7 +99,8 @@ export default function GameScreen() {
   // flipResult gate, which waits for a Continue tap.)
   const [finalHold, setFinalHold] = useState(false);
 
-  // Toast: empty-selection taps and rejected-play reasons
+  // Notice: empty-selection taps and rejected-play reasons (shown in the
+  // turn banner)
   const [toast, setToast] = useState<string | null>(null);
 
   // Bot action pacing: while set, the next bot turn is held for pacing.displayMs
@@ -190,6 +196,9 @@ export default function GameScreen() {
     const rejection = recentEvents.find((e) => e.type === 'playRejected');
     if (rejection && rejection.type === 'playRejected') {
       setToast(rejection.reason);
+    } else if (recentEvents.length > 0) {
+      // The next action that goes through retires any notice still up.
+      setToast(null);
     }
     // A human's pickup or burn draws a heckle after a short beat, so it
     // reads as a response, not a simultaneous caption.
@@ -214,11 +223,30 @@ export default function GameScreen() {
     }
   }, [game, handRevealed, humanCount, revealHand]);
 
+  // Layout: the dock's hand area gets about a third of the screen at most,
+  // and a hand that wouldn't fit two rows of full-size cards goes compact.
+  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const handMaxHeight = Math.max(150, Math.round(height * 0.34));
+  const isCompactHand = (p: Player) => needsCompactHand(p, width - 2 * theme.space.md);
+
+  // Keep the player whose turn it is in view when the scoreboard is taller
+  // than its window (four or more players on a phone).
+  const playersScroll = useRef<ScrollView>(null);
+  const stripY = useRef<number[]>([]);
+  const turnIndex = game?.currentPlayerIndex;
+  useEffect(() => {
+    if (turnIndex === undefined) return;
+    const y = stripY.current[turnIndex];
+    // Leave room above the strip for its speech bubble.
+    if (y !== undefined) playersScroll.current?.scrollTo({ y: Math.max(0, y - 36), animated: true });
+  }, [turnIndex]);
+
   const currentPlayer = game ? game.players[game.currentPlayerIndex] : null;
 
   if (!game || !currentPlayer) {
     return (
-      <View style={styles.container}>
+      <View style={styles.screen}>
         <Text style={styles.dim}>Loading…</Text>
       </View>
     );
@@ -321,75 +349,94 @@ export default function GameScreen() {
     (game.phase !== 'gameOver' && currentPlayer.rules ? ` · ${currentPlayer.rules.name}` : '');
 
   return (
-    <View style={{ flex: 1 }}>
-    <ScrollView contentContainerStyle={styles.container}>
-      {/* Variant badge — shows which ruleset is active */}
-      <VariantBadge config={game.ruleConfig} />
-
-      {/* Player scoreboard — fixed order, turn indicator on active player */}
-      <View style={styles.scoreboardHeader}>
-        <Text style={styles.scoreboardTitle}>Players</Text>
-        <Pressable
-          onPress={() => setHistoryOpen(true)}
-          hitSlop={8}
-          style={styles.historyBtn}
-          accessibilityLabel="Game history"
-          accessibilityRole="button"
-        >
-          <ScrollText size={20} color={theme.color.textMuted} strokeWidth={2} />
-        </Pressable>
-      </View>
-      <View style={styles.scoreboard}>
-        {game.players.map((p, i) => (
-          <OpponentStrip
-            key={p.id}
-            player={p}
-            isCurrent={i === game.currentPlayerIndex}
-            bubble={tableTalk && tableTalk.playerId === p.id ? tableTalk : null}
-          />
-        ))}
-      </View>
-
-      <ActionCaption caption={actionCaption} highlighted={!!botAction || finalHold} />
-
-      {/* Center: draw / pile / burned — pile is tappable for pickup */}
-      <Center
-        game={game}
-        onPickup={isHumanTurn ? pickup : undefined}
-        isHumanTurn={isHumanTurn}
-        mustPickup={isHumanTurn && !canPlay}
-      />
-
-      <TurnBanner
-        title={turnTitle}
-        recent={recent}
-        selectedCount={selectedCardIds.length}
-        onPlay={isHumanTurn && source !== 'faceDown' && canPlay ? onPlayPressed : undefined}
-      />
-
-      {/* Toast: empty selection / rejected play */}
-      {toast && (
-        <View style={styles.toast}>
-          <Text style={styles.toastText}>{toast}</Text>
+    <View style={styles.screen}>
+      {/* The players scroll; everything you act on stays put below. */}
+      <ScrollView
+        ref={playersScroll}
+        style={styles.players}
+        contentContainerStyle={styles.playersContent}
+      >
+        {/* Variant badge (which ruleset is active) with the log button */}
+        <View style={styles.tableHeader}>
+          <VariantBadge config={game.ruleConfig} />
+          <Pressable
+            onPress={() => setHistoryOpen(true)}
+            hitSlop={8}
+            style={styles.historyBtn}
+            accessibilityLabel="Game history"
+            accessibilityRole="button"
+          >
+            <ScrollText size={20} color={theme.color.textMuted} strokeWidth={2} />
+          </Pressable>
         </View>
-      )}
 
-      {/* Player area */}
-      <View style={styles.playerArea}>
-        {isHumanTurn ? (
-          <HandArea
-            player={currentPlayer}
-            playableIds={playableIds}
-            selectedIds={selectedCardIds}
-            onToggle={toggleSelect}
-            onSelectRank={selectRank}
-            onFlip={onFlip}
-          />
-        ) : game.phase === 'gameOver' ? null : watcher ? (
-          <WatchingHand player={watcher} currentName={currentPlayer.name} />
-        ) : (
-          <Text style={styles.dim}>Waiting for {currentPlayer.name}…</Text>
-        )}
+        {/* Player scoreboard — fixed order, turn indicator on active player */}
+        {game.players.map((p, i) => (
+          <View
+            key={p.id}
+            onLayout={(e) => {
+              stripY.current[i] = e.nativeEvent.layout.y;
+            }}
+          >
+            <OpponentStrip
+              player={p}
+              isCurrent={i === game.currentPlayerIndex}
+              bubble={tableTalk && tableTalk.playerId === p.id ? tableTalk : null}
+            />
+          </View>
+        ))}
+      </ScrollView>
+
+      {/* The dock: pile, turn, Play and your cards, always on screen. */}
+      <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, theme.space.sm) }]}>
+        {/* Floats over the dock's top edge instead of holding a row of
+            its own open. */}
+        <View style={styles.captionFloat} pointerEvents="none">
+          <ActionCaption caption={actionCaption} highlighted={!!botAction || finalHold} />
+        </View>
+
+        {/* Center: draw / pile / burned — pile is tappable for pickup */}
+        <Center
+          game={game}
+          onPickup={isHumanTurn ? pickup : undefined}
+          isHumanTurn={isHumanTurn}
+          mustPickup={isHumanTurn && !canPlay}
+        />
+
+        <TurnBanner
+          title={turnTitle}
+          recent={recent}
+          // Empty-selection taps and rejected plays speak here for a moment.
+          notice={toast ?? undefined}
+          selectedCount={selectedCardIds.length}
+          onPlay={isHumanTurn && source !== 'faceDown' && canPlay ? onPlayPressed : undefined}
+        />
+
+        {/* Player area: scrolls on its own if the hand outgrows it */}
+        <ScrollView
+          style={[styles.playerArea, { maxHeight: handMaxHeight }]}
+          contentContainerStyle={styles.playerAreaContent}
+        >
+          {isHumanTurn ? (
+            <HandArea
+              player={currentPlayer}
+              playableIds={playableIds}
+              selectedIds={selectedCardIds}
+              onToggle={toggleSelect}
+              onSelectRank={selectRank}
+              onFlip={onFlip}
+              compact={isCompactHand(currentPlayer)}
+            />
+          ) : game.phase === 'gameOver' ? null : watcher ? (
+            <WatchingHand
+              player={watcher}
+              currentName={currentPlayer.name}
+              compact={isCompactHand(watcher)}
+            />
+          ) : (
+            <Text style={styles.dim}>Waiting for {currentPlayer.name}…</Text>
+          )}
+        </ScrollView>
       </View>
 
       {/* Game history modal */}
@@ -398,57 +445,57 @@ export default function GameScreen() {
         onClose={() => setHistoryOpen(false)}
         log={game.log}
       />
-    </ScrollView>
-    {stickUp && (
-      <StickUpCard
-        stickUp={stickUp}
-        robberIsYou={isSoleHuman(game, stickUp.robberId)}
-        victimIsYou={isSoleHuman(game, stickUp.victimId)}
-        onClose={() => setStickUp(null)}
-      />
-    )}
-    <AchievementToast earned={earnedThisGame} />
+      {stickUp && (
+        <StickUpCard
+          stickUp={stickUp}
+          robberIsYou={isSoleHuman(game, stickUp.robberId)}
+          victimIsYou={isSoleHuman(game, stickUp.victimId)}
+          onClose={() => setStickUp(null)}
+        />
+      )}
+      <AchievementToast earned={earnedThisGame} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: theme.space.md,
-    backgroundColor: theme.color.feltBg,
-    minHeight: '100%',
-    paddingBottom: 40,
+  screen: { flex: 1, backgroundColor: theme.color.feltBg },
+  players: { flex: 1 },
+  playersContent: {
+    paddingHorizontal: theme.space.md,
+    paddingTop: theme.space.xs,
+    // Lets the last strip scroll clear of the floating caption.
+    paddingBottom: 20,
   },
-  scoreboard: { marginBottom: 4 },
-  scoreboardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  scoreboardTitle: {
-    color: theme.color.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
+  // The badge sits centred; the log button rides the right edge.
+  tableHeader: { justifyContent: 'center', zIndex: 10 },
   historyBtn: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    // Above the badge's full-width row, which would otherwise take the tap.
+    zIndex: 11,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
-  toast: {
-    alignItems: 'center',
-    paddingVertical: 6,
+  dock: {
+    paddingHorizontal: theme.space.md,
+    backgroundColor: theme.color.feltBg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.10)',
   },
-  toastText: {
-    color: theme.color.accent,
-    fontSize: 12,
-    fontWeight: '600',
+  captionFloat: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    // The caption's pill straddles the dock's top edge: it covers the
+    // Draw / Pile / Burned labels for a moment, never a card.
+    top: -24,
+    zIndex: 5,
   },
-  playerArea: {
-    marginTop: 8,
-    minHeight: 140,
-  },
+  playerArea: { flexGrow: 0, marginTop: 2 },
+  // Tall enough for one row of cards, so the dock doesn't jump between
+  // your turn and everyone else's.
+  playerAreaContent: { minHeight: 128 },
   dim: { color: theme.color.textMuted, fontStyle: 'italic' },
 });
