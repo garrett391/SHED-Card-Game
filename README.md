@@ -36,6 +36,8 @@ A cross-platform (iOS / Android / Web) mobile app for the card game
   a refresh or restart picks it back up from Home; Settings has a way to
   leave the table
 - Card **sound effects**
+- **Settings** that stick: sound effects on or off, the radio station and
+  a normal or fast **game speed** for bot turns
 - Pure, fully tested **game engine** (no UI dependency)
 
 ### Not yet (deliberate)
@@ -118,6 +120,7 @@ and full integration scenarios.
 │   │   ├── tableTalk.ts        What the hosts say after a turn, and heckles
 │   │   ├── stickUp.ts          Which stick-ups get the wanted-poster panel
 │   │   ├── useBotAutoplay.ts   Plays bot turns at a readable pace
+│   │   ├── pacing.ts           Bot-turn timings for each game speed
 │   │   └── useAutoClear.ts     Retires short-lived UI state
 │   ├── achievements/
 │   │   └── achievements.ts     What each achievement is and how it's detected

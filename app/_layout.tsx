@@ -4,11 +4,12 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useFonts } from 'expo-font';
-import { LogOut, Pause, Play, Settings, Volume2, VolumeX } from 'lucide-react-native';
+import { Gauge, LogOut, Pause, Play, Settings, Volume2, VolumeX } from 'lucide-react-native';
 import { Rye_400Regular } from '@expo-google-fonts/rye';
 import { theme } from '../src/components/theme';
 import { useRadioStore, STATIONS } from '../src/store/radioStore';
-import { preloadSfx, setSfxMuted, isSfxMuted } from '../src/audio/sfx';
+import { preloadSfx, setSfxMuted } from '../src/audio/sfx';
+import { useProfileStore } from '../src/store/profileStore';
 
 // ---------------------------------------------------------------------------
 // SettingsButton  (lives in the header of every screen)
@@ -64,9 +65,13 @@ function SettingsSheet({ visible, onClose }: SettingsSheetProps) {
   const setStation = useRadioStore((s) => s.setStation);
   const onSelect = (i: number) => setStation(i);
 
-  // SFX mute mirrors the module-level flag in sfx.ts; the initial read keeps
-  // it in sync when the sheet remounts.
-  const [sfxMuted, setSfxMutedState] = useState(isSfxMuted());
+  // Both saved on the device (profileStore). The root layout passes the
+  // mute on to sfx.ts.
+  const sfxMuted = useProfileStore((s) => s.sfxMuted);
+  const saveSfxMuted = useProfileStore((s) => s.setSfxMuted);
+  const gameSpeed = useProfileStore((s) => s.gameSpeed);
+  const setGameSpeed = useProfileStore((s) => s.setGameSpeed);
+  const fast = gameSpeed === 'fast';
 
   // At the table there's no back arrow, so this is the way out. The game
   // is saved as it goes; Home offers to resume it.
@@ -92,11 +97,7 @@ function SettingsSheet({ visible, onClose }: SettingsSheetProps) {
           {/* ── Sound effects ─────────────────────────────────────────── */}
           <Text style={styles.sectionLabel}>Sound effects</Text>
           <Pressable
-            onPress={() => {
-              const next = !sfxMuted;
-              setSfxMuted(next);
-              setSfxMutedState(next);
-            }}
+            onPress={() => saveSfxMuted(!sfxMuted)}
             style={styles.sfxRow}
             accessibilityRole="switch"
             accessibilityState={{ checked: !sfxMuted }}
@@ -112,6 +113,28 @@ function SettingsSheet({ visible, onClose }: SettingsSheetProps) {
             <Text style={styles.sfxLabel}>Card & game sounds</Text>
             <Text style={[styles.sfxState, !sfxMuted && styles.sfxStateOn]}>
               {sfxMuted ? 'Off' : 'On'}
+            </Text>
+          </Pressable>
+
+          {/* ── Game speed ────────────────────────────────────────────── */}
+          <Text style={[styles.sectionLabel, styles.sectionGap]}>Game speed</Text>
+          <Pressable
+            onPress={() => setGameSpeed(fast ? 'normal' : 'fast')}
+            style={styles.sfxRow}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: fast }}
+            accessibilityLabel="Fast bot turns"
+          >
+            <View style={styles.stationIcon}>
+              <Gauge
+                size={18}
+                color={fast ? theme.color.textOnDark : theme.color.textMuted}
+                strokeWidth={2}
+              />
+            </View>
+            <Text style={styles.sfxLabel}>Bot turns</Text>
+            <Text style={[styles.sfxState, fast && styles.sfxStateOn]}>
+              {fast ? 'Fast' : 'Normal'}
             </Text>
           </Pressable>
 
@@ -204,6 +227,13 @@ export default function RootLayout() {
   // falls back to the system font for the moment it takes to load.
   useFonts({ Rye_400Regular });
 
+  // The saved mute reaches sfx.ts here: once when the profile loads from
+  // the device, and again whenever the setting is flipped.
+  const sfxMuted = useProfileStore((s) => s.sfxMuted);
+  useEffect(() => {
+    setSfxMuted(sfxMuted);
+  }, [sfxMuted]);
+
   useEffect(() => {
     init();
     // Create SFX players up front so the first sound has no load latency.
@@ -267,7 +297,7 @@ const styles = StyleSheet.create({
   },
   card: {
     width: 240,
-    maxHeight: 360,
+    maxHeight: 520, // room for a few stations under the settings rows
     backgroundColor: theme.color.feltBgDark,
     borderRadius: theme.radius.md,
     paddingVertical: 6,
@@ -319,6 +349,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
+  sectionGap: { marginTop: 14 },
   leaveRow: {
     flexDirection: 'row',
     alignItems: 'center',

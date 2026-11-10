@@ -4,9 +4,6 @@ import { getPlaySource } from '../engine/engine';
 import { GameEvent, GameState, RuleConfig } from '../engine/types';
 import { useGameStore } from '../store/gameStore';
 
-/** How long a bot "thinks" before it plays. */
-export const BOT_THINK_MS = 700;
-
 export interface BotActed {
   botName: string;
   playerId: number;
@@ -20,13 +17,14 @@ export interface BotActed {
 
 /**
  * Plays bot turns: when it's a bot's turn and nothing is holding the table
- * (`paused`), wait BOT_THINK_MS, let the bot decide, dispatch its action to
+ * (`paused`), wait `thinkMs`, let the bot decide, dispatch its action to
  * the game store, then report what happened through `onActed`.
  */
 export function useBotAutoplay(
   game: GameState | null,
   paused: boolean,
   onActed: (acted: BotActed) => void,
+  thinkMs: number,
 ): void {
   // Which turn we last acted for, so re-renders don't fire it twice.
   const lastBotTurnRef = useRef<{ idx: number; epoch: number } | null>(null);
@@ -86,7 +84,7 @@ export function useBotAutoplay(
         game: after.game,
         cfg: latest.game.ruleConfig,
       });
-    }, BOT_THINK_MS);
+    }, thinkMs);
     return () => clearTimeout(timer);
-  }, [game, paused]);
+  }, [game, paused, thinkMs]);
 }

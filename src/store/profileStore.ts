@@ -5,16 +5,29 @@
  * saves whatever was typed when the cards are dealt, so it carries from
  * table to table (campaign and free play alike). Kept apart from
  * campaignStore so resetting campaign progress doesn't forget your name.
+ *
+ * gameSpeed: how fast bot turns go by (see src/table/pacing.ts).
+ * sfxMuted: card and game sounds off. The root layout hands it to sfx.ts.
+ * radioStationId: the last station picked, so the radio comes back on it.
+ * Whether the radio was playing is deliberately not remembered: it always
+ * starts paused (see radioStore).
  */
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { GameSpeed } from '../table/pacing';
 
 export const DEFAULT_PLAYER_NAME = 'Player 1';
 
 interface ProfileStore {
   playerName: string;
   setPlayerName: (name: string) => void;
+  gameSpeed: GameSpeed;
+  setGameSpeed: (speed: GameSpeed) => void;
+  sfxMuted: boolean;
+  setSfxMuted: (muted: boolean) => void;
+  radioStationId: string | null;
+  setRadioStationId: (id: string) => void;
 }
 
 export const useProfileStore = create<ProfileStore>()(
@@ -25,6 +38,12 @@ export const useProfileStore = create<ProfileStore>()(
         const trimmed = name.trim();
         if (trimmed) set({ playerName: trimmed });
       },
+      gameSpeed: 'normal',
+      setGameSpeed: (gameSpeed) => set({ gameSpeed }),
+      sfxMuted: false,
+      setSfxMuted: (sfxMuted) => set({ sfxMuted }),
+      radioStationId: null,
+      setRadioStationId: (radioStationId) => set({ radioStationId }),
     }),
     {
       name: 'shed-profile-v1',

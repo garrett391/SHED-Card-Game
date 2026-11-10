@@ -7,6 +7,8 @@
  *   - The saxophone toggle in the header controls play/pause on every screen.
  *   - The station name + ▾ opens a picker; tapping a station switches to it
  *     and starts playing (see `setStation`).
+ *   - The station you last picked is remembered on the device (profileStore),
+ *     so the radio comes back on it, still paused.
  *   - Audio persists across screen navigations (store + Sound live
  *     outside the component tree).
  *
@@ -31,6 +33,7 @@
 import { create } from 'zustand';
 import { Audio } from 'expo-av';
 import { Platform } from 'react-native';
+import { useProfileStore } from './profileStore';
 
 // ---------------------------------------------------------------------------
 // Station catalogue
@@ -218,6 +221,25 @@ async function recoverStream(
   }
 }
 
+/**
+ * The saved station's place in STATIONS, once the profile has loaded from
+ * the device. Stations get pruned, so it's saved by id and an id that's
+ * gone falls back to the first station. Doesn't wait forever: if the
+ * profile is slow to load, the radio starts on the first station.
+ */
+async function savedStationIndex(): Promise<number> {
+  const profile = useProfileStore.persist;
+  if (!profile.hasHydrated()) {
+    await new Promise<void>((resolve) => {
+      const done = profile.onFinishHydration(() => { done(); resolve(); });
+      setTimeout(resolve, 1500);
+    });
+  }
+  const id = useProfileStore.getState().radioStationId;
+  const index = STATIONS.findIndex((s) => s.id === id);
+  return index >= 0 ? index : 0;
+}
+
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
@@ -251,7 +273,9 @@ export const useRadioStore = create<RadioStore>((set, get) => ({
         staysActiveInBackground: true,
       });
 
-      _sound = await loadSound(STATIONS[0].urls);
+      const index = await savedStationIndex();
+      set({ stationIndex: index });
+      _sound = await loadSound(STATIONS[index].urls);
       if (!_sound) {
         set({ isLoading: false });
         return;
@@ -314,6 +338,7 @@ export const useRadioStore = create<RadioStore>((set, get) => ({
     }
 
     set({ isLoading: true, stationIndex: index, loadError: null });
+    useProfileStore.getState().setRadioStationId(STATIONS[index].id);
 
     // Tear down whatever's currently loaded.
     try {

@@ -23,19 +23,18 @@ import {
 import { Card } from '../src/engine/types';
 import { useCampaignStore } from '../src/store/campaignStore';
 import { useGameHydrated, useGameStore } from '../src/store/gameStore';
+import { useProfileStore } from '../src/store/profileStore';
 import {
   captionText,
   describeAction,
   flipOutcome,
   summarizeRecent,
 } from '../src/table/describeEvents';
+import { pacingFor } from '../src/table/pacing';
 import { isSoleHuman, SeatedStickUp, stickUpFrom } from '../src/table/stickUp';
 import { describeBotTurn, heckle } from '../src/table/tableTalk';
 import { useAutoClear } from '../src/table/useAutoClear';
 import { useBotAutoplay } from '../src/table/useBotAutoplay';
-
-/** How long a bot's play (or the winning play) holds the table. */
-const BOT_DISPLAY_MS = 1800;
 
 /**
  * Main table screen.
@@ -71,6 +70,9 @@ export default function GameScreen() {
   const recentEvents = useGameStore((s) => s.recentEvents);
   const earnedThisGame = useGameStore((s) => s.earnedThisGame);
   const campaignPresetId = useGameStore((s) => s.campaignPresetId);
+  // Bot pacing follows the speed picked in Settings; a change mid-game
+  // takes effect from the next bot turn.
+  const pacing = pacingFor(useProfileStore((s) => s.gameSpeed));
 
   // Face-down flip result: pause to show what was flipped before bots continue.
   const [flipResult, setFlipResult] = useState<{ card: Card; success: boolean } | null>(null);
@@ -94,7 +96,7 @@ export default function GameScreen() {
   // Toast: empty-selection taps and rejected-play reasons
   const [toast, setToast] = useState<string | null>(null);
 
-  // Bot action pacing: while set, the next bot turn is held for BOT_DISPLAY_MS
+  // Bot action pacing: while set, the next bot turn is held for pacing.displayMs
   // so plays don't blitz past faster than you can read them. Also carries the
   // character's quip, which becomes table talk when the window closes.
   const [botAction, setBotAction] = useState<{ playerId: number; quip?: string } | null>(null);
@@ -117,13 +119,13 @@ export default function GameScreen() {
       setTableTalk({ playerId: botAction.playerId, text: botAction.quip, nonce: Date.now() });
     }
     setBotAction(null);
-  }, BOT_DISPLAY_MS);
+  }, pacing.displayMs);
   // The bubble's fade lives in OpponentStrip; this just retires the state.
   useAutoClear(tableTalk, () => setTableTalk(null), BUBBLE_MS);
   // A touch longer than the bot pacing, so the line lingers into the next turn.
-  useAutoClear(actionCaption, () => setActionCaption(null), 2600);
+  useAutoClear(actionCaption, () => setActionCaption(null), pacing.captionMs);
   // The human's winning play gets the same beat bots get.
-  useAutoClear(finalHold, () => setFinalHold(false), BOT_DISPLAY_MS);
+  useAutoClear(finalHold, () => setFinalHold(false), pacing.displayMs);
 
   // Bail to home if there's no game, once the saved one has had its chance
   // to load (a refresh lands here before the save does).
@@ -158,7 +160,7 @@ export default function GameScreen() {
     setBotAction({ playerId, quip: turn.quip });
     setActionCaption({ emoji: turn.display.emoji, text: turn.caption, nonce: Date.now() });
     if (turn.robbery) setStickUp(turn.robbery);
-  });
+  }, pacing.thinkMs);
 
   // The player's own 7 at the Outlaw Pass: show what they took (bot robbers
   // open the panel from the bot turn, with their line).
