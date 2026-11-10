@@ -25,9 +25,13 @@ import {
 } from '../src/campaign/characters';
 import { playSfx } from '../src/audio/sfx';
 import { DEFAULT_PLAYER_NAME, useProfileStore } from '../src/store/profileStore';
+import {
+  MAX_PLAYERS,
+  MIN_PLAYERS,
+  restoreTable,
+  toSavedTable,
+} from '../src/campaign/lastTable';
 
-const MIN_PLAYERS = 2;
-const MAX_PLAYERS = 6;
 
 const DEFAULT_NAMES = ['Player 1', 'Jake', 'Erich', 'Bauer', 'Cousin', 'Elder'];
 
@@ -112,8 +116,13 @@ export default function SetupScreen() {
     presetParam && RULE_PRESETS[presetParam] && isUnlocked(completed, presetParam)
       ? presetParam
       : null;
+  // Free play opens on the table you last dealt (variant and seats), if
+  // there is one; the campaign always seats the node's own cast.
+  const [lastTable] = useState(() =>
+    campaignPreset ? null : restoreTable(useProfileStore.getState().lastTable, completed),
+  );
   const [selectedMode, setSelectedMode] = useState<string>(
-    () => campaignPreset ?? 'jake-classic',
+    () => campaignPreset ?? lastTable?.modeId ?? 'jake-classic',
   );
   // Mode picker starts collapsed so the Players section and Deal button sit
   // above the fold. The collapsed header shows the current selection; tapping
@@ -130,12 +139,25 @@ export default function SetupScreen() {
         ...cast.map((c) => ({ name: c.name, isBot: true, botStyle: c.botStyle })),
       ];
     }
+    if (lastTable) return lastTable.players;
     return [
       { name: savedName, isBot: false },
       { name: 'Bot 1', isBot: true },
       { name: 'Bot 2', isBot: true },
     ];
   });
+
+  // Opened before the profile had loaded from the device (a refresh on
+  // this screen): bring the last table in when it arrives.
+  useEffect(() => {
+    if (campaignPreset || useProfileStore.persist.hasHydrated()) return;
+    return useProfileStore.persist.onFinishHydration((profile) => {
+      const table = restoreTable(profile.lastTable, useCampaignStore.getState().completed);
+      if (!table) return;
+      setSelectedMode(table.modeId);
+      setPlayers(table.players);
+    });
+  }, [campaignPreset]);
 
   // The profile loads from storage asynchronously, so on a cold start the
   // first render may still see the default. Once the saved name arrives,
@@ -228,6 +250,10 @@ export default function SetupScreen() {
     });
     const firstHuman = lineup.find((p) => !p.isBot);
     if (firstHuman) setPlayerName(firstHuman.name);
+    // Free play remembers this table for next time (names as dealt).
+    if (!campaignPreset) {
+      useProfileStore.getState().setLastTable(toSavedTable(preset.id, lineup));
+    }
     // campaignPreset threads through to game-over, which uses it to offer
     // "Continue campaign" / "Try again" instead of the free-play actions.
     startGame(lineup, preset, campaignPreset);

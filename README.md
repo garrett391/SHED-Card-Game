@@ -37,6 +37,7 @@ A cross-platform (iOS / Android / Web) mobile app for the card game
   a refresh or restart picks it back up from Home; Settings has a way to
   leave the table
 - Card **sound effects**
+- Free play **remembers your last table**: the variant and who sat where
 - **Settings** that stick: sound effects on or off, the radio station and
   a normal or fast **game speed** for bot turns
 - Pure, fully tested **game engine** (no UI dependency)

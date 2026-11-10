@@ -11,11 +11,13 @@
  * radioStationId: the last station picked, so the radio comes back on it.
  * Whether the radio was playing is deliberately not remembered: it always
  * starts paused (see radioStore).
+ * lastTable: the free-play table last dealt (see src/campaign/lastTable.ts).
  */
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { GameSpeed } from '../table/pacing';
+import type { SavedTable } from '../campaign/lastTable';
 
 export const DEFAULT_PLAYER_NAME = 'Player 1';
 
@@ -28,6 +30,8 @@ interface ProfileStore {
   setSfxMuted: (muted: boolean) => void;
   radioStationId: string | null;
   setRadioStationId: (id: string) => void;
+  lastTable: SavedTable | null;
+  setLastTable: (table: SavedTable) => void;
 }
 
 export const useProfileStore = create<ProfileStore>()(
@@ -44,6 +48,8 @@ export const useProfileStore = create<ProfileStore>()(
       setSfxMuted: (sfxMuted) => set({ sfxMuted }),
       radioStationId: null,
       setRadioStationId: (radioStationId) => set({ radioStationId }),
+      lastTable: null,
+      setLastTable: (lastTable) => set({ lastTable }),
     }),
     {
       name: 'shed-profile-v1',
