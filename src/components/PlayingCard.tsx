@@ -5,6 +5,10 @@ import { isRedSuit, rankLabel } from '../engine/cards';
 import { theme } from './theme';
 import { RotateCcw, Shuffle } from 'lucide-react-native';
 
+/** Shorter than the system default, so holding a card feels deliberate
+ *  without feeling slow. */
+const LONG_PRESS_MS = 300;
+
 interface Props {
   card?: Card;            // omit when faceDown=true with no known card
   faceDown?: boolean;
@@ -12,6 +16,8 @@ interface Props {
   small?: boolean;
   dimmed?: boolean;       // unplayable visual cue
   onPress?: () => void;
+  /** Press and hold (the hand uses it to select a whole set). */
+  onLongPress?: () => void;
   disabled?: boolean;
 }
 
@@ -22,6 +28,7 @@ export function PlayingCard({
   small,
   dimmed,
   onPress,
+  onLongPress,
   disabled,
 }: Props) {
   const size = small ? styles.small : styles.normal;
@@ -36,6 +43,8 @@ export function PlayingCard({
     return (
       <Pressable
         onPress={onPress}
+        onLongPress={onLongPress}
+        delayLongPress={LONG_PRESS_MS}
         disabled={disabled}
         style={[...baseStyle, styles.back]}
       >
@@ -49,6 +58,8 @@ export function PlayingCard({
     return (
       <Pressable
         onPress={onPress}
+        onLongPress={onLongPress}
+        delayLongPress={LONG_PRESS_MS}
         disabled={disabled}
         style={baseStyle}
         accessibilityLabel={card.joker === 'reverse' ? 'Reverse joker' : 'Swap joker'}
@@ -67,7 +78,13 @@ export function PlayingCard({
     );
   }
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={baseStyle}>
+    <Pressable
+      onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={LONG_PRESS_MS}
+      disabled={disabled}
+      style={baseStyle}
+    >
       <Text
         style={[styles.rank, red && styles.red, small && styles.smallText]}
       >
@@ -91,6 +108,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 3,
+    // On the web a long press would otherwise start selecting the card's text.
+    userSelect: 'none',
   },
   normal: { width: theme.card.width, height: theme.card.height },
   small: { width: theme.card.widthSmall, height: theme.card.heightSmall },

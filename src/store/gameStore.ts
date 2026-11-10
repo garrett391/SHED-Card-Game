@@ -62,6 +62,9 @@ interface GameStore {
 
   // playing phase
   toggleSelect: (cardId: string) => void;
+  /** Long-press: select every card of this card's rank in the cards being
+   *  played from, or clear them if the whole set is already selected. */
+  selectRank: (cardId: string) => void;
   clearSelection: () => void;
   /** swapTargetId: whose hand a swap joker takes (see engine.playCards). */
   playSelected: (swapTargetId?: number) => void;
@@ -164,6 +167,24 @@ export const useGameStore = create<GameStore>()(
         }
       }
       return { selectedCardIds: [...s.selectedCardIds, id] };
+    }),
+
+  selectRank: (id) =>
+    set((s) => {
+      const game = s.game;
+      if (!game) return s;
+      const current = game.players[game.currentPlayerIndex];
+      const source = engine.getPlaySource(current);
+      // Face-down cards are flipped blind, one at a time: no sets there.
+      if (source !== 'hand' && source !== 'faceUp') return s;
+      const cards = source === 'hand' ? current.hand : current.faceUp;
+      const card = cards.find((c) => c.id === id);
+      if (!card) return s;
+      const rankIds = cards.filter((c) => c.rank === card.rank).map((c) => c.id);
+      const allSelected =
+        s.selectedCardIds.length === rankIds.length &&
+        rankIds.every((x) => s.selectedCardIds.includes(x));
+      return { selectedCardIds: allSelected ? [] : rankIds };
     }),
 
   clearSelection: () => set({ selectedCardIds: [] }),

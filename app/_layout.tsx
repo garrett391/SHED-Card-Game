@@ -265,8 +265,18 @@ export default function RootLayout() {
         <Stack.Screen name="setup" options={{ title: 'Players' }} />
         <Stack.Screen name="tutorial" options={{ title: 'Tutorial' }} />
         <Stack.Screen name="swap" options={{ title: 'Swap cards' }} />
-        <Stack.Screen name="game" options={{ title: 'Shed', headerBackVisible: false }} />
-        <Stack.Screen name="game-over" options={{ title: 'Game over', headerBackVisible: false }} />
+        {/* No way back from the table or the results: Settings has "Leave
+            table", and game over has its own buttons. headerBackVisible
+            covers native; the web header ignores it and shows an arrow
+            unless headerLeft is set. */}
+        <Stack.Screen
+          name="game"
+          options={{ title: 'Shed', headerBackVisible: false, headerLeft: () => null }}
+        />
+        <Stack.Screen
+          name="game-over"
+          options={{ title: 'Game over', headerBackVisible: false, headerLeft: () => null }}
+        />
         <Stack.Screen name="rules" options={{ title: 'Rules', presentation: 'modal' }} />
         <Stack.Screen name="achievements" options={{ title: 'Achievements' }} />
       </Stack>

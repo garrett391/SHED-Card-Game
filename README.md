@@ -17,6 +17,7 @@ A cross-platform (iOS / Android / Web) mobile app for the card game
   - **Three phases**: hand → face-up → face-down (blind flip)
   - Lowest non-power card starts; draw-to-3 from draw pile
 - Pre-game **swap** screen (each player can trade hand ↔ face-up)
+- Tap a card to select it, or **hold** one to select every card of its rank
 - Pass-the-device privacy gates so humans don't see each other's hands
 - **Rule variants** — each campaign table unlocks as a free-play preset
   once you beat it (Justin's Schism, Super Tens, the Outlaw Pass's

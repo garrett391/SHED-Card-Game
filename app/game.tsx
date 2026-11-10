@@ -63,6 +63,7 @@ export default function GameScreen() {
   const selectedCardIds = useGameStore((s) => s.selectedCardIds);
   const handRevealed = useGameStore((s) => s.handRevealed);
   const toggleSelect = useGameStore((s) => s.toggleSelect);
+  const selectRank = useGameStore((s) => s.selectRank);
   const playSelected = useGameStore((s) => s.playSelected);
   const playFaceDown = useGameStore((s) => s.playFaceDown);
   const pickup = useGameStore((s) => s.pickup);
@@ -381,6 +382,7 @@ export default function GameScreen() {
             playableIds={playableIds}
             selectedIds={selectedCardIds}
             onToggle={toggleSelect}
+            onSelectRank={selectRank}
             onFlip={onFlip}
           />
         ) : game.phase === 'gameOver' ? null : watcher ? (

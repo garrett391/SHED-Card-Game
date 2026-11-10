@@ -7,22 +7,37 @@ import { theme } from './theme';
 
 const byRank = (cards: readonly Card[]) => [...cards].sort((a, b) => a.rank - b.rank);
 
+/** True when two or more playable cards share a rank. */
+export function hasPlayableSet(cards: readonly Card[], playableIds: readonly string[]): boolean {
+  const seen = new Set<number>();
+  for (const c of cards) {
+    if (!playableIds.includes(c.id)) continue;
+    if (seen.has(c.rank)) return true;
+    seen.add(c.rank);
+  }
+  return false;
+}
+
 /**
  * The bottom of the table on a human's turn: whichever cards they play
  * from now. Hand and face-up cards are tapped to select (unplayable ones
- * dimmed); face-down cards are flipped blind with one tap.
+ * dimmed), or held to select every card of that rank; face-down cards are
+ * flipped blind with one tap.
  */
 export function HandArea({
   player,
   playableIds,
   selectedIds,
   onToggle,
+  onSelectRank,
   onFlip,
 }: {
   player: Player;
   playableIds: readonly string[];
   selectedIds: readonly string[];
   onToggle: (cardId: string) => void;
+  /** Long-press a card: select its whole set. */
+  onSelectRank: (cardId: string) => void;
   onFlip: (cardId: string) => void;
 }) {
   const source = getPlaySource(player);
@@ -35,6 +50,10 @@ export function HandArea({
       <>
         <Text style={styles.sectionLabel}>
           {source === 'hand' ? `${player.name}'s hand` : 'Mid-game (face-up)'}
+          {/* Only worth saying when there's a set to play right now. */}
+          {hasPlayableSet(cards, playableIds) && (
+            <Text style={styles.watchingNote}> · hold a card to select its set</Text>
+          )}
         </Text>
         <View style={styles.cardRow}>
           {cards.map((c) => (
@@ -44,6 +63,7 @@ export function HandArea({
               selected={selectedIds.includes(c.id)}
               dimmed={!playableIds.includes(c.id)}
               onPress={() => onToggle(c.id)}
+              onLongPress={() => onSelectRank(c.id)}
             />
           ))}
         </View>
