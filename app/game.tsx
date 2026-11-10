@@ -22,7 +22,7 @@ import {
 } from '../src/engine/engine';
 import { Card } from '../src/engine/types';
 import { useCampaignStore } from '../src/store/campaignStore';
-import { useGameStore } from '../src/store/gameStore';
+import { useGameHydrated, useGameStore } from '../src/store/gameStore';
 import {
   captionText,
   describeAction,
@@ -125,10 +125,12 @@ export default function GameScreen() {
   // The human's winning play gets the same beat bots get.
   useAutoClear(finalHold, () => setFinalHold(false), BOT_DISPLAY_MS);
 
-  // Bail to home if state was wiped (e.g. dev reload).
+  // Bail to home if there's no game, once the saved one has had its chance
+  // to load (a refresh lands here before the save does).
+  const hydrated = useGameHydrated();
   useEffect(() => {
-    if (!game) router.replace('/');
-  }, [game, router]);
+    if (hydrated && !game) router.replace('/');
+  }, [hydrated, game, router]);
 
   // Route to game-over when phase changes. Wait for every "show the final play"
   // beat to finish first: bot pacing (botAction), the human's winning-play hold

@@ -8,7 +8,6 @@ import { PlayingCard } from '../src/components/PlayingCard';
 import { theme } from '../src/components/theme';
 import { Card, PlaySource } from '../src/engine/types';
 import * as engine from '../src/engine/engine';
-import { useGameStore } from '../src/store/gameStore';
 import { useTutorialStore } from '../src/store/tutorialStore';
 import {
   LESSONS,
@@ -21,8 +20,6 @@ const CHRIS_PORTRAIT = require('../assets/images/characters/chris-portrait.png')
 
 export default function TutorialScreen() {
   const router = useRouter();
-  const resetGame = useGameStore((s) => s.reset);
-
   const lessonIndex = useTutorialStore((s) => s.lessonIndex);
   const stage = useTutorialStore((s) => s.stage);
   const lineIndex = useTutorialStore((s) => s.lineIndex);
@@ -106,7 +103,6 @@ export default function TutorialScreen() {
         title="Play a real game"
         compact
         onPress={() => {
-          resetGame();
           router.replace('/setup');
         }}
       />

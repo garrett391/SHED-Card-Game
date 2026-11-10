@@ -1,10 +1,10 @@
-import { Stack } from 'expo-router';
+import { Stack, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useFonts } from 'expo-font';
-import { Pause, Play, Settings, Volume2, VolumeX } from 'lucide-react-native';
+import { LogOut, Pause, Play, Settings, Volume2, VolumeX } from 'lucide-react-native';
 import { Rye_400Regular } from '@expo-google-fonts/rye';
 import { theme } from '../src/components/theme';
 import { useRadioStore, STATIONS } from '../src/store/radioStore';
@@ -67,6 +67,12 @@ function SettingsSheet({ visible, onClose }: SettingsSheetProps) {
   // SFX mute mirrors the module-level flag in sfx.ts; the initial read keeps
   // it in sync when the sheet remounts.
   const [sfxMuted, setSfxMutedState] = useState(isSfxMuted());
+
+  // At the table there's no back arrow, so this is the way out. The game
+  // is saved as it goes; Home offers to resume it.
+  const router = useRouter();
+  const pathname = usePathname();
+  const atTable = pathname === '/game' || pathname === '/swap';
 
   return (
     <Modal
@@ -164,6 +170,24 @@ function SettingsSheet({ visible, onClose }: SettingsSheetProps) {
               );
             })}
           </ScrollView>
+
+          {atTable && (
+            <Pressable
+              onPress={() => {
+                onClose();
+                router.replace('/');
+              }}
+              style={styles.leaveRow}
+              accessibilityRole="button"
+              accessibilityLabel="Leave table"
+            >
+              <View style={styles.stationIcon}>
+                <LogOut size={18} color={theme.color.textOnDark} strokeWidth={2} />
+              </View>
+              <Text style={styles.sfxLabel}>Leave table</Text>
+              <Text style={styles.sfxState}>Game is saved</Text>
+            </Pressable>
+          )}
         </Pressable>
       </Pressable>
     </Modal>
@@ -292,6 +316,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  leaveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    marginTop: 12,
     borderRadius: 8,
     backgroundColor: 'rgba(255,255,255,0.04)',
   },

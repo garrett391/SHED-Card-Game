@@ -1,4 +1,18 @@
+/**
+ * The game in progress.
+ *
+ * Saved on the device after every action (zustand/persist over AsyncStorage,
+ * like the campaign and achievements), so a refresh, a tab the phone threw
+ * away or an app restart picks the game back up: Home offers "Resume game",
+ * and the table screens wait for the save to load before giving up on a
+ * game. Only the game itself is saved. The selection, the last action's
+ * events and the privacy reveal start fresh, so pass-and-play comes back
+ * behind the "pass the device" gate.
+ */
+import { useEffect, useState } from 'react';
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GameEvent, GameState, PlayerConfig, RuleConfig } from '../engine/types';
 import { DEFAULT_RULES } from '../engine/rules';
 import * as engine from '../engine/engine';
@@ -59,7 +73,16 @@ interface GameStore {
   hideHand: () => void;
 }
 
-export const useGameStore = create<GameStore>((set, get) => ({
+/**
+ * Bump when GameState, RuleConfig or GameStats change shape: a save from
+ * an older version is dropped instead of loaded into an engine that can't
+ * read it.
+ */
+export const GAME_SAVE_VERSION = 1;
+
+export const useGameStore = create<GameStore>()(
+  persist(
+    (set, get) => ({
   game: null,
   recentEvents: [],
   selectedCardIds: [],
@@ -200,7 +223,41 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   revealHand: () => set({ handRevealed: true }),
   hideHand: () => set({ handRevealed: false }),
-}));
+    }),
+    {
+      name: 'shed-game-v1',
+      version: GAME_SAVE_VERSION,
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (s) => ({
+        game: s.game,
+        campaignPresetId: s.campaignPresetId,
+        stats: s.stats,
+        earnedThisGame: s.earnedThisGame,
+      }),
+      // Any other version: start with no game rather than guess at its shape.
+      migrate: () => ({
+        game: null,
+        campaignPresetId: null,
+        stats: null,
+        earnedThisGame: [],
+      }),
+    },
+  ),
+);
+
+/**
+ * False until the saved game (if any) has loaded from the device. Screens
+ * that send you home when there's no game wait for this first, so a
+ * refresh on the table doesn't bounce to the menu before the save arrives.
+ */
+export function useGameHydrated(): boolean {
+  const [hydrated, setHydrated] = useState(() => useGameStore.persist.hasHydrated());
+  useEffect(() => {
+    setHydrated(useGameStore.persist.hasHydrated());
+    return useGameStore.persist.onFinishHydration(() => setHydrated(true));
+  }, []);
+  return hydrated;
+}
 
 /**
  * Run one engine action through achievement tracking: in-game feats on

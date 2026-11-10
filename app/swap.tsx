@@ -5,7 +5,7 @@ import { Button } from '../src/components/Button';
 import { PlayingCard } from '../src/components/PlayingCard';
 import { VariantBadge } from '../src/components/VariantBadge';
 import { theme } from '../src/components/theme';
-import { useGameStore } from '../src/store/gameStore';
+import { useGameHydrated, useGameStore } from '../src/store/gameStore';
 
 /**
  * Pre-game swap screen. We walk through each player one at a time.
@@ -32,10 +32,11 @@ export default function SwapScreen() {
   const [pendingHandId, setPendingHandId] = useState<string | null>(null);
   const [pendingFaceUpId, setPendingFaceUpId] = useState<string | null>(null);
 
-  // Bail out if the store hasn't been hydrated.
+  // Bail out if there's no game, once the saved one has had time to load.
+  const hydrated = useGameHydrated();
   useEffect(() => {
-    if (!game) router.replace('/');
-  }, [game, router]);
+    if (hydrated && !game) router.replace('/');
+  }, [hydrated, game, router]);
 
   // Skip bots: they don't need a "pass the device" moment.
   useEffect(() => {

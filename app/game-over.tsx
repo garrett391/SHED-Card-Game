@@ -4,7 +4,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { Bot, ScrollText } from 'lucide-react-native';
 import { GameLogModal } from '../src/components/GameLogModal';
 import { theme } from '../src/components/theme';
-import { useGameStore } from '../src/store/gameStore';
+import { useGameHydrated, useGameStore } from '../src/store/gameStore';
 import { isUnlocked, useCampaignStore } from '../src/store/campaignStore';
 import { RULE_PRESETS, PRESET_ORDER } from '../src/campaign/presets';
 import { CINEMATICS, ENDING_ID } from '../src/campaign/story';
@@ -68,9 +68,10 @@ export default function GameOverScreen() {
   // router.replace('/') races (and wins against) the intended destination,
   // sending every button to the main menu.
   const departing = useRef(false);
+  const hydrated = useGameHydrated();
   useEffect(() => {
-    if (!game && !departing.current) router.replace('/');
-  }, [game, router]);
+    if (hydrated && !game && !departing.current) router.replace('/');
+  }, [hydrated, game, router]);
 
   if (!game) return null;
 

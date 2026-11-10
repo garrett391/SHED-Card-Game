@@ -7,7 +7,12 @@ import { useGameStore } from '../src/store/gameStore';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const reset = useGameStore((s) => s.reset);
+  // A game left unfinished (or cut off by a refresh) waits here. Dealing a
+  // new one replaces it, so the other buttons leave it alone until then.
+  const saved = useGameStore((s) => s.game);
+  const savedTurn = saved && saved.phase === 'playing'
+    ? saved.players[saved.currentPlayerIndex]
+    : null;
   const appVersion = Constants.expoConfig?.version ?? '0.0.0';
 
   return (
@@ -18,20 +23,27 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.actions}>
+        {saved && (
+          <View style={styles.resume}>
+            <Button
+              title={saved.phase === 'gameOver' ? 'See results' : 'Resume game'}
+              onPress={() => router.push(saved.phase === 'swap' ? '/swap' : '/game')}
+            />
+            <Text style={styles.resumeNote}>
+              {saved.ruleConfig.name} · {saved.players.length} players
+              {savedTurn ? ` · ${savedTurn.name}'s turn` : ''}
+            </Text>
+          </View>
+        )}
         <Button
           title="Campaign"
-          onPress={() => {
-            reset();
-            router.push('/campaign');
-          }}
+          variant={saved ? 'ghost' : 'primary'}
+          onPress={() => router.push('/campaign')}
         />
         <Button
           title="Free play"
           variant="ghost"
-          onPress={() => {
-            reset();
-            router.push('/setup');
-          }}
+          onPress={() => router.push('/setup')}
         />
         <Button
           title="Achievements"
@@ -83,6 +95,13 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   actions: { marginBottom: 32 },
+  resume: { marginBottom: 12 },
+  resumeNote: {
+    color: theme.color.textMuted,
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 2,
+  },
   footerContainer: {
     alignItems: 'center',
     marginBottom: 16,

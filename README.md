@@ -32,6 +32,9 @@ A cross-platform (iOS / Android / Web) mobile app for the card game
 - **Game over** screen with final standings and per-game stats, and an
   in-game **log** of every play
 - **Achievements**, remembered on the device
+- **Save and resume**: the game in progress is saved after every play, so
+  a refresh or restart picks it back up from Home; Settings has a way to
+  leave the table
 - Card **sound effects**
 - Pure, fully tested **game engine** (no UI dependency)
 
@@ -120,6 +123,7 @@ and full integration scenarios.
 │   │   └── achievements.ts     What each achievement is and how it's detected
 │   ├── store/                  Zustand stores
 │   │   ├── gameStore.ts        Wraps the engine for the current game
+│   │   │                       (saved on device, so it can be resumed)
 │   │   ├── campaignStore.ts    Campaign progress (saved on device)
 │   │   ├── achievementStore.ts Unlocked achievements (saved on device)
 │   │   ├── profileStore.ts     Player name and settings (saved on device)
