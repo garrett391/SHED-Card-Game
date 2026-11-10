@@ -56,10 +56,14 @@ export default function TutorialScreen() {
   const activeSource = engine.getPlaySource(player);
   const isPickupStage = stage === 'play' && action === 'pickup';
 
+  // The row being played from is full size, right under the pile. The
+  // rows waiting their turn are reminders: drawn small, side by side, so
+  // the lesson fits a phone screen.
   const renderRow = (cards: Card[], source: PlaySource, label: string) => {
     if (cards.length === 0) return null;
+    const waiting = source !== activeSource;
     return (
-      <View style={styles.stackBlock}>
+      <View style={waiting ? styles.waitingBlock : styles.stackBlock}>
         <Text style={styles.rowLabel}>{label}</Text>
         <View style={styles.cardRow}>
           {cards.map((card) => {
@@ -71,6 +75,7 @@ export default function TutorialScreen() {
               <PlayingCard
                 key={card.id}
                 card={card}
+                small={waiting}
                 selected={selectedCardIds.includes(card.id)}
                 dimmed={isActive && !isAllowed}
                 disabled={!selectable}
@@ -86,11 +91,11 @@ export default function TutorialScreen() {
   const renderFaceDownRow = () => {
     if (player.faceDown.length === 0) return null;
     return (
-      <View style={styles.stackBlock}>
+      <View style={styles.waitingBlock}>
         <Text style={styles.rowLabel}>Face-down (blind)</Text>
         <View style={styles.cardRow}>
           {player.faceDown.map((card) => (
-            <PlayingCard key={card.id} faceDown disabled />
+            <PlayingCard key={card.id} faceDown small disabled />
           ))}
         </View>
       </View>
@@ -164,38 +169,42 @@ export default function TutorialScreen() {
               mustPickup={isPickupStage}
             />
 
-            {renderRow(player.hand, 'hand', 'Your hand')}
-            {renderRow(player.faceUp, 'faceUp', 'Face-up')}
-            {renderFaceDownRow()}
-
-            {/* Action controls */}
-            {stage === 'play' && action === 'play' && (
-              <View style={styles.actions}>
-                <Button
-                  title="Play selected"
-                  onPress={() => {
-                    playSfx('cardPlace');
-                    confirmPlay();
-                  }}
-                  disabled={!canPlaySelection(selectedCardIds, lesson)}
-                />
-              </View>
-            )}
-            {stage === 'play' && action === 'pickup' && (
-              <View style={styles.actions}>
-                <Button
-                  title="Pick up pile"
-                  variant="danger"
-                  onPress={() => {
-                    playSfx('cardPickup');
-                    pickup();
-                  }}
-                />
-              </View>
-            )}
+            {activeSource === 'hand' && renderRow(player.hand, 'hand', 'Your hand')}
+            {activeSource === 'faceUp' && renderRow(player.faceUp, 'faceUp', 'Face-up')}
+            <View style={styles.waitingRow}>
+              {activeSource !== 'hand' && renderRow(player.hand, 'hand', 'Your hand')}
+              {activeSource !== 'faceUp' && renderRow(player.faceUp, 'faceUp', 'Face-up')}
+              {renderFaceDownRow()}
+            </View>
           </>
         )}
       </ScrollView>
+
+      {/* Action controls: docked above Chris, so the button for the step
+          he's describing is never below the fold. */}
+      {!lesson.final && stage === 'play' && (
+        <View style={styles.actions}>
+          {action === 'play' ? (
+            <Button
+              title="Play selected"
+              onPress={() => {
+                playSfx('cardPlace');
+                confirmPlay();
+              }}
+              disabled={!canPlaySelection(selectedCardIds, lesson)}
+            />
+          ) : (
+            <Button
+              title="Pick up pile"
+              variant="danger"
+              onPress={() => {
+                playSfx('cardPickup');
+                pickup();
+              }}
+            />
+          )}
+        </View>
+      )}
 
       {/* Chris */}
       <View style={styles.dialogueWrap}>
@@ -255,25 +264,35 @@ const styles = StyleSheet.create({
 
   board: {
     paddingHorizontal: theme.space.lg,
-    paddingTop: 8,
-    paddingBottom: 16,
+    paddingTop: 2,
+    paddingBottom: 8,
   },
   stackBlock: {
-    marginTop: 14,
+    marginTop: 4,
+  },
+  waitingRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: 20,
+  },
+  waitingBlock: {
+    marginTop: 2,
   },
   rowLabel: {
     color: theme.color.textMuted,
     fontSize: 12,
     fontWeight: '600',
-    marginBottom: 6,
+    marginBottom: 0,
   },
   cardRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingVertical: 16, // room for the selected-card lift
+    paddingTop: 16, // room for the selected-card lift
+    paddingBottom: 4,
   },
   actions: {
-    marginTop: 18,
+    paddingHorizontal: theme.space.lg,
+    paddingTop: 4,
   },
 
   // Final screen
