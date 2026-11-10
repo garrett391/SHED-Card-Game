@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GameState } from '../engine/types';
 import { getEffectiveTopCard } from '../engine/rules';
@@ -6,6 +6,10 @@ import { PlayingCard } from './PlayingCard';
 import { theme } from './theme';
 import { Flame } from 'lucide-react-native';
 import { rankLabel } from '../engine/cards';
+import { useAutoClear } from '../table/useAutoClear';
+
+/** How long the pile waits for the second tap of a voluntary pickup. */
+const CONFIRM_PICKUP_MS = 2500;
 
 interface Props {
   game: GameState;
@@ -44,6 +48,28 @@ export function Center({ game, onPickup, isHumanTurn, mustPickup }: Props) {
 
   const pileTappable = isHumanTurn && game.playPile.length > 0 && onPickup;
 
+  // Picking up when you could have played is a real move, but it can't be
+  // taken back and the pile sits right above the hand, so a stray tap
+  // shouldn't do it: the first tap asks, a second within a moment picks
+  // up. A forced pickup (no legal play) stays one tap.
+  const [confirming, setConfirming] = useState(false);
+  useAutoClear(confirming, () => setConfirming(false), CONFIRM_PICKUP_MS);
+  // Anything that changes the table withdraws the question.
+  useEffect(() => {
+    setConfirming(false);
+  }, [game.playPile.length, game.currentPlayerIndex, isHumanTurn, mustPickup]);
+
+  const onPilePress = () => {
+    if (!onPickup) return;
+    if (mustPickup || confirming) {
+      setConfirming(false);
+      onPickup();
+    } else {
+      setConfirming(true);
+    }
+  };
+  const pileCount = game.playPile.length;
+
   // Animated border color: pulses from muted to bright gold
   const animatedBorderColor = pulseAnim.interpolate({
     inputRange: [0, 1],
@@ -80,12 +106,12 @@ export function Center({ game, onPickup, isHumanTurn, mustPickup }: Props) {
     if (pileTappable) {
       return (
         <Pressable
-          onPress={onPickup}
+          onPress={onPilePress}
           style={({ pressed }) => [
             styles.column,
             pressed && { opacity: 0.7 },
           ]}
-          accessibilityLabel="Pick up pile"
+          accessibilityLabel={confirming ? 'Confirm: pick up pile' : 'Pick up pile'}
           accessibilityRole="button"
         >
           <Text style={[styles.label, mustPickup && styles.labelHighlight]}>
@@ -104,12 +130,22 @@ export function Center({ game, onPickup, isHumanTurn, mustPickup }: Props) {
               {pileContent}
             </Animated.View>
           ) : (
-            <View style={styles.pileTappable}>
+            <View style={[styles.pileTappable, confirming && styles.pileConfirming]}>
               {pileContent}
             </View>
           )}
-          <Text style={[styles.pickupHint, mustPickup && styles.pickupHintForced]}>
-            {mustPickup ? 'No moves — tap to pick up' : 'Tap to pick up'}
+          <Text
+            style={[
+              styles.pickupHint,
+              (mustPickup || confirming) && styles.pickupHintForced,
+            ]}
+            accessibilityLiveRegion="polite"
+          >
+            {mustPickup
+              ? 'No moves — tap to pick up'
+              : confirming
+              ? `Tap again to take ${pileCount} ${pileCount === 1 ? 'card' : 'cards'}`
+              : 'Tap to pick up'}
           </Text>
         </Pressable>
       );
@@ -212,6 +248,11 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     padding: 4,
     alignItems: 'center',
+  },
+  // First tap of a voluntary pickup: the pile asks to be tapped again
+  pileConfirming: {
+    borderColor: theme.color.accent,
+    borderStyle: 'solid',
   },
   // "Tap to pick up" hint text
   pickupHint: {
