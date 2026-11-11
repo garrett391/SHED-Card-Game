@@ -85,6 +85,24 @@ export const HOME_SCENES: HomeScene[] = [
     panel: 'rgba(44,18,22,0.9)',
     line: '#7a3a3a',
   },
+  {
+    id: 'second-schism',
+    name: "Justin's cell",
+    image: require('../../assets/images/cell/splash-cell.png'),
+    base: '#0a0d12',
+    accent: '#f0b25a',
+    panel: 'rgba(16,22,30,0.9)',
+    line: '#3a4a5c',
+  },
+  {
+    id: 'the-council',
+    name: 'The Council table',
+    image: require('../../assets/images/council/splash-council.png'),
+    base: '#0a1020',
+    accent: '#b7d0f7',
+    panel: 'rgba(14,22,42,0.9)',
+    line: '#3d4f7c',
+  },
 ];
 
 /** What profileStore.homeScene holds when no scene is pinned. */

@@ -310,8 +310,8 @@ down).
 | Super Tens | Greg's machine hall: circuit-board table, glowing monitors | `machine-hall/splash-machine-hall.png` |
 | The Outlaw Pass | The saloon | `wild-west/splash-wild-west.png` |
 | Chaos Shed | The twins' big top: spotlight, curtains, cards in the air | `big-top/splash-big-top.png` |
-| The Second Schism | Justin's cell: one candle, burning cards, no 8s | Not made |
-| The Council of Schisms | The round table in the ring of pillars, the empty chair | Not made |
+| The Second Schism | Justin's cell: one candle, burning cards, no 8s | `cell/splash-cell.png` |
+| The Council of Schisms | The round table in the ring of pillars, the empty chair | `council/splash-council.png` |
 
 The other splashes (noir, Atlantis, cyberpunk, jungle, space) belong to no
 table. Idea: bonus scenes unlocked by achievements. Card backs could later

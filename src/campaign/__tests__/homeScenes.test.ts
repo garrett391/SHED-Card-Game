@@ -32,10 +32,10 @@ describe('following the campaign', () => {
     expect(homeScene(upTo('super-tens'), null).id).toBe('the-pass');
   });
 
-  test('a table without a scene borrows the nearest earlier one', () => {
-    // Standing at the Second Schism, then the Council: no art yet.
-    expect(homeScene(upTo('chaos-shed'), null).id).toBe('chaos-shed');
-    expect(homeScene(upTo('second-schism'), null).id).toBe('chaos-shed');
+  test('every table has its own scene', () => {
+    expect(HOME_SCENES.map((s) => s.id)).toEqual(PRESET_ORDER);
+    expect(homeScene(upTo('chaos-shed'), null).id).toBe('second-schism');
+    expect(homeScene(upTo('second-schism'), null).id).toBe('the-council');
   });
 
   test('with every table beaten it stays at the last scene', () => {
