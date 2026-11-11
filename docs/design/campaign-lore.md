@@ -289,6 +289,34 @@ assets/characters/) are kept for later use, e.g.:
   return and the Council. At a shared table a random host speaks, except
   that a host who beat you always gets the last word.
 
+## Home scenes
+
+The Home screen sits you at a table in the campaign place the heroes have
+reached: the same seat and hands every time, a different place. Beating a
+table unlocks its scene for pinning in Settings; otherwise Home follows
+the campaign. Scenes live in `src/campaign/homeScenes.ts`; a table without
+art borrows the nearest earlier scene.
+
+All scene art copies the layout of `assets/images/medieval/splash-medieval.png`
+(768x1376, first person, hands and a fan of cards at the bottom, the top
+quarter dark for the title, one main light between a quarter and halfway
+down).
+
+| Table | Scene | Art |
+|-------|-------|-----|
+| Jake's Classic | Jake's old wood by moonlight: stump table, hanging lantern | `forest/splash-moonlit-wood.png` |
+| The Spreading | The village tavern | `medieval/splash-medieval.png` |
+| Justin's Schism | The heretics' cathedral: crimson banners, the green-lit book | Not made |
+| Super Tens | Greg's machine hall: circuit-board table, glowing monitors | Not made |
+| The Outlaw Pass | The saloon | `wild-west/splash-wild-west.png` |
+| Chaos Shed | The twins' big top: spotlight, curtains, cards in the air | Not made |
+| The Second Schism | Justin's cell: one candle, burning cards, no 8s | Not made |
+| The Council of Schisms | The round table in the ring of pillars, the empty chair | Not made |
+
+The other splashes (noir, Atlantis, cyberpunk, jungle, space) belong to no
+table. Idea: bonus scenes unlocked by achievements. Card backs could later
+ride on the same scenes (one theme: background, accent, card back).
+
 ## Backlog
 
 - **A less linear map.** The overworld climbs straight from bottom to top.

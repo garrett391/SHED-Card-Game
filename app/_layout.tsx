@@ -4,12 +4,14 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useFonts } from 'expo-font';
-import { Gauge, LogOut, Pause, Play, Settings, Volume2, VolumeX } from 'lucide-react-native';
+import { Gauge, Image as ImageIcon, LogOut, Pause, Play, Settings, Volume2, VolumeX } from 'lucide-react-native';
 import { Rye_400Regular } from '@expo-google-fonts/rye';
 import { theme } from '../src/components/theme';
 import { useRadioStore, STATIONS } from '../src/store/radioStore';
 import { preloadSfx, setSfxMuted } from '../src/audio/sfx';
 import { useProfileStore } from '../src/store/profileStore';
+import { useCampaignStore } from '../src/store/campaignStore';
+import { FOLLOW_CAMPAIGN, homeScene, unlockedScenes } from '../src/campaign/homeScenes';
 
 // ---------------------------------------------------------------------------
 // SettingsButton  (lives in the header of every screen)
@@ -72,6 +74,17 @@ function SettingsSheet({ visible, onClose }: SettingsSheetProps) {
   const gameSpeed = useProfileStore((s) => s.gameSpeed);
   const setGameSpeed = useProfileStore((s) => s.setGameSpeed);
   const fast = gameSpeed === 'fast';
+
+  // The Home scene: follow the campaign, or pin one you've unlocked. One
+  // row that steps through the choices, like the rows above it.
+  const completed = useCampaignStore((s) => s.completed);
+  const pinnedScene = useProfileStore((s) => s.homeScene);
+  const setHomeScene = useProfileStore((s) => s.setHomeScene);
+  const sceneChoices = [FOLLOW_CAMPAIGN, ...unlockedScenes(completed).map((s) => s.id)];
+  const sceneNow = sceneChoices.includes(pinnedScene) ? pinnedScene : FOLLOW_CAMPAIGN;
+  const following = sceneNow === FOLLOW_CAMPAIGN;
+  const nextScene = () =>
+    setHomeScene(sceneChoices[(sceneChoices.indexOf(sceneNow) + 1) % sceneChoices.length]);
 
   // At the table there's no back arrow, so this is the way out. The game
   // is saved as it goes; Home offers to resume it.
@@ -136,6 +149,33 @@ function SettingsSheet({ visible, onClose }: SettingsSheetProps) {
             <Text style={[styles.sfxState, fast && styles.sfxStateOn]}>
               {fast ? 'Fast' : 'Normal'}
             </Text>
+          </Pressable>
+
+          {/* ── Home scene ────────────────────────────────────────────── */}
+          <Text style={[styles.sectionLabel, styles.sectionGap]}>Home scene</Text>
+          <Pressable
+            onPress={nextScene}
+            style={styles.sfxRow}
+            accessibilityRole="button"
+            accessibilityLabel={`Home scene: ${
+              following ? 'follows the campaign' : homeScene(completed, sceneNow).name
+            }. Tap to change.`}
+          >
+            <View style={styles.stationIcon}>
+              <ImageIcon
+                size={18}
+                color={following ? theme.color.textMuted : theme.color.textOnDark}
+                strokeWidth={2}
+              />
+            </View>
+            <Text style={styles.sfxLabel} numberOfLines={1}>
+              {following ? 'Follows the campaign' : homeScene(completed, sceneNow).name}
+            </Text>
+            {sceneChoices.length > 1 && (
+              <Text style={[styles.sfxState, !following && styles.sfxStateOn]}>
+                {sceneChoices.indexOf(sceneNow) + 1}/{sceneChoices.length}
+              </Text>
+            )}
           </Pressable>
 
           {/* ── Radio ─────────────────────────────────────────────────── */}
@@ -259,7 +299,17 @@ export default function RootLayout() {
           headerTitleAlign: 'center',
         }}
       >
-        <Stack.Screen name="index" options={{ title: 'Shed' }} />
+        {/* Home is a full-screen scene: no title bar, just the settings
+            cog floating over the art. */}
+        <Stack.Screen
+          name="index"
+          options={{
+            title: '',
+            headerTransparent: true,
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: 'transparent' },
+          }}
+        />
         <Stack.Screen name="campaign" options={{ title: 'Campaign' }} />
         <Stack.Screen name="cinematic" options={{ headerShown: false }} />
         <Stack.Screen name="setup" options={{ title: 'Players' }} />
@@ -308,7 +358,7 @@ const styles = StyleSheet.create({
   },
   card: {
     width: 240,
-    maxHeight: 520, // room for a few stations under the settings rows
+    maxHeight: 590, // room for a few stations under the settings rows
     backgroundColor: theme.color.feltBgDark,
     borderRadius: theme.radius.md,
     paddingVertical: 6,

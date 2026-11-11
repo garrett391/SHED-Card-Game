@@ -12,12 +12,15 @@
  * Whether the radio was playing is deliberately not remembered: it always
  * starts paused (see radioStore).
  * lastTable: the free-play table last dealt (see src/campaign/lastTable.ts).
+ * homeScene: the Home screen scene pinned in Settings, or 'follow' to move
+ * with the campaign (see src/campaign/homeScenes.ts).
  */
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { GameSpeed } from '../table/pacing';
 import type { SavedTable } from '../campaign/lastTable';
+import { FOLLOW_CAMPAIGN } from '../campaign/homeScenes';
 
 export const DEFAULT_PLAYER_NAME = 'Player 1';
 
@@ -32,6 +35,8 @@ interface ProfileStore {
   setRadioStationId: (id: string) => void;
   lastTable: SavedTable | null;
   setLastTable: (table: SavedTable) => void;
+  homeScene: string;
+  setHomeScene: (id: string) => void;
 }
 
 export const useProfileStore = create<ProfileStore>()(
@@ -50,6 +55,8 @@ export const useProfileStore = create<ProfileStore>()(
       setRadioStationId: (radioStationId) => set({ radioStationId }),
       lastTable: null,
       setLastTable: (lastTable) => set({ lastTable }),
+      homeScene: FOLLOW_CAMPAIGN,
+      setHomeScene: (homeScene) => set({ homeScene }),
     }),
     {
       name: 'shed-profile-v1',
