@@ -258,8 +258,15 @@ export default function SetupScreen() {
   // The table shrinks to fit a short screen (a phone browser with its
   // bars showing), so your own seat isn't left under the Deal button.
   const { height: windowH } = useWindowDimensions();
-  const tableH = Math.max(TABLE_MIN_H, Math.min(TABLE_H, windowH - TABLE_CHROME_H));
-  const slotStyle = slotStyles(tableH);
+  // Five or six need the table's full length for two seats down each
+  // side; fewer can sit round a shorter one. The campaign banner is
+  // taller than free play's table card.
+  // (Free play always shows all six places, the empty ones as plus signs.)
+  const bothSides = !campaignPreset || players.length >= 5;
+  const minH = bothSides ? TABLE_MIN_H : TABLE_MIN_H_FEW;
+  const chromeH = TABLE_CHROME_H + (campaignPreset ? 40 : 0);
+  const tableH = Math.max(minH, Math.min(TABLE_H, windowH - chromeH));
+  const slotStyle = slotStyles(tableH, bothSides);
   const humans = players.filter((p) => !p.isBot).length;
   const tableNumber = campaignPreset ? PRESET_ORDER.indexOf(campaignPreset) + 1 : 0;
   const room = MAX_PLAYERS - players.length;
@@ -304,13 +311,11 @@ export default function SetupScreen() {
           <View style={styles.centre} pointerEvents="none">
             <Text style={styles.centreCount}>{players.length}</Text>
             <Text style={styles.centreLabel}>at the table</Text>
-            <Text style={styles.centreNote} numberOfLines={4}>
-              {campaignPreset
-                ? selectedPreset.flavorText
-                : room === 0
-                ? 'Full table'
-                : `room for ${room} more`}
-            </Text>
+            {!campaignPreset && (
+              <Text style={styles.centreNote}>
+                {room === 0 ? 'Full table' : `room for ${room} more`}
+              </Text>
+            )}
           </View>
 
           {players.map((p, i) => {
@@ -320,14 +325,13 @@ export default function SetupScreen() {
             const character = p.isBot ? characterByName(p.name) : null;
             // Hosts are canon in the campaign; your own seat is yours to name.
             const canEdit = !campaignPreset || !p.isBot;
-            // What a host brings: at the Council, the rules of their own
-            // table; elsewhere in the campaign, who they are.
+            // At the Council each host brings the rules of their own table,
+            // so their seat says which. Elsewhere a name is enough.
             const home = character?.homeTable;
-            const note = !campaignPreset || !character
-              ? null
-              : selectedPreset.seatRules && home && RULE_PRESETS[home]
-              ? RULE_PRESETS[home].name
-              : character.title;
+            const note =
+              campaignPreset && selectedPreset.seatRules && home && RULE_PRESETS[home]
+                ? RULE_PRESETS[home].name
+                : null;
             return (
               <Seat
                 key={i}
@@ -478,7 +482,7 @@ function Seat({
   position: object;
   player: PlayerConfig;
   character: Character | null;
-  /** A line under a campaign host's name. */
+  /** A line under a host's name: the table whose rules they play by. */
   note: string | null;
   /** The first seat, when a person sits in it: drawn larger, ringed in gold. */
   you: boolean;
@@ -525,7 +529,7 @@ function Seat({
         {player.name || 'Player'}
         {youLabel && <Text style={styles.seatYou}> (you)</Text>}
       </Text>
-      {note && <Text style={styles.seatNote} numberOfLines={2}>{note}</Text>}
+      {note && <Text style={styles.seatNote} numberOfLines={1}>{note}</Text>}
     </Pressable>
   );
 }
@@ -536,12 +540,14 @@ function Seat({
 const TABLE_H = 520;
 /** As small as it goes before the side seats would run into each other. */
 const TABLE_MIN_H = 420;
+/** With four or fewer there's one seat a side, so it can go shorter. */
+const TABLE_MIN_H_FEW = 360;
 /** Everything else on the screen: header, table card, hint and Deal. */
 const TABLE_CHROME_H = 290;
 /** The oval sits below the top seat and above yours. */
-const OVAL_TOP = 118;
+const OVAL_TOP = 104;
 const OVAL_BOTTOM = 110;
-const SEAT_W = 104;
+const SEAT_W = 100;
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
@@ -594,8 +600,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: OVAL_TOP,
     bottom: OVAL_BOTTOM,
-    left: '22%',
-    right: '22%',
+    left: '25%',
+    right: '25%',
     borderRadius: 999,
     backgroundColor: '#17604a',
     borderWidth: 12,
@@ -610,8 +616,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: OVAL_TOP,
     bottom: OVAL_BOTTOM,
-    left: '29%',
-    right: '29%',
+    left: '31%',
+    right: '31%',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
@@ -654,10 +660,10 @@ const styles = StyleSheet.create({
   avatarInitial: { color: '#f1e3c2', fontSize: 26, fontWeight: '800' },
   seatName: {
     color: theme.color.textOnDark,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 15,
   },
   seatYou: { color: theme.color.textMuted, fontWeight: '500' },
   seatNote: { color: '#c9d2ce', fontSize: 11, lineHeight: 14, textAlign: 'center' },
@@ -758,12 +764,16 @@ const styles = StyleSheet.create({
   modeFlavor: { color: theme.color.textMuted, fontSize: 12, fontStyle: 'italic', marginTop: 6 },
 });
 
-/** Where each place sits in a table area `tableH` tall (seats anchor by
- *  their top; the side seats spread along the oval's length). */
-function slotStyles(tableH: number): Record<SeatSlot, object> {
+/**
+ * Where each place sits in a table area `tableH` tall (seats anchor by
+ * their top). With one seat a side it sits beside the oval's middle;
+ * with two (`bothSides`) they start higher and keep a full seat's height
+ * apart, so a two-line name and a note never run into the seat below.
+ */
+function slotStyles(tableH: number, bothSides: boolean): Record<SeatSlot, object> {
   const ovalH = tableH - OVAL_TOP - OVAL_BOTTOM;
-  const upper = OVAL_TOP + ovalH * 0.1;
-  const lower = OVAL_TOP + ovalH * 0.56;
+  const upper = bothSides ? OVAL_TOP - 30 : OVAL_TOP + ovalH * 0.1;
+  const lower = upper + Math.max(124, ovalH * 0.56);
   return {
     top: { top: 0, left: '50%', marginLeft: -SEAT_W / 2 },
     // Nudged out past the screen's padding so names clear the table's rim.

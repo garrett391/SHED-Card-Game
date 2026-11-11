@@ -1,6 +1,6 @@
 {
   "name": "shed",
-  "version": "0.5.37",
+  "version": "0.5.38",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
