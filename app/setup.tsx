@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { Button } from '../src/components/Button';
@@ -254,6 +255,11 @@ export default function SetupScreen() {
     RULE_PRESETS[selectedMode] ?? RULE_PRESETS['jake-classic'];
 
   const seats = seatsFor(players.length);
+  // The table shrinks to fit a short screen (a phone browser with its
+  // bars showing), so your own seat isn't left under the Deal button.
+  const { height: windowH } = useWindowDimensions();
+  const tableH = Math.max(TABLE_MIN_H, Math.min(TABLE_H, windowH - TABLE_CHROME_H));
+  const slotStyle = slotStyles(tableH);
   const humans = players.filter((p) => !p.isBot).length;
   const tableNumber = campaignPreset ? PRESET_ORDER.indexOf(campaignPreset) + 1 : 0;
   const room = MAX_PLAYERS - players.length;
@@ -293,7 +299,7 @@ export default function SetupScreen() {
         )}
 
         {/* ── The table from above, everyone in their seat ─────────────── */}
-        <View style={styles.table}>
+        <View style={[styles.table, { height: tableH }]}>
           <View style={styles.oval} />
           <View style={styles.centre} pointerEvents="none">
             <Text style={styles.centreCount}>{players.length}</Text>
@@ -325,7 +331,7 @@ export default function SetupScreen() {
             return (
               <Seat
                 key={i}
-                slot={seats[i]}
+                position={slotStyle[seats[i]]}
                 player={p}
                 character={character}
                 note={note}
@@ -340,7 +346,7 @@ export default function SetupScreen() {
               <Pressable
                 key={slot}
                 onPress={addPlayer}
-                style={({ pressed }) => [styles.seat, SLOT_STYLE[slot], pressed && styles.pressed]}
+                style={({ pressed }) => [styles.seat, slotStyle[slot], pressed && styles.pressed]}
                 accessibilityRole="button"
                 accessibilityLabel="Empty seat. Tap to add a player."
               >
@@ -460,7 +466,7 @@ export default function SetupScreen() {
 // ─── A seat at the table ────────────────────────────────────────────────────────
 
 function Seat({
-  slot,
+  position,
   player,
   character,
   note,
@@ -468,7 +474,8 @@ function Seat({
   youLabel,
   onPress,
 }: {
-  slot: SeatSlot;
+  /** Where the seat goes in the table area (see slotStyles). */
+  position: object;
   player: PlayerConfig;
   character: Character | null;
   /** A line under a campaign host's name. */
@@ -486,7 +493,7 @@ function Seat({
     <Pressable
       onPress={onPress}
       disabled={!onPress}
-      style={({ pressed }) => [styles.seat, SLOT_STYLE[slot], pressed && styles.pressed]}
+      style={({ pressed }) => [styles.seat, position, pressed && styles.pressed]}
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={`${player.name || 'Player'}, ${player.isBot ? 'bot' : 'human'}${
         onPress ? '. Tap to change.' : ''
@@ -527,6 +534,13 @@ function Seat({
 
 /** The table area: seats sit round an oval, anchored by their top edge. */
 const TABLE_H = 520;
+/** As small as it goes before the side seats would run into each other. */
+const TABLE_MIN_H = 420;
+/** Everything else on the screen: header, table card, hint and Deal. */
+const TABLE_CHROME_H = 290;
+/** The oval sits below the top seat and above yours. */
+const OVAL_TOP = 118;
+const OVAL_BOTTOM = 110;
 const SEAT_W = 104;
 
 const styles = StyleSheet.create({
@@ -578,8 +592,8 @@ const styles = StyleSheet.create({
   },
   oval: {
     position: 'absolute',
-    top: 118,
-    bottom: 110,
+    top: OVAL_TOP,
+    bottom: OVAL_BOTTOM,
     left: '22%',
     right: '22%',
     borderRadius: 999,
@@ -594,8 +608,8 @@ const styles = StyleSheet.create({
   },
   centre: {
     position: 'absolute',
-    top: 118,
-    bottom: 110,
+    top: OVAL_TOP,
+    bottom: OVAL_BOTTOM,
     left: '29%',
     right: '29%',
     alignItems: 'center',
@@ -744,13 +758,19 @@ const styles = StyleSheet.create({
   modeFlavor: { color: theme.color.textMuted, fontSize: 12, fontStyle: 'italic', marginTop: 6 },
 });
 
-/** Where each place sits in the table area (seats anchor by their top). */
-const SLOT_STYLE: Record<SeatSlot, object> = {
-  top: { top: 0, left: '50%', marginLeft: -SEAT_W / 2 },
-  // Nudged out past the screen's padding so names clear the table's rim.
-  upperLeft: { top: 146, left: -10 },
-  lowerLeft: { top: 282, left: -10 },
-  upperRight: { top: 146, right: -10 },
-  lowerRight: { top: 282, right: -10 },
-  bottom: { bottom: 0, left: '50%', marginLeft: -SEAT_W / 2 },
-};
+/** Where each place sits in a table area `tableH` tall (seats anchor by
+ *  their top; the side seats spread along the oval's length). */
+function slotStyles(tableH: number): Record<SeatSlot, object> {
+  const ovalH = tableH - OVAL_TOP - OVAL_BOTTOM;
+  const upper = OVAL_TOP + ovalH * 0.1;
+  const lower = OVAL_TOP + ovalH * 0.56;
+  return {
+    top: { top: 0, left: '50%', marginLeft: -SEAT_W / 2 },
+    // Nudged out past the screen's padding so names clear the table's rim.
+    upperLeft: { top: upper, left: -10 },
+    lowerLeft: { top: lower, left: -10 },
+    upperRight: { top: upper, right: -10 },
+    lowerRight: { top: lower, right: -10 },
+    bottom: { bottom: 0, left: '50%', marginLeft: -SEAT_W / 2 },
+  };
+}

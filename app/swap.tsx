@@ -148,6 +148,11 @@ export default function SwapScreen() {
     hideHand();
   };
 
+  // Who swaps after this player, if anyone: only another human gets a
+  // turn here (bots swap off-screen), so on your own it's straight to
+  // the game.
+  const nextHuman = game.players.find((p, i) => i > activeIdx && !p.isBot);
+
   // Sized so all three rows and the Done button fit a phone screen: the
   // two rows you trade between must be visible together. The face-down
   // cards are only a reminder, so they're drawn small.
@@ -194,7 +199,10 @@ export default function SwapScreen() {
 
     </ScrollView>
     <View style={styles.footer}>
-      <Button title="Done — next player" onPress={done} />
+      <Button
+        title={nextHuman ? `Done — pass to ${nextHuman.name}` : 'Done — start the game'}
+        onPress={done}
+      />
     </View>
     </View>
   );
