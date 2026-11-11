@@ -18,6 +18,15 @@ const FOUR_OF_A_KIND: Card[] = [
   { id: 'f5', rank: 5, suit: '♦' },
 ];
 
+/**
+ * The rulesets worth looking up: Jake's Classic and every table that
+ * changes something. A table that plays by the classic rules (The
+ * Spreading) would only repeat it.
+ */
+const RULESETS = PRESET_ORDER.filter(
+  (id, i) => i === 0 || variantDiff(RULE_PRESETS[id]).length > 0,
+);
+
 const FACE_UP: Card[] = [
   { id: 'u1', rank: 14, suit: '♠' },
   { id: 'u2', rank: 2, suit: '♥' },
@@ -38,15 +47,13 @@ export default function RulesScreen() {
 
   const preset = getPreset(variantId);
   const diff = variantDiff(preset);
-  // Zero diffs means the preset plays exactly like Jake's Classic (e.g. The
-  // Spreading, which reskins classic for the teaching beat) — show the
-  // "original ruleset" note rather than an empty "What's different" list.
+  // Zero diffs means Jake's Classic itself: show the "original ruleset"
+  // note rather than an empty "What's different" list.
   const isClassic = diff.length === 0;
 
   return (
     <>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.subtitle}>Original rules as spake by Jake the Elder</Text>
 
         {/* New here? → interactive tutorial */}
         <Button
@@ -203,20 +210,6 @@ export default function RulesScreen() {
           </Stage>
         </Section>
 
-        <Section title="Long live Jake the Elder">
-          <Text style={styles.quoteFrom}>From Jake the Elder, the herald of SHED:</Text>
-          <Quote>
-            8 is definitely playable on 7. It's invisible. Plus, it lets you
-            pass the 7 to the next person, which is potentially a huge tactical
-            move.
-          </Quote>
-          <Quote>
-            7s and 10s are lower-tier than 8s and 2s. They're situational:
-            sometimes good, sometimes bad. 2 and 8 are always playable and
-            always good to have.
-          </Quote>
-        </Section>
-
         <View style={{ height: 40 }} />
       </ScrollView>
 
@@ -231,7 +224,7 @@ export default function RulesScreen() {
           <Pressable style={styles.sheet} onPress={() => {}}>
             <Text style={styles.sheetTitle}>Choose a ruleset</Text>
             <ScrollView bounces={false}>
-              {PRESET_ORDER.map((id) => {
+              {RULESETS.map((id) => {
                 const p = RULE_PRESETS[id];
                 const active = id === variantId;
                 return (
@@ -353,14 +346,6 @@ function Stage({
   );
 }
 
-function Quote({ children }: { children: React.ReactNode }) {
-  return (
-    <View style={styles.quote}>
-      <Text style={styles.quoteText}>“{children}”</Text>
-    </View>
-  );
-}
-
 function P({ children }: { children: React.ReactNode }) {
   return <Text style={styles.p}>{children}</Text>;
 }
@@ -374,14 +359,6 @@ const styles = StyleSheet.create({
     padding: theme.space.lg,
     backgroundColor: theme.color.feltBg,
     minHeight: '100%',
-  },
-  subtitle: {
-    color: theme.color.accent,
-    fontStyle: 'italic',
-    fontSize: 13,
-    textAlign: 'center',
-    marginTop: 4,
-    marginBottom: 14,
   },
   cta: {
     marginBottom: 14,
@@ -543,16 +520,6 @@ const styles = StyleSheet.create({
   dealLabel: { color: theme.color.textOnDark, fontSize: 13, fontWeight: '700' },
   dealNote: { color: theme.color.textMuted, fontSize: 12 },
   bullets: { gap: 2 },
-
-  quoteFrom: { color: theme.color.textMuted, fontSize: 13, marginBottom: 8 },
-  quote: {
-    backgroundColor: '#163f32',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginTop: 6,
-  },
-  quoteText: { color: theme.color.textOnDark, fontSize: 14, lineHeight: 21, fontStyle: 'italic' },
 
   // Picker popout
   backdrop: {
