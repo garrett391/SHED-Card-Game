@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Bot, ScrollText } from 'lucide-react-native';
+import { AchievementIcon } from '../src/components/AchievementIcon';
 import { GameLogModal } from '../src/components/GameLogModal';
 import { theme } from '../src/components/theme';
 import { useGameHydrated, useGameStore } from '../src/store/gameStore';
@@ -242,9 +243,10 @@ export default function GameOverScreen() {
               {earnedThisGame.length === 1 ? 'Achievement unlocked' : `${earnedThisGame.length} achievements unlocked`}
             </Text>
             {earnedThisGame.map((id) => (
-              <Text key={id} style={styles.bannerItem}>
-                {ACHIEVEMENT_BY_ID[id].emoji} {ACHIEVEMENT_BY_ID[id].name}
-              </Text>
+              <View key={id} style={styles.bannerItemRow}>
+                <AchievementIcon id={id} size={16} color={GOLD} />
+                <Text style={styles.bannerItem}>{ACHIEVEMENT_BY_ID[id].name}</Text>
+              </View>
             ))}
             <Text style={styles.bannerLink}>View all ›</Text>
           </Pressable>
@@ -473,6 +475,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
+  bannerItemRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   bannerItem: { color: theme.color.textOnDark, fontSize: 15 },
   bannerLink: { color: GOLD, fontSize: 13, fontWeight: '700', marginTop: 4 },
   bannerTitle: { color: theme.color.textOnDark, fontSize: 18, fontWeight: '800' },

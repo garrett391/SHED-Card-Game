@@ -8,6 +8,7 @@ import { PlayingCard } from '../src/components/PlayingCard';
 import { Card } from '../src/engine/types';
 import { RULE_PRESETS, PRESET_ORDER, getPreset } from '../src/campaign/presets';
 import { variantDiff } from '../src/campaign/ruleSummary';
+import { isUnlocked, useCampaignStore } from '../src/store/campaignStore';
 
 /** Three 5s, an 8, then a 5: the 8 doesn't break four of a kind. */
 const FOUR_OF_A_KIND: Card[] = [
@@ -19,13 +20,17 @@ const FOUR_OF_A_KIND: Card[] = [
 ];
 
 /**
- * The rulesets worth looking up: Jake's Classic and every table that
- * changes something. A table that plays by the classic rules (The
- * Spreading) would only repeat it.
+ * The rulesets worth looking up: Jake's Classic and every table you've
+ * reached in the campaign that changes something. A table that plays by
+ * the classic rules (The Spreading) would only repeat it, and a table
+ * still ahead of you keeps its twist for when you get there.
  */
-const RULESETS = PRESET_ORDER.filter(
-  (id, i) => i === 0 || variantDiff(RULE_PRESETS[id]).length > 0,
-);
+function rulesetsFor(completed: Record<string, true>): string[] {
+  return PRESET_ORDER.filter(
+    (id, i) =>
+      i === 0 || (isUnlocked(completed, id) && variantDiff(RULE_PRESETS[id]).length > 0),
+  );
+}
 
 const FACE_UP: Card[] = [
   { id: 'u1', rank: 14, suit: '♠' },
@@ -44,6 +49,9 @@ export default function RulesScreen() {
   const router = useRouter();
   const [variantId, setVariantId] = useState('jake-classic');
   const [pickerOpen, setPickerOpen] = useState(false);
+  const completed = useCampaignStore((s) => s.completed);
+  const rulesets = rulesetsFor(completed);
+  const hidden = PRESET_ORDER.some((id) => !isUnlocked(completed, id));
 
   const preset = getPreset(variantId);
   const diff = variantDiff(preset);
@@ -167,8 +175,14 @@ export default function RulesScreen() {
 
         <Section title="Variants">
           <P>
-            Other tables bend these rules. Pick one to see what changes there.
+            Other tables bend these rules.{' '}
+            {rulesets.length > 1
+              ? 'Pick one to see what changes there.'
+              : 'Their rules are written here as you reach them in the campaign.'}
+            {rulesets.length > 1 && hidden ? ' More are added as you reach them in the campaign.' : ''}
           </P>
+          {rulesets.length > 1 && (
+            <>
           <View style={styles.variantGap} />
         {/* Ruleset selector */}
         <Pressable
@@ -208,6 +222,8 @@ export default function RulesScreen() {
             </>
           )}
         </View>
+            </>
+          )}
         </Section>
 
         <View style={{ height: 40 }} />
@@ -224,7 +240,7 @@ export default function RulesScreen() {
           <Pressable style={styles.sheet} onPress={() => {}}>
             <Text style={styles.sheetTitle}>Choose a ruleset</Text>
             <ScrollView bounces={false}>
-              {RULESETS.map((id) => {
+              {rulesets.map((id) => {
                 const p = RULE_PRESETS[id];
                 const active = id === variantId;
                 return (

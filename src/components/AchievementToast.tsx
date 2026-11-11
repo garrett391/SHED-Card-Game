@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { ACHIEVEMENT_BY_ID, AchievementId } from '../achievements/achievements';
 import { playSfx } from '../audio/sfx';
+import { AchievementIcon } from './AchievementIcon';
 
 const HOLD_MS = 2600;
 
@@ -44,7 +45,7 @@ export function AchievementToast({ earned }: { earned: AchievementId[] }) {
         },
       ]}
     >
-      <Text style={styles.emoji}>{a.emoji}</Text>
+      <AchievementIcon id={a.id} size={30} color="#f4c430" />
       <View style={{ flexShrink: 1 }}>
         <Text style={styles.kicker}>ACHIEVEMENT UNLOCKED</Text>
         <Text style={styles.name}>{a.name}</Text>
@@ -76,7 +77,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 10,
   },
-  emoji: { fontSize: 30 },
   kicker: { color: '#f4c430', fontSize: 10, fontWeight: '800', letterSpacing: 1.2 },
   name: { color: '#fafafa', fontSize: 16, fontWeight: '800' },
   desc: { color: '#c8c2a8', fontSize: 12 },

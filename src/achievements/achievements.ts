@@ -34,36 +34,35 @@ export interface Achievement {
   name: string;
   /** How to earn it, shown on the achievements screen. */
   description: string;
-  emoji: string;
 }
 
 /** Display order on the achievements screen. */
 export const ACHIEVEMENTS: Achievement[] = [
-  { id: 'uno-reverse', name: 'Uno Reverse', emoji: '🔁',
+  { id: 'uno-reverse', name: 'Uno Reverse',
     description: 'Play a 7 on a 7.' },
-  { id: 'big-bomb', name: 'Big Bomb', emoji: '💣',
+  { id: 'big-bomb', name: 'Big Bomb',
     description: 'Play two 10s at the same time.' },
-  { id: 'tactical-nuke', name: 'Tactical Nuke', emoji: '☢️',
+  { id: 'tactical-nuke', name: 'Tactical Nuke',
     description: 'Play three 10s at the same time.' },
-  { id: 'ninja-warrior', name: 'Ultimate Ninja Warrior', emoji: '🥷',
+  { id: 'ninja-warrior', name: 'Ultimate Ninja Warrior',
     description: 'Play four 8s in a single game.' },
-  { id: 'bomb-technician', name: 'Bomb Technician', emoji: '🧯',
+  { id: 'bomb-technician', name: 'Bomb Technician',
     description: 'Get stuck with a 10 as your last face-up card when someone plays a 7, and pick up the pile.' },
-  { id: 'novice-duelist', name: 'Novice Duelist', emoji: '🗡️',
+  { id: 'novice-duelist', name: 'Novice Duelist',
     description: 'Win a game after being the first to pick up the pile.' },
-  { id: 'master-duelist', name: 'Master Duelist', emoji: '⚔️',
+  { id: 'master-duelist', name: 'Master Duelist',
     description: 'Win a game after picking up the pile three times.' },
-  { id: 'lucky-sob', name: 'Lucky SOB', emoji: '🍀',
+  { id: 'lucky-sob', name: 'Lucky SOB',
     description: 'Flip a 10 from your second-to-last face-down card, then win with your last one.' },
-  { id: 'cracking-aces', name: 'Cracking Aces', emoji: '🂡',
+  { id: 'cracking-aces', name: 'Cracking Aces',
     description: 'Win by flipping a face-down card that beats an Ace.' },
-  { id: 'hat-trick', name: 'Hat Trick', emoji: '🎩',
+  { id: 'hat-trick', name: 'Hat Trick',
     description: 'Win three games in a row.' },
-  { id: 'unshedable', name: 'Unshedable', emoji: '🔥',
+  { id: 'unshedable', name: 'Unshedable',
     description: 'Win five games in a row.' },
-  { id: 'keeper', name: 'Keeper of the Teachings', emoji: '📜',
+  { id: 'keeper', name: 'Keeper of the Teachings',
     description: 'Restore every table in the campaign.' },
-  { id: 'without-a-scratch', name: 'Without a Scratch', emoji: '🛡️',
+  { id: 'without-a-scratch', name: 'Without a Scratch',
     description: 'Restore every table in the campaign without losing a single campaign game.' },
 ];
 

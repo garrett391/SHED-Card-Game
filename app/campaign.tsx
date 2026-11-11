@@ -43,7 +43,7 @@ const HEROES_W = OVERWORLD.heroes.width;
 const HEROES_H = OVERWORLD.heroes.height;
 
 const MARKER = 40;
-const LABEL_W = 150;
+const LABEL_W = 184;
 
 type NodeState = 'completed' | 'current' | 'available' | 'locked';
 type NodePos = { x: number; y: number; side: 'left' | 'right' };
@@ -345,27 +345,29 @@ const styles = StyleSheet.create({
   label: {
     position: 'absolute',
     width: LABEL_W,
-    paddingVertical: 5,
-    paddingHorizontal: 8,
-    borderRadius: 4,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 6,
     borderWidth: 2,
     borderColor: '#181820',
-    backgroundColor: 'rgba(24,24,40,0.82)',
+    backgroundColor: 'rgba(24,24,40,0.88)',
     alignItems: 'center',
   },
   labelName: {
     textAlign: 'center',
     color: '#f8f8f8',
-    fontWeight: '800',
-    fontSize: 13,
+    fontFamily: theme.font.western,
+    fontSize: 16,
+    lineHeight: 21,
   },
   labelNameLocked: {
     color: '#a8a8b8',
   },
   labelTagline: {
     textAlign: 'center',
-    color: '#d8d8e0',
-    fontSize: 10,
-    marginTop: 1,
+    color: '#e4e4ec',
+    fontSize: 12.5,
+    lineHeight: 16,
+    marginTop: 2,
   },
 });
