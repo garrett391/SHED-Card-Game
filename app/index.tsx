@@ -81,9 +81,6 @@ export default function HomeScreen() {
         <ScrollView contentContainerStyle={styles.scroll}>
           <View style={[styles.hero, { paddingTop: insets.top + 52 }]}>
             <Text style={[styles.title, { textShadowColor: scene.accent }]}>SHED</Text>
-            <Text style={[styles.subtitle, { color: scene.accent }]}>
-              The card game as spake by Jake
-            </Text>
           </View>
 
           <View>
@@ -276,7 +273,7 @@ const styles = StyleSheet.create({
   // Fills the screen when there's room (the menu sits at the bottom, the
   // art shows between); scrolls on short screens.
   scroll: { flexGrow: 1, justifyContent: 'space-between' },
-  hero: { alignItems: 'center', paddingBottom: 150 },
+  hero: { alignItems: 'center', paddingBottom: 170 },
   title: {
     color: CREAM,
     fontFamily: theme.font.western,
@@ -285,14 +282,6 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
     textShadowRadius: 24,
     textShadowOffset: { width: 0, height: 0 },
-  },
-  subtitle: {
-    fontSize: 15,
-    fontStyle: 'italic',
-    fontWeight: '500',
-    textShadowColor: '#000',
-    textShadowRadius: 6,
-    textShadowOffset: { width: 0, height: 1 },
   },
   menuFade: { position: 'absolute', top: -FADE, left: 0, right: 0, height: FADE },
   menu: { paddingHorizontal: 20, gap: 12 },
