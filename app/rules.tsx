@@ -34,11 +34,11 @@ const FACE_UP: Card[] = [
 ];
 
 /**
- * The rulebook. A variant picker at the top shows an auto-generated "what's
- * different" summary for any ruleset (derived from its RuleConfig, so it
- * can't drift from the engine); the rulebook under it is Jake's Classic,
- * laid out as panels with the cards drawn where they help: the four power
- * cards, four of a kind, the deal.
+ * The rulebook: Jake's Classic, laid out as panels with the cards drawn
+ * where they help (the four power cards, four of a kind, the deal). The
+ * last panel, Variants, has a picker that shows an auto-generated "what's
+ * different" summary for any other table (derived from its RuleConfig, so
+ * it can't drift from the engine).
  */
 export default function RulesScreen() {
   const router = useRouter();
@@ -63,52 +63,9 @@ export default function RulesScreen() {
           style={styles.cta}
         />
 
-        {/* Ruleset selector */}
-        <Pressable
-          style={styles.selector}
-          onPress={() => setPickerOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel={`Ruleset: ${preset.name}. Tap to change.`}
-        >
-          <Text style={styles.selectorLabel}>Ruleset</Text>
-          <View style={styles.selectorValueWrap}>
-            <Text style={styles.selectorValue} numberOfLines={1}>
-              {preset.name}
-            </Text>
-            <Text style={styles.caret}>▾</Text>
-          </View>
-        </Pressable>
-
-        {/* Variant summary */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryFlavor}>{preset.flavorText}</Text>
-          {isClassic ? (
-            <Text style={styles.summaryNote}>
-              This is the original ruleset — every rule below applies as written.
-            </Text>
-          ) : (
-            <>
-              <Text style={styles.summaryHeading}>What's different</Text>
-              {diff.map((line, i) => (
-                <View key={i} style={styles.bulletRow}>
-                  <Text style={styles.bulletDot}>•</Text>
-                  <Text style={styles.bulletText}>{line}</Text>
-                </View>
-              ))}
-              <Text style={styles.summaryNote}>
-                Everything else follows the base rules below.
-              </Text>
-            </>
-          )}
-        </View>
-
-        <View style={styles.divider}>
-          <Text style={styles.dividerText}>THE FULL RULEBOOK · JAKE'S CLASSIC</Text>
-        </View>
-
         <Section title="The goal">
           <P>
-            Get rid of all nine of your cards. First to clear hand, face-up and
+            Get rid of all your cards. First to clear hand, face-up and
             face-down wins. Everyone left holding cards is a SHITHEAD.
           </P>
         </Section>
@@ -143,10 +100,8 @@ export default function RulesScreen() {
 
         <Section title="Four of a kind">
           <View style={styles.fan}>
-            {FOUR_OF_A_KIND.map((card, i) => (
-              <View key={card.id} style={i > 0 && styles.fanNext}>
-                <PlayingCard card={card} small disabled dimmed={card.rank === 8} />
-              </View>
+            {FOUR_OF_A_KIND.map((card) => (
+              <PlayingCard key={card.id} card={card} small disabled dimmed={card.rank === 8} />
             ))}
           </View>
           <P>
@@ -175,6 +130,22 @@ export default function RulesScreen() {
           />
         </Section>
 
+        <Section title="Three stages">
+          <Stage n="1" name="Hand">
+            Play from your hand, drawing back up to three, until the draw pile
+            and your hand are both empty.
+          </Stage>
+          <Stage n="2" name="Face-up">
+            Play your face-up cards by the same meet-or-beat rules. Can't play
+            one? Pick up the pile and use it as your new hand.
+          </Stage>
+          <Stage n="3" name="Face-down" last>
+            Flip your face-down cards blind, one at a time. If the flip doesn't
+            beat the pile, you pick up the pile with it, and must clear that
+            hand before flipping again.
+          </Stage>
+        </Section>
+
         <Section title="Who starts">
           <P>
             Whoever has the lowest non-power card plays it first. If players
@@ -194,20 +165,49 @@ export default function RulesScreen() {
           />
         </Section>
 
-        <Section title="Three stages">
-          <Stage n="1" name="Hand">
-            Play from your hand, drawing back up to three, until the draw pile
-            and your hand are both empty.
-          </Stage>
-          <Stage n="2" name="Face-up">
-            Play your face-up cards by the same meet-or-beat rules. Can't play
-            one? Pick up the pile and use it as your new hand.
-          </Stage>
-          <Stage n="3" name="Face-down" last>
-            Flip your face-down cards blind, one at a time. If the flip doesn't
-            beat the pile, you pick up the pile with it, and must clear that
-            hand before flipping again.
-          </Stage>
+        <Section title="Variants">
+          <P>
+            Other tables bend these rules. Pick one to see what changes there.
+          </P>
+          <View style={styles.variantGap} />
+        {/* Ruleset selector */}
+        <Pressable
+          style={styles.selector}
+          onPress={() => setPickerOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={`Ruleset: ${preset.name}. Tap to change.`}
+        >
+          <Text style={styles.selectorLabel}>Ruleset</Text>
+          <View style={styles.selectorValueWrap}>
+            <Text style={styles.selectorValue} numberOfLines={1}>
+              {preset.name}
+            </Text>
+            <Text style={styles.caret}>▾</Text>
+          </View>
+        </Pressable>
+
+        {/* Variant summary */}
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryFlavor}>{preset.flavorText}</Text>
+          {isClassic ? (
+            <Text style={styles.summaryNote}>
+              This is the original ruleset — every rule above applies as written.
+            </Text>
+          ) : (
+            <>
+              <Text style={styles.summaryHeading}>What's different</Text>
+              {diff.map((line, i) => (
+                <View key={i} style={styles.bulletRow}>
+                  <Text style={styles.bulletDot}>•</Text>
+                  <Text style={styles.bulletText}>{line}</Text>
+                </View>
+              ))}
+              <Text style={styles.summaryNote}>
+                Everything else follows the rules above.
+              </Text>
+            </>
+          )}
+        </View>
         </Section>
 
         <View style={{ height: 40 }} />
@@ -448,21 +448,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-  // Divider before base rules
-  divider: {
-    marginTop: 22,
-    marginBottom: 2,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255,255,255,0.15)',
-    paddingBottom: 6,
-  },
-  dividerText: {
-    color: theme.color.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-  },
-
   section: {
     marginTop: 12,
     backgroundColor: theme.color.feltBgDark,
@@ -513,7 +498,7 @@ const styles = StyleSheet.create({
   stageNumberText: { color: '#1a1a1a', fontSize: 14, fontWeight: '900' },
 
   fan: { flexDirection: 'row', justifyContent: 'center', marginBottom: 10 },
-  fanNext: { marginLeft: -10 },
+  variantGap: { height: 10 },
   dealRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 12 },
   deal: { alignItems: 'center', gap: 2 },
   dealCards: { flexDirection: 'row', marginBottom: 4 },
