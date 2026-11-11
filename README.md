@@ -42,7 +42,8 @@ A cross-platform (iOS / Android / Web) mobile app for the card game
 - Free play **remembers your last table**: the variant and who sat where
 - A **Home screen set at the table**: first-person art of the campaign
   place you've reached (Jake's moonlit wood, the village tavern, the
-  saloon), which moves on as you beat tables; Settings can pin any scene
+  heretics' cathedral, Greg's machine hall, the saloon, the twins' big
+  top), which moves on as you beat tables; Settings can pin any scene
   you've unlocked
 - **Settings** that stick: sound effects on or off, the radio station and
   a normal or fast **game speed** for bot turns

@@ -28,13 +28,14 @@ describe('following the campaign', () => {
   test('Home moves on with the heroes', () => {
     expect(campaignPlace(beaten('jake-classic'))).toBe('the-spreading');
     expect(homeScene(beaten('jake-classic'), null).id).toBe('the-spreading');
+    expect(homeScene(upTo('the-spreading'), null).id).toBe('justins-schism');
     expect(homeScene(upTo('super-tens'), null).id).toBe('the-pass');
   });
 
   test('a table without a scene borrows the nearest earlier one', () => {
-    // Standing at Justin's Schism, which has no art yet.
-    expect(homeScene(upTo('the-spreading'), null).id).toBe('the-spreading');
-    expect(homeScene(upTo('the-pass'), null).id).toBe('the-pass');
+    // Standing at the Second Schism, then the Council: no art yet.
+    expect(homeScene(upTo('chaos-shed'), null).id).toBe('chaos-shed');
+    expect(homeScene(upTo('second-schism'), null).id).toBe('chaos-shed');
   });
 
   test('with every table beaten it stays at the last scene', () => {

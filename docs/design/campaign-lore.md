@@ -306,10 +306,10 @@ down).
 |-------|-------|-----|
 | Jake's Classic | Jake's old wood by moonlight: stump table, hanging lantern | `forest/splash-moonlit-wood.png` |
 | The Spreading | The village tavern | `medieval/splash-medieval.png` |
-| Justin's Schism | The heretics' cathedral: crimson banners, the green-lit book | Not made |
-| Super Tens | Greg's machine hall: circuit-board table, glowing monitors | Not made |
+| Justin's Schism | The heretics' cathedral: crimson banners, the green-lit book | `cathedral/splash-cathedral.png` |
+| Super Tens | Greg's machine hall: circuit-board table, glowing monitors | `machine-hall/splash-machine-hall.png` |
 | The Outlaw Pass | The saloon | `wild-west/splash-wild-west.png` |
-| Chaos Shed | The twins' big top: spotlight, curtains, cards in the air | Not made |
+| Chaos Shed | The twins' big top: spotlight, curtains, cards in the air | `big-top/splash-big-top.png` |
 | The Second Schism | Justin's cell: one candle, burning cards, no 8s | Not made |
 | The Council of Schisms | The round table in the ring of pillars, the empty chair | Not made |
 

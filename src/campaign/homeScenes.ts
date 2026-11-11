@@ -50,6 +50,24 @@ export const HOME_SCENES: HomeScene[] = [
     line: '#6b4d2a',
   },
   {
+    id: 'justins-schism',
+    name: "The heretics' cathedral",
+    image: require('../../assets/images/cathedral/splash-cathedral.png'),
+    base: '#0b0d0a',
+    accent: '#9be37a',
+    panel: 'rgba(20,27,18,0.9)',
+    line: '#3f5a38',
+  },
+  {
+    id: 'super-tens',
+    name: "Greg's machine hall",
+    image: require('../../assets/images/machine-hall/splash-machine-hall.png'),
+    base: '#06141a',
+    accent: '#5fe0d2',
+    panel: 'rgba(8,30,36,0.9)',
+    line: '#2c6a6c',
+  },
+  {
     id: 'the-pass',
     name: 'The saloon',
     image: require('../../assets/images/wild-west/splash-wild-west.png'),
@@ -57,6 +75,15 @@ export const HOME_SCENES: HomeScene[] = [
     accent: '#eda03c',
     panel: 'rgba(38,22,10,0.9)',
     line: '#6e4a26',
+  },
+  {
+    id: 'chaos-shed',
+    name: "The twins' big top",
+    image: require('../../assets/images/big-top/splash-big-top.png'),
+    base: '#160b0c',
+    accent: '#f0c04a',
+    panel: 'rgba(44,18,22,0.9)',
+    line: '#7a3a3a',
   },
 ];
 

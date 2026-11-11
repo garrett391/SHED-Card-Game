@@ -226,7 +226,7 @@ function BigButton({
           {title}
         </Text>
         <Text
-          style={[styles.bigNote, { color: primary ? '#4a3210' : '#d9c7a3' }]}
+          style={[styles.bigNote, { color: primary ? 'rgba(32,20,10,0.78)' : '#d9c7a3' }]}
           numberOfLines={1}
         >
           {note}
