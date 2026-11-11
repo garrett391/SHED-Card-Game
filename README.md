@@ -99,7 +99,7 @@ and full integration scenarios.
 │   ├── index.tsx               Home
 │   ├── campaign.tsx            Overworld map with the campaign nodes
 │   ├── cinematic.tsx           Story cutscenes (captioned scenes)
-│   ├── setup.tsx               Pick players (human / bot, names, variant)
+│   ├── setup.tsx               The table from above: pick it, seat the players
 │   ├── swap.tsx                Pre-game card swap (per player)
 │   ├── game.tsx                Main table
 │   ├── game-over.tsx           Standings, stats, the host's last word
@@ -132,6 +132,7 @@ and full integration scenarios.
 │   │   ├── useBotAutoplay.ts   Plays bot turns at a readable pace
 │   │   ├── pacing.ts           Bot-turn timings for each game speed
 │   │   ├── handLayout.ts       When a big hand switches to small cards
+│   │   ├── seatLayout.ts       Who sits where on the setup screen's table
 │   │   └── useAutoClear.ts     Retires short-lived UI state
 │   ├── achievements/
 │   │   └── achievements.ts     What each achievement is and how it's detected

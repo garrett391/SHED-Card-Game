@@ -1,10 +1,8 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Animated,
   Image,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,15 +12,17 @@ import {
 } from 'react-native';
 import { Button } from '../src/components/Button';
 import { theme } from '../src/components/theme';
-import { Bot, Lock, Swords, User, X } from 'lucide-react-native';
+import { Bot, Lock, Plus, Swords } from 'lucide-react-native';
 import { useGameStore } from '../src/store/gameStore';
 import { PlayerConfig, RuleConfig } from '../src/engine/types';
 import { RULE_PRESETS, PRESET_ORDER } from '../src/campaign/presets';
 import { isUnlocked, useCampaignStore } from '../src/store/campaignStore';
 import {
+  Character,
   characterByName,
   opponentsFor,
 } from '../src/campaign/characters';
+import { emptySeats, SeatSlot, seatsFor } from '../src/table/seatLayout';
 import { playSfx } from '../src/audio/sfx';
 import { DEFAULT_PLAYER_NAME, useProfileStore } from '../src/store/profileStore';
 import {
@@ -124,10 +124,11 @@ export default function SetupScreen() {
   const [selectedMode, setSelectedMode] = useState<string>(
     () => campaignPreset ?? lastTable?.modeId ?? 'jake-classic',
   );
-  // Mode picker starts collapsed so the Players section and Deal button sit
-  // above the fold. The collapsed header shows the current selection; tapping
-  // it expands the full list, and choosing a mode snaps it shut again.
+  // The table picker (free play): a sheet over the screen, opened from the
+  // table card's "Change".
   const [modeExpanded, setModeExpanded] = useState(false);
+  // The seat being edited (its place in the lineup), or null.
+  const [editing, setEditing] = useState<number | null>(null);
   // Campaign nodes seed their named hosts as the bot lineup (the Chaos
   // Twins are a two-bot table), each with their own play style. Free play
   // keeps the generic default. The lineup stays fully editable either way.
@@ -171,32 +172,6 @@ export default function SetupScreen() {
     );
   }, [savedName]);
 
-  // ── Scroll-down affordance ──────────────────────────────────────────────
-  // The mode picker can fill the whole viewport on mobile, hiding the Players
-  // section and "Deal cards" button below the fold. We surface a floating cue
-  // that fades in while there's more content below and out once you reach the
-  // bottom. Tapping it scrolls down.
-  const scrollRef = useRef<ScrollView>(null);
-  const cueOpacity = useRef(new Animated.Value(0)).current;
-  const viewportH = useRef(0);
-  const contentH = useRef(0);
-  const offsetY = useRef(0);
-
-  const updateCue = () => {
-    const remaining = contentH.current - (offsetY.current + viewportH.current);
-    const shouldShow = remaining > 24; // a little slack so it hides at the end
-    Animated.timing(cueOpacity, {
-      toValue: shouldShow ? 1 : 0,
-      duration: 150,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    offsetY.current = e.nativeEvent.contentOffset.y;
-    updateCue();
-  };
-
   const setName = (idx: number, name: string) =>
     setPlayers((ps) => ps.map((p, i) => (i === idx ? { ...p, name } : p)));
 
@@ -234,6 +209,21 @@ export default function SetupScreen() {
   const removePlayer = (idx: number) => {
     if (players.length <= MIN_PLAYERS) return;
     setPlayers(players.filter((_, i) => i !== idx));
+    setEditing(null);
+  };
+
+  /** Seat the table's cast when a seat-rules table is picked (the Outlaw
+   *  Pass, the Council): the rules ride on the characters. Keeps as many
+   *  humans as fit beside them. */
+  const pickMode = (id: string) => {
+    setSelectedMode(id);
+    setModeExpanded(false);
+    if (!RULE_PRESETS[id].seatRules) return;
+    const cast = opponentsFor(id);
+    setPlayers((ps) => [
+      ...ps.filter((p) => !p.isBot).slice(0, MAX_PLAYERS - cast.length),
+      ...cast.map((c) => ({ name: c.name, isBot: true, botStyle: c.botStyle })),
+    ]);
   };
 
   const start = () => {
@@ -263,429 +253,504 @@ export default function SetupScreen() {
   const selectedPreset =
     RULE_PRESETS[selectedMode] ?? RULE_PRESETS['jake-classic'];
 
+  const seats = seatsFor(players.length);
+  const humans = players.filter((p) => !p.isBot).length;
+  const tableNumber = campaignPreset ? PRESET_ORDER.indexOf(campaignPreset) + 1 : 0;
+  const room = MAX_PLAYERS - players.length;
+  const edited = editing !== null ? players[editing] : undefined;
+
   return (
     <View style={styles.screen}>
-      {/* "Players" names the free-play roster screen. In the campaign the
-          node's banner below says where you are, so the header stays empty. */}
-      <Stack.Screen options={{ title: campaignPreset ? '' : 'Players' }} />
-      <ScrollView
-        ref={scrollRef}
-        contentContainerStyle={styles.container}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        onLayout={(e) => {
-          viewportH.current = e.nativeEvent.layout.height;
-          updateCue();
-        }}
-        onContentSizeChange={(_w, h) => {
-          contentH.current = h;
-          updateCue();
-        }}
-      >
-        {/* ── Game mode: fixed banner in campaign, picker in free play ── */}
+      {/* "Free play" names the screen. In the campaign the banner below
+          says where you are, so the header stays empty. */}
+      <Stack.Screen options={{ title: campaignPreset ? '' : 'Free play' }} />
+      <ScrollView contentContainerStyle={styles.container}>
+        {/* ── The table: a fixed banner in the campaign, a picker in free play ── */}
         {campaignPreset ? (
-          <View style={styles.campaignBanner}>
+          <View style={styles.tableCard}>
             <View style={styles.campaignLabelRow}>
               <Swords size={13} color={theme.color.accent} strokeWidth={2.25} />
-              <Text style={styles.campaignLabel}>CAMPAIGN</Text>
+              <Text style={styles.campaignLabel}>
+                CAMPAIGN · TABLE {tableNumber} OF {PRESET_ORDER.length}
+              </Text>
             </View>
-            <Text style={styles.campaignName}>{selectedPreset.name}</Text>
-            <Text style={styles.modeDesc}>{selectedPreset.description}</Text>
+            <Text style={[styles.tableName, styles.tableNameCampaign]}>{selectedPreset.name}</Text>
+            <Text style={styles.tableDesc}>{selectedPreset.description}</Text>
           </View>
-        ) : (
-        <Pressable
-          onPress={() => setModeExpanded((e) => !e)}
-          style={styles.modeSectionHeader}
-          accessibilityRole="button"
-          accessibilityLabel={
-            modeExpanded
-              ? 'Collapse game mode list'
-              : `Game mode: ${selectedPreset.name}. Tap to change.`
-          }
-        >
-          <Text style={styles.sectionLabel}>Game mode</Text>
-          <Text style={styles.modeChevron}>{modeExpanded ? '⌄' : '›'}</Text>
-        </Pressable>
-        )}
-
-        {/* Picker and its collapsed summary exist only in free play — in
-            campaign the banner above is the whole story (the variant is
-            fixed; offering "Change" would contradict it). */}
-        {!campaignPreset && (modeExpanded ? (
-          PRESET_ORDER.map((id, i) => {
-            // Free play offers only variants you've BEATEN — the campaign
-            // frontier is unlocked for the campaign, but stays exclusive to
-            // it until conquered. Jake's Classic is always open.
-            const locked = i > 0 && !completed[id];
-            return (
-              <ModeCard
-                key={id}
-                preset={RULE_PRESETS[id]}
-                selected={selectedMode === id}
-                locked={locked}
-                unlockHint={'Beat this table in the campaign to unlock'}
-                onPress={() => {
-                  setSelectedMode(id);
-                  setModeExpanded(false);
-                  // Seat-rules tables (the Outlaw Pass, the Council) only
-                  // work with their cast seated: the rules ride on the
-                  // characters. Seat them, keeping the human players.
-                  if (RULE_PRESETS[id].seatRules) {
-                    const cast = opponentsFor(id);
-                    setPlayers((ps) => [
-                      // Keep as many humans as fit beside the cast (the
-                      // Council's four villains leave room for two).
-                      ...ps.filter((p) => !p.isBot).slice(0, MAX_PLAYERS - cast.length),
-                      ...cast.map((c) => ({
-                        name: c.name,
-                        isBot: true,
-                        botStyle: c.botStyle,
-                      })),
-                    ]);
-                  }
-                }}
-              />
-            );
-          })
         ) : (
           <Pressable
             onPress={() => setModeExpanded(true)}
-            style={[styles.modeCard, styles.modeCardSelected, styles.modeSummary]}
+            style={({ pressed }) => [styles.tableCard, styles.tableCardRow, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel={`Table: ${selectedPreset.name}. Tap to change.`}
           >
-            <View style={styles.modeSummaryBody}>
-              <Text style={[styles.modeName, styles.modeNameSelected]} numberOfLines={1}>
-                {selectedPreset.name}
-              </Text>
-              <Text style={[styles.modeDesc, styles.modeSummaryDesc]} numberOfLines={2}>
-                {selectedPreset.description}
-              </Text>
+            <View style={styles.tableCardBody}>
+              <Text style={styles.tableName} numberOfLines={1}>{selectedPreset.name}</Text>
+              <Text style={styles.tableDesc} numberOfLines={2}>{selectedPreset.description}</Text>
             </View>
-            <Text style={styles.modeChange}>Change</Text>
+            <Text style={styles.tableChange}>Change</Text>
           </Pressable>
-        ))}
-
-        {/* ── Player config ───────────────────────────────────────────── */}
-        <Text style={[styles.sectionLabel, { marginTop: 24 }]}>
-          {campaignPreset ? 'At the table' : 'Players'}
-        </Text>
-        {/* The hint describes free-play editing (toggle/add/remove) — in
-            campaign the roster is fixed, so the instruction would be false. */}
-        {!campaignPreset && (
-          <Text style={styles.intro}>
-            2–6 players. Tap a row to toggle human / bot.
-          </Text>
         )}
 
-        {players.map((p, i) => {
-          // Campaign characters show their portrait/emoji instead of the
-          // generic robot. Matched by name, so renaming the row reverts it
-          // to a plain bot (and typing an exact character name summons them).
-          const character = p.isBot ? characterByName(p.name) : null;
-          return (
-          <View key={i} style={styles.row}>
-            <Pressable
-              style={[styles.botToggle, p.isBot && styles.botToggleActive]}
-              onPress={campaignPreset ? undefined : () => toggleBot(i)}
-              disabled={!!campaignPreset}
-            >
-              {character?.portrait ? (
-                <Image source={character.portrait} style={styles.botPortrait} />
-              ) : character ? (
-                <Text style={styles.botEmoji}>{character.emoji}</Text>
-              ) : p.isBot ? (
-                <Bot size={22} color={theme.color.textOnDark} strokeWidth={2} />
-              ) : (
-                <User size={22} color={theme.color.textOnDark} strokeWidth={2} />
-              )}
-              <Text style={styles.botLabel}>{p.isBot ? 'Bot' : 'Human'}</Text>
-            </Pressable>
-            <TextInput
-              value={p.name}
-              onChangeText={(t) => setName(i, t)}
-              style={styles.input}
-              placeholder="Name"
-              placeholderTextColor={theme.color.textMuted}
-              maxLength={16}
-              // In campaign, the hosts' names are canon (and the portrait
-              // lookup is by name); the human seat stays yours to name.
-              editable={!campaignPreset || !p.isBot}
-            />
-            {!campaignPreset && players.length > MIN_PLAYERS && (
-              <Pressable
-                onPress={() => removePlayer(i)}
-                style={styles.removeBtn}
-                accessibilityLabel={`Remove ${p.name || 'player'}`}
-                accessibilityRole="button"
-              >
-                <X size={20} color={theme.color.danger} strokeWidth={2.5} />
-              </Pressable>
-            )}
+        {/* ── The table from above, everyone in their seat ─────────────── */}
+        <View style={styles.table}>
+          <View style={styles.oval} />
+          <View style={styles.centre} pointerEvents="none">
+            <Text style={styles.centreCount}>{players.length}</Text>
+            <Text style={styles.centreLabel}>at the table</Text>
+            <Text style={styles.centreNote} numberOfLines={4}>
+              {campaignPreset
+                ? selectedPreset.flavorText
+                : room === 0
+                ? 'Full table'
+                : `room for ${room} more`}
+            </Text>
           </View>
-          );
-        })}
 
-        {!campaignPreset && players.length < MAX_PLAYERS && (
-          <Button title="+ Add player" variant="ghost" onPress={addPlayer} />
-        )}
+          {players.map((p, i) => {
+            // Campaign characters show their portrait. Matched by name, so
+            // renaming a bot reverts it to a plain one (and typing an exact
+            // character name summons them).
+            const character = p.isBot ? characterByName(p.name) : null;
+            // Hosts are canon in the campaign; your own seat is yours to name.
+            const canEdit = !campaignPreset || !p.isBot;
+            // What a host brings: at the Council, the rules of their own
+            // table; elsewhere in the campaign, who they are.
+            const home = character?.homeTable;
+            const note = !campaignPreset || !character
+              ? null
+              : selectedPreset.seatRules && home && RULE_PRESETS[home]
+              ? RULE_PRESETS[home].name
+              : character.title;
+            return (
+              <Seat
+                key={i}
+                slot={seats[i]}
+                player={p}
+                character={character}
+                note={note}
+                you={i === 0 && !p.isBot}
+                youLabel={!p.isBot && humans === 1}
+                onPress={canEdit ? () => setEditing(i) : undefined}
+              />
+            );
+          })}
+          {!campaignPreset &&
+            emptySeats(players.length).map((slot) => (
+              <Pressable
+                key={slot}
+                onPress={addPlayer}
+                style={({ pressed }) => [styles.seat, SLOT_STYLE[slot], pressed && styles.pressed]}
+                accessibilityRole="button"
+                accessibilityLabel="Empty seat. Tap to add a player."
+              >
+                <View style={[styles.avatar, styles.avatarEmpty]}>
+                  <Plus size={24} color={theme.color.textMuted} strokeWidth={2.25} />
+                </View>
+                <Text style={styles.seatEmptyLabel}>Empty</Text>
+              </Pressable>
+            ))}
+        </View>
 
+        <Text style={styles.hint}>
+          {campaignPreset
+            ? 'Tap your seat to change your name.'
+            : 'Tap a seat to change who sits there.'}
+        </Text>
       </ScrollView>
 
-      {/* Docked under the list, so dealing never needs a scroll. */}
+      {/* Docked under the table, so dealing never needs a scroll. */}
       <View style={styles.footer}>
         <Button title="Deal cards" onPress={start} />
       </View>
 
-      {/* Floating scroll-down cue — only visible while content sits below the fold */}
-      <Animated.View
-        style={[styles.scrollCue, { opacity: cueOpacity }]}
-        pointerEvents="box-none"
+      {/* ── Table picker (free play) ─────────────────────────────────── */}
+      <Modal
+        visible={modeExpanded}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModeExpanded(false)}
       >
-        <Pressable
-          onPress={() =>
-            scrollRef.current?.scrollTo({
-              y: offsetY.current + viewportH.current * 0.8,
-              animated: true,
-            })
-          }
-          accessibilityRole="button"
-          accessibilityLabel="Scroll down for more players"
-          style={styles.scrollCuePill}
-          hitSlop={8}
-        >
-          <Text style={styles.scrollCueText}>More below</Text>
-          <Text style={styles.scrollCueChevron}>⌄</Text>
+        <Pressable style={styles.backdrop} onPress={() => setModeExpanded(false)}>
+          <Pressable style={styles.sheet} onPress={() => {}}>
+            <Text style={styles.sheetTitle}>Choose a table</Text>
+            <ScrollView bounces={false} contentContainerStyle={styles.sheetList}>
+              {PRESET_ORDER.map((id, i) => (
+                // Free play offers only variants you've BEATEN — the campaign
+                // frontier is unlocked for the campaign, but stays exclusive
+                // to it until conquered. Jake's Classic is always open.
+                <ModeCard
+                  key={id}
+                  preset={RULE_PRESETS[id]}
+                  selected={selectedMode === id}
+                  locked={i > 0 && !completed[id]}
+                  unlockHint={'Beat this table in the campaign to unlock'}
+                  onPress={() => pickMode(id)}
+                />
+              ))}
+            </ScrollView>
+          </Pressable>
         </Pressable>
-      </Animated.View>
+      </Modal>
+
+      {/* ── Seat editor ──────────────────────────────────────────────── */}
+      <Modal
+        visible={!!edited}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditing(null)}
+      >
+        {/* Near the top, so a phone keyboard doesn't cover it. */}
+        <Pressable style={[styles.backdrop, styles.backdropTop]} onPress={() => setEditing(null)}>
+          {edited && editing !== null && (
+            <Pressable style={[styles.sheet, styles.seatSheet]} onPress={() => {}}>
+              <Text style={styles.sheetTitle}>
+                {campaignPreset ? 'Your name' : `Seat ${editing + 1}`}
+              </Text>
+              <TextInput
+                value={edited.name}
+                onChangeText={(t) => setName(editing, t)}
+                style={styles.input}
+                placeholder="Name"
+                placeholderTextColor={theme.color.textMuted}
+                maxLength={16}
+                accessibilityLabel="Name"
+                onSubmitEditing={() => setEditing(null)}
+                returnKeyType="done"
+              />
+              {!campaignPreset && (
+                <View style={styles.segment}>
+                  {[false, true].map((bot) => {
+                    const on = edited.isBot === bot;
+                    return (
+                      <Pressable
+                        key={String(bot)}
+                        onPress={on ? undefined : () => toggleBot(editing)}
+                        style={[styles.segmentHalf, on && styles.segmentHalfOn]}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: on }}
+                      >
+                        <Text style={[styles.segmentText, on && styles.segmentTextOn]}>
+                          {bot ? 'Bot' : 'Human'}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+              <View style={styles.sheetActions}>
+                {!campaignPreset && players.length > MIN_PLAYERS && (
+                  <Button
+                    title="Remove"
+                    variant="ghost"
+                    onPress={() => removePlayer(editing)}
+                    style={styles.sheetAction}
+                  />
+                )}
+                <Button title="Done" onPress={() => setEditing(null)} style={styles.sheetAction} />
+              </View>
+            </Pressable>
+          )}
+        </Pressable>
+      </Modal>
     </View>
+  );
+}
+
+// ─── A seat at the table ────────────────────────────────────────────────────────
+
+function Seat({
+  slot,
+  player,
+  character,
+  note,
+  you,
+  youLabel,
+  onPress,
+}: {
+  slot: SeatSlot;
+  player: PlayerConfig;
+  character: Character | null;
+  /** A line under a campaign host's name. */
+  note: string | null;
+  /** The first seat, when a person sits in it: drawn larger, ringed in gold. */
+  you: boolean;
+  /** Say "(you)": only when there's a single human to mean. */
+  youLabel: boolean;
+  /** Omitted for seats that can't be changed (campaign hosts). */
+  onPress?: () => void;
+}) {
+  const size = you ? 72 : 64;
+  const round = { width: size, height: size, borderRadius: size / 2 };
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={({ pressed }) => [styles.seat, SLOT_STYLE[slot], pressed && styles.pressed]}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={`${player.name || 'Player'}, ${player.isBot ? 'bot' : 'human'}${
+        onPress ? '. Tap to change.' : ''
+      }`}
+    >
+      {character?.portrait ? (
+        <Image source={character.portrait} style={[styles.avatar, round, styles.avatarHost]} />
+      ) : (
+        <View
+          style={[
+            styles.avatar,
+            round,
+            player.isBot ? styles.avatarBot : styles.avatarHuman,
+            you && styles.avatarYou,
+          ]}
+        >
+          {character ? (
+            <Text style={styles.avatarEmoji}>{character.emoji}</Text>
+          ) : player.isBot ? (
+            <Bot size={28} color="#f1e3c2" strokeWidth={2} />
+          ) : (
+            <Text style={styles.avatarInitial}>
+              {(player.name.trim().charAt(0) || '?').toUpperCase()}
+            </Text>
+          )}
+        </View>
+      )}
+      <Text style={styles.seatName} numberOfLines={2}>
+        {player.name || 'Player'}
+        {youLabel && <Text style={styles.seatYou}> (you)</Text>}
+      </Text>
+      {note && <Text style={styles.seatNote} numberOfLines={2}>{note}</Text>}
+    </Pressable>
   );
 }
 
 // ─── Styles ─────────────────────────────────────────────────────────────────────
 
+/** The table area: seats sit round an oval, anchored by their top edge. */
+const TABLE_H = 520;
+const SEAT_W = 104;
+
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  container: { padding: theme.space.lg, paddingBottom: theme.space.lg },
+  container: { padding: theme.space.lg, paddingBottom: theme.space.sm },
+  pressed: { opacity: 0.75 },
 
-  // Floating scroll-down cue
-  scrollCue: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    // Clear of the docked Deal button.
-    bottom: 92,
-    alignItems: 'center',
+  // Docked action bar.
+  footer: {
+    paddingHorizontal: theme.space.lg,
+    paddingTop: theme.space.sm,
+    paddingBottom: theme.space.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: theme.color.feltBg,
   },
-  scrollCuePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(10,42,32,0.95)',
-    borderColor: '#d4a843',
+
+  // The table card (free play) and campaign banner.
+  tableCard: {
+    backgroundColor: theme.color.feltBgDark,
+    borderRadius: 14,
     borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 6,
+    borderColor: 'rgba(244,196,48,0.5)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 3,
   },
-  scrollCueText: {
-    color: '#f0d78c',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  scrollCueChevron: {
-    color: '#f0d78c',
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 14,
-    marginTop: -2,
-  },
-
-  // Section labels
-  sectionLabel: {
-    color: theme.color.textOnDark,
-    fontSize: 13,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    marginBottom: 10,
-    opacity: 0.6,
-  },
-
-  // Collapsible mode section
-  modeSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  campaignBanner: {
-    borderWidth: 1,
-    borderColor: 'rgba(244,196,48,0.4)',
-    borderRadius: theme.radius.md,
-    padding: 14,
-    marginBottom: 8,
-  },
-  campaignLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  tableCardRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  tableCardBody: { flex: 1, gap: 3 },
+  tableName: { color: theme.color.accent, fontFamily: theme.font.western, fontSize: 20 },
+  tableNameCampaign: { color: theme.color.textOnDark, fontSize: 22 },
+  tableDesc: { color: '#c9d2ce', fontSize: 13, lineHeight: 18 },
+  tableChange: { color: theme.color.accent, fontSize: 13, fontWeight: '700' },
+  campaignLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   campaignLabel: {
     color: theme.color.accent,
     fontSize: 11,
-    letterSpacing: 2,
+    fontWeight: '700',
+    letterSpacing: 1.5,
   },
-  campaignName: {
+
+  // The table from above.
+  table: {
+    height: TABLE_H,
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
+    marginTop: 18,
+  },
+  oval: {
+    position: 'absolute',
+    top: 118,
+    bottom: 110,
+    left: '22%',
+    right: '22%',
+    borderRadius: 999,
+    backgroundColor: '#17604a',
+    borderWidth: 12,
+    borderColor: '#5a3a1c',
+    shadowColor: '#000',
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 8,
+  },
+  centre: {
+    position: 'absolute',
+    top: 118,
+    bottom: 110,
+    left: '29%',
+    right: '29%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  centreCount: {
+    color: theme.color.textOnDark,
+    fontFamily: theme.font.western,
+    fontSize: 34,
+    lineHeight: 40,
+  },
+  centreLabel: { color: '#d5e0db', fontSize: 13, fontWeight: '600' },
+  centreNote: {
+    color: '#b9c6c0',
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+
+  seat: { position: 'absolute', width: SEAT_W, alignItems: 'center', gap: 4 },
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarHost: { borderWidth: 2, borderColor: '#7a4a24' },
+  avatarBot: { backgroundColor: '#7a4a24' },
+  avatarHuman: { backgroundColor: theme.color.secondary },
+  avatarYou: { borderWidth: 3, borderColor: theme.color.accent },
+  avatarEmpty: {
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: '#5f8576',
+    backgroundColor: 'rgba(10,42,32,0.6)',
+  },
+  avatarEmoji: { fontSize: 28 },
+  avatarInitial: { color: '#f1e3c2', fontSize: 26, fontWeight: '800' },
+  seatName: {
+    color: theme.color.textOnDark,
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  seatYou: { color: theme.color.textMuted, fontWeight: '500' },
+  seatNote: { color: '#c9d2ce', fontSize: 11, lineHeight: 14, textAlign: 'center' },
+  seatEmptyLabel: { color: theme.color.textMuted, fontSize: 13, fontWeight: '600' },
+  hint: { color: theme.color.textMuted, fontSize: 13, textAlign: 'center', marginTop: 6 },
+
+  // Sheets: the table picker and the seat editor.
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: theme.space.lg,
+  },
+  backdropTop: { justifyContent: 'flex-start', paddingTop: 110 },
+  sheet: {
+    maxHeight: '80%',
+    width: '100%',
+    maxWidth: 440,
+    alignSelf: 'center',
+    backgroundColor: theme.color.feltBg,
+    borderRadius: theme.radius.lg,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 10,
+  },
+  seatSheet: { paddingHorizontal: 16, gap: 12 },
+  sheetTitle: {
+    color: theme.color.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  sheetList: { paddingHorizontal: 12, paddingBottom: 4 },
+  sheetActions: { flexDirection: 'row', gap: 10 },
+  sheetAction: { flex: 1 },
+  input: {
     color: theme.color.textOnDark,
     fontSize: 18,
     fontWeight: '700',
-    marginBottom: 4,
+    backgroundColor: theme.color.feltBgDark,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: '#4d6d61',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
-  modeChevron: {
-    color: theme.color.textOnDark,
-    fontSize: 20,
-    fontWeight: '700',
-    opacity: 0.6,
-    marginBottom: 10,
-    paddingHorizontal: 4,
-  },
-  modeSummary: {
+  segment: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    backgroundColor: theme.color.feltBgDark,
+    borderRadius: theme.radius.md,
+    padding: 4,
   },
-  modeSummaryBody: {
+  segmentHalf: {
     flex: 1,
+    height: 44,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  modeSummaryDesc: {
-    marginLeft: 0,
-  },
-  modeChange: {
-    color: '#d4a843',
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
+  segmentHalfOn: { backgroundColor: theme.color.accent },
+  segmentText: { color: '#c9d2ce', fontSize: 15, fontWeight: '600' },
+  segmentTextOn: { color: '#1a1a1a', fontWeight: '800' },
 
-  // Mode picker
+  // Table picker cards.
   modeCard: {
     backgroundColor: theme.color.feltBgDark,
     borderRadius: theme.radius.md,
-    borderWidth: 1.5,
+    padding: theme.space.md,
+    marginBottom: theme.space.sm,
+    borderWidth: 2,
     borderColor: 'transparent',
-    padding: 14,
-    marginBottom: 8,
   },
-  modeCardSelected: {
-    borderColor: '#d4a843',
-    backgroundColor: '#1a3e2e',
-  },
-  modeCardLocked: {
-    opacity: 0.55,
-  },
-  modeNameLocked: {
-    color: theme.color.textMuted,
-  },
-  modeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
+  modeCardSelected: { borderColor: theme.color.accent },
+  modeCardLocked: { opacity: 0.55 },
+  modeHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   modeRadio: {
     width: 18,
     height: 18,
     borderRadius: 9,
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: theme.color.textMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modeRadioSelected: {
-    borderColor: '#d4a843',
-  },
-  modeRadioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#d4a843',
-  },
-  modeName: {
-    color: theme.color.textOnDark,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  modeNameSelected: {
-    color: '#f0d78c',
-  },
-  modeDesc: {
-    color: theme.color.textMuted,
-    fontSize: 12,
-    marginTop: 6,
-    marginLeft: 28,
-    lineHeight: 17,
-  },
-  modeFlavor: {
-    color: '#d4a843',
-    fontSize: 11,
-    fontStyle: 'italic',
-    marginTop: 6,
-    marginLeft: 28,
-  },
-
-  // Player config
-  intro: {
-    color: theme.color.textOnDark,
-    fontSize: 14,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    backgroundColor: theme.color.feltBgDark,
-    borderRadius: theme.radius.md,
-    padding: 8,
-  },
-  botToggle: {
-    width: 70,
-    paddingVertical: 8,
-    borderRadius: theme.radius.sm,
-    alignItems: 'center',
-    backgroundColor: '#1f4d3d',
-  },
-  botToggleActive: { backgroundColor: '#2a5a48' },
-  botEmoji: { fontSize: 22 },
-  botPortrait: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-  },
-  botLabel: {
-    color: theme.color.textOnDark,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  input: {
-    flex: 1,
-    // On the web an input won't shrink below its default width without
-    // this, and pushes the remove button off a phone screen.
-    minWidth: 0,
-    marginHorizontal: 10,
-    fontSize: 16,
-    color: theme.color.textOnDark,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.color.textMuted,
-  },
-  removeBtn: { padding: 8 },
-  footer: {
-    paddingHorizontal: theme.space.lg,
-    paddingTop: theme.space.sm,
-    paddingBottom: theme.space.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.10)',
-  },
+  modeRadioSelected: { borderColor: theme.color.accent },
+  modeRadioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.color.accent },
+  modeName: { flex: 1, color: theme.color.textOnDark, fontSize: 16, fontWeight: '700' },
+  modeNameSelected: { color: theme.color.accent },
+  modeNameLocked: { color: theme.color.textMuted },
+  modeDesc: { color: theme.color.textMuted, fontSize: 13, lineHeight: 18 },
+  modeFlavor: { color: theme.color.textMuted, fontSize: 12, fontStyle: 'italic', marginTop: 6 },
 });
+
+/** Where each place sits in the table area (seats anchor by their top). */
+const SLOT_STYLE: Record<SeatSlot, object> = {
+  top: { top: 0, left: '50%', marginLeft: -SEAT_W / 2 },
+  // Nudged out past the screen's padding so names clear the table's rim.
+  upperLeft: { top: 146, left: -10 },
+  lowerLeft: { top: 282, left: -10 },
+  upperRight: { top: 146, right: -10 },
+  lowerRight: { top: 282, right: -10 },
+  bottom: { bottom: 0, left: '50%', marginLeft: -SEAT_W / 2 },
+};
