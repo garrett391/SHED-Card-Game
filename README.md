@@ -33,6 +33,8 @@ A cross-platform (iOS / Android / Web) mobile app for the card game
 - **Game over** screen with final standings and per-game stats, and an
   in-game **log** of every play
 - **Achievements**, remembered on the device
+- **Records**: games played, win rate and best streak, a leaderboard by
+  player name (friends and hosts alike) and your last 30 games
 - **Save and resume**: the game in progress is saved after every play, so
   a refresh or restart picks it back up from Home; Settings has a way to
   leave the table
@@ -46,7 +48,6 @@ A cross-platform (iOS / Android / Web) mobile app for the card game
 
 - Online multiplayer / accounts (engine is decoupled to make this easy later)
 - Haptics
-- Match history across games / leaderboards
 - Spectator mode
 
 ## Setup
@@ -98,6 +99,7 @@ and full integration scenarios.
 │   ├── game.tsx                Main table
 │   ├── game-over.tsx           Standings, stats, the host's last word
 │   ├── achievements.tsx        Every achievement and how to earn it
+│   ├── records.tsx             Totals, leaderboard and recent games
 │   ├── rules.tsx               Rules reference
 │   └── tutorial.tsx            Interactive tutorial
 ├── src/
@@ -127,11 +129,14 @@ and full integration scenarios.
 │   │   └── useAutoClear.ts     Retires short-lived UI state
 │   ├── achievements/
 │   │   └── achievements.ts     What each achievement is and how it's detected
+│   ├── records/
+│   │   └── records.ts          What a finished game adds to the record book
 │   ├── store/                  Zustand stores
 │   │   ├── gameStore.ts        Wraps the engine for the current game
 │   │   │                       (saved on device, so it can be resumed)
 │   │   ├── campaignStore.ts    Campaign progress (saved on device)
 │   │   ├── achievementStore.ts Unlocked achievements (saved on device)
+│   │   ├── recordStore.ts      The record book (saved on device)
 │   │   ├── profileStore.ts     Player name and settings (saved on device)
 │   │   ├── radioStore.ts       The jazz radio
 │   │   └── tutorialStore.ts    Tutorial progress

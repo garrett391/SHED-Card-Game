@@ -279,6 +279,7 @@ export default function RootLayout() {
         />
         <Stack.Screen name="rules" options={{ title: 'Rules', presentation: 'modal' }} />
         <Stack.Screen name="achievements" options={{ title: 'Achievements' }} />
+        <Stack.Screen name="records" options={{ title: 'Records' }} />
       </Stack>
     </SafeAreaProvider>
   );

@@ -26,6 +26,8 @@ import {
 } from '../achievements/achievements';
 import { useAchievementStore } from './achievementStore';
 import { useCampaignStore } from './campaignStore';
+import { useRecordStore } from './recordStore';
+import { summarizeGame } from '../records/records';
 import { PRESET_ORDER } from '../campaign/presets';
 
 interface GameStore {
@@ -283,7 +285,8 @@ export function useGameHydrated(): boolean {
 /**
  * Run one engine action through achievement tracking: in-game feats on
  * every action, plus wins, streaks and the campaign when the game ends.
- * Unlocks are saved to achievementStore; returns the store fields to set.
+ * Unlocks are saved to achievementStore, and a finished game goes in the
+ * record book (recordStore); returns the store fields to set.
  */
 function achievementsFor(
   store: Pick<GameStore, 'stats' | 'earnedThisGame' | 'campaignPresetId'>,
@@ -308,7 +311,17 @@ function achievementsFor(
         : null,
     });
     ids.push(...result.earned);
-    if (result.humanPlayed) ach.recordResult(result.humanWon, !!campaignId);
+    if (result.humanPlayed) {
+      ach.recordResult(result.humanWon, !!campaignId);
+      const record = summarizeGame(r.state, {
+        turns: t.stats.turns,
+        campaign: !!campaignId,
+        at: new Date().toISOString(),
+      });
+      if (record) {
+        useRecordStore.getState().add(record, result.humanWon ? ach.streak + 1 : 0);
+      }
+    }
   }
   const fresh = ach.unlock(ids);
   return { stats: t.stats, earnedThisGame: [...store.earnedThisGame, ...fresh] };

@@ -51,6 +51,11 @@ export default function HomeScreen() {
           onPress={() => router.push('/achievements')}
         />
         <Button
+          title="Records"
+          variant="ghost"
+          onPress={() => router.push('/records')}
+        />
+        <Button
           title="Tutorial"
           variant="ghost"
           onPress={() => router.push('/tutorial')}

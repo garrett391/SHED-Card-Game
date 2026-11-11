@@ -48,3 +48,52 @@ test('achievements are tracked through the game store', () => {
   expect(wins).toBeGreaterThan(0);
   restore();
 });
+
+// The same kind of bot-driven games, checked against the record book.
+test('finished games go in the record book', async () => {
+  const { useRecordStore } = await import('../recordStore');
+  const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+  useRecordStore.getState().clear();
+  const restore = seedRandom(391);
+  let wins = 0;
+  const play = (humanSeat: boolean) => {
+    useGameStore.getState().startGame(
+      [{ name: 'You', isBot: !humanSeat }, { name: 'B1', isBot: true }],
+      getPreset('jake-classic'),
+      humanSeat ? 'jake-classic' : null,
+    );
+    for (let i = 0; i < 2; i++) useGameStore.getState().finishSwap(i);
+    let turns = 0;
+    while (useGameStore.getState().game!.phase === 'playing' && turns++ < 4000) {
+      const s = useGameStore.getState();
+      const g = s.game!;
+      const idx = g.currentPlayerIndex;
+      const a = decideBotAction(g, idx);
+      if (a.type === 'pickup') s.pickup();
+      else if (getPlaySource(g.players[idx]) === 'faceDown') s.playFaceDown(a.cardIds[0]);
+      else {
+        s.clearSelection();
+        for (const id of a.cardIds) useGameStore.getState().toggleSelect(id);
+        useGameStore.getState().playSelected(a.swapTargetId);
+      }
+    }
+    return useGameStore.getState().game!;
+  };
+  for (let n = 0; n < 8; n++) {
+    const end = play(true);
+    if (end.winnerId === 0) wins++;
+  }
+  play(false); // bots alone: not recorded
+  restore();
+
+  const { records } = useRecordStore.getState();
+  expect(records.games).toBe(8);
+  expect(records.wins).toBe(wins);
+  expect(records.recent).toHaveLength(8);
+  expect(records.recent.every((r) => r.campaign && r.turns > 0)).toBe(true);
+  expect(records.tallies['human:You']).toMatchObject({ games: 8, wins });
+  expect(records.tallies['bot:B1']).toMatchObject({ games: 8, wins: 8 - wins });
+  expect(records.bestStreak > 0).toBe(wins > 0);
+  const saved = JSON.parse((await AsyncStorage.getItem('shed-records-v1'))!).state;
+  expect(saved.records.games).toBe(8);
+});
