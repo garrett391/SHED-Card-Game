@@ -35,6 +35,7 @@ export function Button({
       <Text
         style={[
           styles.text,
+          variant === 'primary' && styles.textPrimary,
           variant === 'secondary' && styles.textSecondary,
           variant === 'ghost' && styles.textGhost,
           variant === 'danger' && styles.textDanger,
@@ -55,7 +56,8 @@ const styles = StyleSheet.create({
   },
   normal: { paddingVertical: 14, paddingHorizontal: 22 },
   compact: { paddingVertical: 8, paddingHorizontal: 14 },
-  primary: { backgroundColor: theme.color.primary },
+  // Gold, like the Campaign button on Home: the one thing to do next.
+  primary: { backgroundColor: theme.color.accent },
   secondary: { backgroundColor: '#ecf0f1' },
   // Ghost variant: Transparent background with a clean, low-opacity white border 
   // so it clearly framing the button without distracting from primary actions.
@@ -69,6 +71,7 @@ const styles = StyleSheet.create({
   
   // Text Styles
   text: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  textPrimary: { color: '#1a1a1a', fontWeight: '800' },
   textSecondary: { color: theme.color.secondary },
   // Crisp, bright off-white text for high readability on dark green felt
   textGhost: { color: '#E0E6ED', fontWeight: '600' }, 

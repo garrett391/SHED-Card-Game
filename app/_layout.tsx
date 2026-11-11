@@ -289,6 +289,9 @@ export default function RootLayout() {
         screenOptions={{
           headerStyle: { backgroundColor: theme.color.feltBgDark },
           headerTintColor: theme.color.textOnDark,
+          // The Western face from Home's title, so every screen's name
+          // reads as part of the same game.
+          headerTitleStyle: { fontFamily: theme.font.western, fontSize: 19 },
           contentStyle: { backgroundColor: theme.color.feltBg },
           headerRight: () => <SettingsButton />,
           // Back arrows carry no caption. Otherwise iOS labels them with the
