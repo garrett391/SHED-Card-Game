@@ -185,25 +185,46 @@ existed.
 
 ## The Campaign Map
 
-Shipped Oct 2026: a Super Mario World-style 16-bit overworld (repainted from 8-bit the same month). The three
-heroes stand at the current node and the map climbs from the bottom:
-Jake's old wood (forest and campfire), the village of The Spreading
-(cottages, pond, wheat), Justin's chapel on a plateau with its graveyard,
-Greg's machine keep in an ashland of lava, the Outlaw Pass (red-rock
-canyon, the bandits' camp and their wagon of quill-sealed rulebooks), Gio
-and Tati's carnival (big top, checker plaza, balloons), Justin's dark
-cathedral for the Second Schism (red banners, burning cards), and the
-Council's round table in a ring of pillars. Above the last node, a fog bank hides
-the rest of the land, with Chris's tower and quill rising out of it. The
-tower is scenery, not a node.
+Shipped Oct 2026 as a 16-bit strip that climbed from bottom to top;
+repainted Nov 2026 as one fairytale land, wider and taller than the screen,
+that you pan across. No sea round it: the map runs to its edges. The three
+heroes stand at the current node.
+
+The land: Jake's old wood in the south-west (deep forest, the campfire
+clearing, one giant elder tree hung with lanterns, wisps between the
+trunks); farmland and the village of The Spreading on a river (cottages,
+wheat, a windmill, sheep); Justin's chapel on its hill with the graveyard;
+a volcano in the east with Greg's machine keep at its foot, and small signs
+of his technology in the ash (a power line from the volcano to the keep, a
+dish, an aerial, terminals, circuit traces, cogs, a mine); the Outlaw Pass,
+a red-rock canyon with the bandits' camp and their wagon of quill-sealed
+rulebooks on its rim; Gio and Tati's carnival on the desert plain (big top,
+checker plaza, balloons); a lake; Justin's dark cathedral in a dead marsh
+for the Second Schism (red banners, burning cards, a ruin nearby); and the
+Council's round table in a ring of pillars on a cliff-edged plateau with a
+waterfall. Across the north runs a wall of snow peaks with glowing
+crystals, and on the tallest, above the cloud, Chris's tower and quill.
+The tower is scenery, not a node.
+
+The road wanders: east along the south from the wood to the chapel, north
+to the volcano, back west along the canyon floor, over the river to the
+desert, round the lake both ways, through the marsh, up onto the plateau
+and into the mountains. Four short side paths lead to places that aren't
+tables (the windmill, the mine, the foot of the waterfall, the marsh
+ruin): room for a secret or a future table. Ideas not decided: a secret
+area found by exploring or earned, perhaps holding "tables from other
+worlds" for the unused splashes; Chris hidden in the background.
 
 How it's built: `scripts/map/build_overworld.py` paints the land as pixel
 art and writes `assets/map/overworld.png`, `assets/map/heroes.png` and the
 node positions in `src/campaign/overworld.json`. app/campaign.tsx draws the
-image and lays live node markers over it. To add a node, write a painter
-for its region, add it to `REGIONS` in ladder order and re-run the script
-(a test fails if the map and `PRESET_ORDER` disagree). The fog band moves
-up as regions are added.
+image larger than the screen, pans it both ways and lays live node markers
+over it. Each table's landmark is drawn by its own region painter in a
+small tile, which the script sets down wherever the land wants it. To add
+a node, write a painter for it, add it to `REGIONS` in ladder order, give
+it a place in `NODES`, `TILES`, `RESERVED` and `SCATTER_ON`, add it to
+`ROAD` and re-run the script (a test fails if the map and `PRESET_ORDER`
+disagree).
 
 ## Chris the Scribe — boss design notes
 
@@ -319,12 +340,8 @@ ride on the same scenes (one theme: background, accent, card back).
 
 ## Backlog
 
-- **A less linear map.** The overworld climbs straight from bottom to top.
-  Let the path wander sideways too: switchbacks, a detour along the
-  desert, regions set side by side instead of stacked. This is all in
-  `scripts/map/build_overworld.py` (region layout and the path between
-  nodes); the map screen may need to pan horizontally as well as
-  vertically if the land gets wider than a phone.
+- **A secret on the map.** The side paths end at places that aren't
+  tables yet. One could hide a secret area (see The Campaign Map).
 - **Chris was there all along.** When Chris the Scribe is finally
   revealed, show that he has been in the background of the whole story,
   taking notes: in the crowd at Jake's teaching, watching through a

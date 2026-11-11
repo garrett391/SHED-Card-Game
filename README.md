@@ -26,7 +26,8 @@ A cross-platform (iOS / Android / Web) mobile app for the card game
   and an auto-generated rules summary
 - Interactive **tutorial** and rules reference screen
 - Background **jazz radio**: several streamed stations, HTTPS on native
-- **Campaign** on a 16-bit overworld map: eight tables from Jake's Classic
+- **Campaign** on a 16-bit fairytale map you pan across (forest, canyon,
+  volcano, lake, marsh, mountains): eight tables from Jake's Classic
   to the Council of Schisms, story cinematics, named hosts with table talk
   and end-of-game lines, nodes that unlock in order. It ends on "to be
   continued" for now; Chris the Scribe's finale isn't built yet
@@ -97,7 +98,7 @@ and full integration scenarios.
 ├── app/                        Expo Router screens (file-based)
 │   ├── _layout.tsx             Stack navigator, theme, fonts, radio
 │   ├── index.tsx               Home
-│   ├── campaign.tsx            Overworld map with the campaign nodes
+│   ├── campaign.tsx            The map, panned both ways, with the campaign nodes
 │   ├── cinematic.tsx           Story cutscenes (captioned scenes)
 │   ├── setup.tsx               The table from above: pick it, seat the players
 │   ├── swap.tsx                Pre-game card swap (per player)

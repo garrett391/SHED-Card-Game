@@ -1,28 +1,37 @@
 """
-Build the campaign overworld: a 16-bit, Super Mario World-style map.
+Build the campaign overworld: a 16-bit fairytale land you pan across.
 
     python3 scripts/map/build_overworld.py
 
 Writes:
     assets/map/overworld.png     the painted map (pixel art, pre-scaled by SCALE)
     assets/map/heroes.png        the three disciples as one small sprite
-    assets/story/ending-*.png    two crops of the north (fog, tower) used by
+    assets/story/ending-*.png    two crops of the tower on its peak, used by
                                  the campaign's ending cutscene
     src/campaign/overworld.json  map size, hero sprite size and each node's
                                  position, keyed by preset id; read by
                                  app/campaign.tsx
 
-The map climbs from the bottom (the first node) to the top. Each node owns a
-horizontal band of land painted in its own theme; above the last band sits
-a fog bank, and above that, Chris's tower in the clouds (scenery, not a
-node).
+One continuous country with no sea around it: Jake's deep wood in the
+south-west, farmland and a river, a chapel hill, a volcano with Greg's keep
+and its machinery, a red-rock canyon, a desert plain, a lake, a dead marsh,
+the Council's plateau, and a wall of mountains with Chris's tower on the
+tallest peak (scenery, not a node). The road wanders: east along the south,
+north to the volcano, back west through the canyon, round the lake both
+ways, through the marsh and up to the plateau.
 
 Style: 16-bit. Every material has a shade ramp (dark → light) and shapes are
 lit from the upper left, outlined, and cast a soft shadow down-right.
 
-To add a node: write a painter for it below, add it to REGIONS in ladder
-order (the order must match PRESET_ORDER in src/campaign/presets.ts; a test
-checks this), then re-run this script. Output is deterministic (fixed seed).
+How it's put together: each table has a region painter that draws its
+landmark in a 192x128 tile; a View sets that tile down wherever NODES and
+TILES say. The land around them (ground, water, canyon, mountains, road,
+filler) is painted in "The land" below.
+
+To add a node: write a painter for it, add it to REGIONS in ladder order
+(the order must match PRESET_ORDER in src/campaign/presets.ts; a test
+checks this), give it a place in NODES, TILES, RESERVED and SCATTER_ON, add
+it to ROAD, then re-run this script. Output is deterministic (fixed seed).
 
 Requires Pillow (pip install pillow).
 """
@@ -38,10 +47,8 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
 
-W = 192           # map width in art pixels
-BAND = 128        # height of one node's region, in art pixels
-TOP = 168         # sky, fog bank and Chris's tower above the last region
-BOTTOM = 20       # shore and sea below the first region
+W = 192           # width of one region painter's tile, in art pixels
+BAND = 128        # and its height
 SCALE = 4         # output upscale (nearest neighbour keeps it crisp)
 NODE_X = {'left': 60, 'right': 132}
 
@@ -313,9 +320,11 @@ def gravestone(cv: Canvas, x: int, y: int) -> None:
 
 
 # ─── Region painters ─────────────────────────────────────────────────────────
-# Each paints the band [y0, y0+BAND) and returns the node position (x, y) in
-# art pixels. `side` is where the node sits; landmarks go on the other side.
-# `clear(x, y)` says whether (x, y) is too near the road or a node to decorate.
+# Each paints its landmark in a tile W wide, from row y0 to y0+BAND, as if
+# the road ran up the tile past a node on `side`; the landmark goes on the
+# other side. They draw through a View (see "The land"), which sets the tile
+# down on the map, so the node they return is not used: NODES places it.
+# `clear(x, y)` says whether (x, y) is somewhere they must not decorate.
 
 Clear = Callable[[int, int], bool]
 
@@ -585,6 +594,8 @@ def paint_greg(cv: Canvas, y0: int, side: str, rng: random.Random, clear: Clear)
 def desert_ground(cv: Canvas, y0: int, y1: int, fade: int = 14) -> None:
     """Turn the grass in rows y0..y1 into sand dunes, dithering into grass
     over `fade` rows at each edge so biomes blend instead of meeting in a line."""
+    if getattr(cv, 'world', False):
+        return      # on the map proper, the desert is part of the land's own ground
     grass = set(R['grass'])
     for yy in range(y0 - fade, y1 + fade):
         edge = min(yy - (y0 - fade), (y1 + fade) - yy) / (2 * fade)   # 0 at the outer edge
@@ -977,84 +988,232 @@ REGIONS = [
 ]
 
 
-# ─── Terrain: island, beach, foam, shore cliff ───────────────────────────────
+# ─── The land ────────────────────────────────────────────────────────────────
+# One continuous country, MW x MH art pixels, with no sea around it: the map
+# simply runs to its edges. Each table's landmark is painted by its region
+# painter above, through a View that sets the painter's 192x128 tile down
+# wherever the land wants it. Everything else here is the country itself:
+# ground, water, canyon, plateau, mountains, volcano, the road and the filler.
 
-def coast(y: int) -> tuple[int, int]:
-    """Left and right edges of the land on row y."""
-    left = 10 + 6 * math.sin(y / 26) + 3 * math.sin(y / 8.3) + 2 * noise(0, y, 6, 11)
-    right = W - (10 + 6 * math.sin(y / 34 + 2) + 3 * math.sin(y / 9.4) + 2 * noise(1, y, 6, 12))
-    return int(left), int(right)
+MW, MH = 576, 760
 
+# Where each table stands (art pixels), in ladder order.
+NODES = {
+    'jake-classic': (94, 644),
+    'the-spreading': (250, 626),
+    'justins-schism': (424, 666),
+    'super-tens': (488, 528),
+    'the-pass': (344, 472),
+    'chaos-shed': (184, 440),
+    'second-schism': (84, 280),
+    'the-council': (290, 266),
+}
+# Each region painter's tile: which way round it paints ('side') and the
+# tile's top-left corner, chosen so its landmark lands beside the node.
+TILES = {
+    'jake-classic': ('left', 34, 580),       # the clearing sits round the node
+    'the-spreading': ('right', 145, 503),    # cottages north-west, pond by the river
+    'justins-schism': ('left', 326, 566),    # chapel hill north-east
+    'super-tens': ('right', 394, 504),       # the keep west of the node
+    'the-pass': ('left', 220, 352),          # the bandits' camp on the canyon's north rim
+    'chaos-shed': ('left', -25, 388),        # the big top south-west of the node
+    'second-schism': ('left', -40, 160),     # the dark cathedral above the node
+    'the-council': ('left', 212, 182),       # the ring of pillars on the plateau
+}
+# The ground each landmark stands on, kept clear of filler (x0, y0, x1, y1).
+RESERVED = {
+    'jake-classic': (46, 618, 142, 664),
+    'the-spreading': (156, 506, 226, 624),
+    'justins-schism': (410, 566, 514, 672),
+    'super-tens': (406, 504, 472, 574),
+    'the-pass': (328, 392, 404, 444),
+    'chaos-shed': (74, 400, 142, 492),
+    'second-schism': (62, 164, 146, 262),
+    'the-council': (304, 196, 400, 284),
+}
 
-def paint_land(cv: Canvas, rng: random.Random) -> None:
-    land_top, land_bottom = TOP - 8, cv.h - BOTTOM
-    for y in range(cv.h):
-        lft, rgt = coast(y)
-        for x in range(cv.w):
-            inland = land_top <= y < land_bottom and lft <= x < rgt
-            if inland:
-                d_edge = min(x - lft, rgt - 1 - x)
-                if d_edge < 3:
-                    cv.set(x, y, R['sand'][3] if d_edge else R['sand'][2])
-                    continue
-                v = 0.35 + 0.3 * noise(x, y, 9, 1) + 0.15 * noise(x, y, 3, 2)
-                cv.set(x, y, shade(R['grass'][1:4], v))
-            else:
-                # water: shallow and light near the land, deep further out
-                d = min(abs(x - lft), abs(x - rgt), abs(y - land_bottom) if y >= land_bottom else 99)
-                if y < land_bottom and lft <= x < rgt:
-                    d = 99
-                v = 0.85 - min(d, 16) / 22 + 0.1 * noise(x, y, 5, 6)
-                cv.set(x, y, shade(R['water'][:4], v))
-                if d == 1 or (d == 2 and (x + y) % 3 == 0):
-                    cv.set(x, y, R['water'][4])   # foam
-    # grass detail: tufts and dark speckle
-    for _ in range(cv.w * cv.h // 40):
-        x, y = rng.randrange(cv.w), rng.randrange(land_top, land_bottom)
-        if cv.get(x, y) in R['grass'][1:4] and cv.get(x, y - 1) in R['grass'][1:4]:
-            if rng.random() < 0.5:
-                cv.set(x, y, R['grass'][4])
-                cv.set(x - 1, y + 1, R['grass'][1])
-                cv.set(x + 1, y + 1, R['grass'][1])
-            else:
-                cv.set(x, y, R['grass'][1])
-    # shore cliff along the bottom: the island stands above the sea
-    for x in range(cv.w):
-        lft, rgt = coast(land_bottom)
-        if not (lft <= x < rgt):
-            continue
-        for d in range(7):
-            band = (x // 6 + d) % 3 == 0
-            col = R['cliff'][1] if band else R['cliff'][3] if d < 2 else R['cliff'][2]
-            cv.set(x, land_bottom + d, mix(col, R['cliff'][0], d / 9))
-        cv.set(x, land_bottom + 7, R['water'][4])
-    # glints on the open sea
-    for _ in range(cv.w * cv.h // 260):
-        x, y = rng.randrange(cv.w), rng.randrange(cv.h)
-        if cv.get(x, y) in R['water'][:3] and cv.get(x + 2, y) in R['water'][:3]:
-            cv.set(x, y, R['water'][3])
-            cv.set(x + 1, y, R['water'][4])
-            cv.set(x + 2, y, R['water'][3])
+TOWER = (500, 176)          # foot of Chris's tower, on the great peak
+LAKE = (160, 348, 40, 26)   # centre x, y and radii
 
 
-def paint_sky(cv: Canvas, rng: random.Random) -> None:
-    """Night sky over the unexplored north, Chris's tower rising from the fog."""
-    for y in range(TOP):
-        t = y / TOP
+class View(Canvas):
+    """A window onto the map for one region painter: the painter draws in its
+    own 192x128 tile coordinates and the View sets them down at (ox, oy)."""
+    world = True
+
+    def __init__(self, base: Canvas, ox: int, oy: int):
+        self.base, self.ox, self.oy = base, ox, oy
+        self.w, self.h = W, BAND
+        self.img, self.px = base.img, base.px
+
+    def ok(self, x, y):
+        return self.base.ok(x + self.ox, y + self.oy)
+
+    def set(self, x, y, col):
+        self.base.set(x + self.ox, y + self.oy, col)
+
+    def get(self, x, y):
+        return self.base.get(x + self.ox, y + self.oy)
+
+    def darken(self, x, y, f):
+        self.base.darken(x + self.ox, y + self.oy, f)
+
+    def tint(self, x, y, col, t):
+        self.base.tint(x + self.ox, y + self.oy, col, t)
+
+
+def spline(pts: list[tuple[float, float]], step: float = 0.6) -> list[tuple[float, float]]:
+    """A smooth curve through pts (Catmull-Rom), sampled about every `step` pixels."""
+    out: list[tuple[float, float]] = []
+    P = [pts[0]] + list(pts) + [pts[-1]]
+    for i in range(1, len(P) - 2):
+        p0, p1, p2, p3 = P[i - 1], P[i], P[i + 1], P[i + 2]
+        n = max(2, int(math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / step))
+        for k in range(n):
+            t = k / n
+            out.append(tuple(
+                0.5 * (2 * p1[j] + (-p0[j] + p2[j]) * t
+                       + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t * t
+                       + (-p0[j] + 3 * p1[j] - 3 * p2[j] + p3[j]) * t ** 3)
+                for j in (0, 1)))
+    out.append(pts[-1])
+    return out
+
+
+class Mask:
+    """Pixels something already stands on."""
+
+    def __init__(self):
+        self.bits = bytearray(MW * MH)
+
+    def mark(self, x: int, y: int) -> None:
+        if 0 <= x < MW and 0 <= y < MH:
+            self.bits[y * MW + x] = 1
+
+    def box(self, x0: int, y0: int, x1: int, y1: int) -> None:
+        for y in range(max(0, y0), min(MH, y1 + 1)):
+            for x in range(max(0, x0), min(MW, x1 + 1)):
+                self.bits[y * MW + x] = 1
+
+    def near(self, pts, r: int) -> None:
+        seen = set()
+        for x, y in pts:
+            key = (int(x), int(y))
+            if key not in seen:
+                seen.add(key)
+                self.box(key[0] - r, key[1] - r, key[0] + r, key[1] + r)
+
+    def __call__(self, x: int, y: int) -> bool:
+        return not (0 <= x < MW and 0 <= y < MH) or bool(self.bits[y * MW + x])
+
+
+# ─── Ground ──────────────────────────────────────────────────────────────────
+
+MARSH = [(28, 48, 46), (40, 66, 58), (54, 86, 68), (74, 108, 82)]
+SNOW = [(168, 184, 214), (204, 216, 236), (232, 238, 250), (250, 252, 255)]
+# (biome, centre x, centre y, reach): the nearest edge wins, with a wobble
+BIOMES = [
+    ('forest', 105, 615, 128), ('forest', 52, 440, 54),
+    ('farm', 268, 600, 94), ('meadow', 440, 652, 96), ('meadow', 300, 720, 60),
+    ('ash', 518, 480, 60), ('red', 343, 464, 84), ('desert', 178, 446, 84),
+    ('marsh', 81, 262, 96), ('high', 328, 275, 120), ('high', 528, 320, 82),
+    ('snow', 288, 96, 150), ('snow', 60, 96, 90), ('snow', 500, 150, 96),
+]
+
+
+def biome_at(x: int, y: int) -> str:
+    wx = x + (noise(x, y, 30, 51) - 0.5) * 46
+    wy = y + (noise(x, y, 30, 52) - 0.5) * 46
+    scored = sorted((math.hypot(wx - bx, wy - by) - r, name) for name, bx, by, r in BIOMES)
+    # dither the border between the two nearest so biomes fray into each other
+    if scored[1][0] - scored[0][0] < 7 and _hash(x, y, 53) < 0.5 - (scored[1][0] - scored[0][0]) / 14:
+        return scored[1][1]
+    return scored[0][1]
+
+
+def ground(biome: str, x: int, y: int):
+    v = 0.35 + 0.3 * noise(x, y, 9, 1) + 0.15 * noise(x, y, 3, 2)
+    if biome == 'forest':
+        return shade([R['leaf'][1], R['leaf'][2], R['grass'][1], R['leaf'][2]], v)
+    if biome == 'farm':
+        return shade(R['grass'][2:5], v * 0.85)
+    if biome == 'meadow':
+        return shade(R['grass'][1:4], v)
+    if biome == 'ash':
+        a = noise(x, y, 3, 8)
+        return R['lava'][1] if a > 0.88 else shade(R['ash'], 0.2 + a * 0.6)
+    if biome == 'desert':
+        ripple = math.sin(x / 5 + y / 3 + noise(x, y, 9, 42) * 4)
+        return mix(shade(R['sand'][1:], 0.45 + 0.18 * ripple + 0.15 * noise(x, y, 4, 43)), R['cliff'][2], 0.38)
+    if biome == 'red':
+        band = math.sin(y / 4 + noise(x, y, 12, 44) * 5)
+        return mix(shade(R['cliff'][1:], 0.4 + 0.2 * band + 0.2 * noise(x, y, 3, 45)), R['jred'][1], 0.18)
+    if biome == 'marsh':
+        return shade(MARSH, 0.25 + 0.5 * noise(x, y, 7, 46) + 0.2 * noise(x, y, 2, 47))
+    if biome == 'high':
+        return mix(shade(R['grass'][1:4], v), R['rock'][2], 0.42)
+    return shade(SNOW, 0.35 + 0.45 * noise(x, y, 8, 48) + 0.15 * noise(x, y, 2, 49))
+
+
+def paint_ground(cv: Canvas) -> list[list[str]]:
+    biome = [[biome_at(x, y) for x in range(MW)] for y in range(MH)]
+    for y in range(MH):
+        for x in range(MW):
+            cv.set(x, y, ground(biome[y][x], x, y))
+    return biome
+
+
+# ─── Sky, mountains, the tower ───────────────────────────────────────────────
+
+def paint_sky(cv: Canvas, rng: random.Random, horizon: int = 128) -> None:
+    """Night over the mountains: the peaks stand against it."""
+    for y in range(horizon):
+        t = y / horizon
         base = mix(R['night'][1], R['fog'][0], t ** 0.8)
-        for x in range(cv.w):
-            # banded dither between gradient steps
+        for x in range(MW):
             c = mix(base, R['night'][2], 0.25) if (x + y * 2) % 7 == 0 and t < 0.6 else base
             cv.set(x, y, c)
-    for _ in range(60):
-        x, y = rng.randrange(cv.w), rng.randrange(TOP // 2)
+    for _ in range(170):
+        x, y = rng.randrange(MW), rng.randrange(horizon * 2 // 3)
         cv.set(x, y, WHITE if rng.random() < 0.3 else R['fog'][3])
-    # moon
-    cv.blob([(30, 22, 7)], [(170, 170, 150), (210, 208, 184), (238, 236, 214), (252, 250, 236)])
-    # tower: brick shaft narrowing upward, lit windows, a quill on top
-    cx, base = W // 2, 118
-    for y in range(36, base):
-        half = 9 + (y - 36) * 0.09
+    cv.blob([(70, 30, 9)], [(170, 170, 150), (210, 208, 184), (238, 236, 214), (252, 250, 236)])
+
+
+def peak(cv: Canvas, cx: int, base: int, h: int, w: int, ramp=None, snow: float = 0.4,
+         seed: int = 0) -> None:
+    """A mountain: lit left face, shaded right, a ragged ridge between them
+    and a snow cap. (cx, base) is the middle of its foot; w its half-width."""
+    ramp = ramp or R['rock']
+    top = base - h
+    for yy in range(top, base + 1):
+        t = (yy - top) / h
+        half = w * t + 1.5 * noise(cx + seed, yy, 5, 61) * t
+        ridge = cx + (noise(seed, yy, 7, 62) - 0.5) * 10 * t
+        snow_line = snow + 0.1 * noise(seed, cx, 3, 63)
+        for xx in range(int(cx - half), int(cx + half) + 1):
+            if not cv.ok(xx, yy):
+                continue
+            edge = xx in (int(cx - half), int(cx + half))
+            lit = xx < ridge
+            jag = noise(xx, yy, 4, 64 + seed)
+            if t < snow_line + (jag - 0.5) * 0.14:
+                col = (WHITE if jag > 0.4 else SNOW[2]) if lit else (SNOW[1] if jag > 0.45 else SNOW[0])
+            else:
+                crease = (xx * 2 + yy + seed) % 9 == 0 or jag > 0.78
+                if lit:
+                    col = ramp[2] if crease else ramp[4] if jag > 0.55 else ramp[3]
+                else:
+                    col = ramp[0] if crease else ramp[2] if jag > 0.7 else ramp[1]
+            if yy > base - 5 and _hash(xx, yy, 65) < (yy - (base - 5)) / 6:
+                continue                      # fray the foot into the ground
+            cv.set(xx, yy, INK if edge and t > 0.04 else col)
+
+
+def paint_tower(cv: Canvas, cx: int, base: int) -> None:
+    """Chris's tower: a brick shaft narrowing upward, lit windows, a quill on top."""
+    top = base - 82
+    for y in range(top, base):
+        half = 9 + (y - top) * 0.09
         for x in range(int(cx - half), int(cx + half) + 1):
             row = y // 3
             mortar = y % 3 == 0 or (x + (row % 2) * 2) % 5 == 0
@@ -1065,49 +1224,319 @@ def paint_sky(cv: Canvas, rng: random.Random) -> None:
             if x in (int(cx - half), int(cx + half)):
                 col = INK
             cv.set(x, y, col)
-    for y in range(22, 37):     # roof cone
-        half = (y - 22) * 0.75
+    for y in range(top - 14, top + 1):     # roof cone
+        half = (y - top + 14) * 0.75
         for x in range(int(cx - half), int(cx + half) + 1):
             cv.set(x, y, R['purple'][2] if x < cx else R['purple'][1])
-    for wy in (48, 66, 84, 100):
+    for wy in (top + 12, top + 30, top + 48, top + 64):
         cv.rect(cx - 2, wy, 4, 6, INK)
-        cv.rect(cx - 1, wy + 1, 2, 4, R['gold'][3] if wy != 66 else R['gold'][2])
+        cv.rect(cx - 1, wy + 1, 2, 4, R['gold'][3] if wy != top + 30 else R['gold'][2])
         cv.glow(cx, wy + 3, 9, R['gold'][2], 0.3)
-    # the quill
-    for i in range(12):
-        x, y = cx + 1 + i // 2, 21 - i
+    for i in range(12):                    # the quill
+        x, y = cx + 1 + i // 2, top - 15 - i
         cv.set(x, y, R['wall'][3])
         cv.set(x - 1, y, R['wall'][1] if i > 2 else R['gold'][2])
-    cv.rect(cx, 19, 1, 4, R['gold'][1])
-    # rolling fog: shaded cloud puffs, densest where the land begins
+    cv.rect(cx, top - 17, 1, 4, R['gold'][1])
+
+
+def clouds(cv: Canvas, rng: random.Random, n: int, x0: float, x1: float, y: float, spread: float,
+           keep=None) -> None:
     puffs = []
-    for _ in range(170):
-        y = TOP - 2 - abs(rng.gauss(0, 26))
-        x = rng.uniform(-8, cv.w + 8)
-        if y < 70 and abs(x - cx) < 16:
-            continue      # keep the tower clear
-        puffs.append((x, y, rng.uniform(5, 11)))
-    for x, y, r in sorted(puffs, key=lambda p: p[1]):
-        cv.blob([(x, y, r), (x + r * 0.8, y + 1, r * 0.75)], R['fog'], outline=None)
-    for x in range(cv.w):
-        for y in range(TOP - 10, TOP + 2):
-            if noise(x, y, 4, 13) > 0.25 or y > TOP - 4:
-                cv.set(x, y, R['fog'][2] if (x + y) % 5 else R['fog'][3])
+    for _ in range(n):
+        px_, py_ = rng.uniform(x0, x1), y + rng.gauss(0, spread)
+        if keep and keep(px_, py_):
+            continue
+        puffs.append((px_, py_, rng.uniform(5, 11)))
+    for px_, py_, r in sorted(puffs, key=lambda p: p[1]):
+        cv.blob([(px_, py_, r), (px_ + r * 0.8, py_ + 1, r * 0.75)], R['fog'], outline=None)
 
 
-# ─── Road and node pads ──────────────────────────────────────────────────────
+# ─── Water, canyon, plateau, volcano ─────────────────────────────────────────
 
-def road_points(nodes: list[tuple[int, int]]) -> list[tuple[float, float]]:
-    """A winding road through every node, bottom to top, then into the fog."""
-    pts: list[tuple[float, float]] = []
-    chain = [(nodes[0][0], nodes[0][1] + 30)] + nodes + [(W // 2, TOP - 14)]
-    for (x0, y0), (x1, y1) in zip(chain, chain[1:]):
-        steps = int(abs(y1 - y0) + abs(x1 - x0)) * 2
-        for i in range(steps):
-            t = i / steps
-            e = t * t * (3 - 2 * t)
-            pts.append((x0 + (x1 - x0) * e, y0 + (y1 - y0) * t))
-    return pts
+RIVER = [(188, 370), (222, 428), (232, 492), (282, 558), (322, 614), (334, 668), (340, 720), (346, 764)]
+CANYON = [(456, 466), (418, 478), (382, 468), (344, 472), (310, 480), (288, 474)]
+PLATEAU = (327, 256, 86, 46, 22)        # centre x, y, radii, cliff height
+
+
+def in_lake(x: float, y: float, grow: float = 0) -> bool:
+    cx, cy, rx, ry = LAKE
+    return ((x - cx) / (rx + grow)) ** 2 + ((y - cy) / (ry + grow)) ** 2 <= 1 + 0.12 * (noise(x, y, 9, 71) - 0.5)
+
+
+def paint_water(cv: Canvas) -> list[tuple[float, float]]:
+    river = spline(RIVER, 1.0)
+    for r, col in ((6.5, R['sand'][2]), (5.2, None)):
+        for x, y in river:
+            for yy in range(int(y - r), int(y + r) + 1):
+                for xx in range(int(x - r), int(x + r) + 1):
+                    if (xx - x) ** 2 + (yy - y) ** 2 <= r * r:
+                        cv.set(xx, yy, col or shade(R['water'][1:4], 0.35 + 0.5 * noise(xx, yy, 4, 72)))
+    for x, y in river[::9]:                      # the current
+        cv.set(int(x) + 1, int(y), R['water'][4])
+        cv.set(int(x) - 1, int(y) + 2, R['water'][3])
+    cx, cy, rx, ry = LAKE
+    for yy in range(cy - ry - 6, cy + ry + 7):
+        for xx in range(cx - rx - 6, cx + rx + 7):
+            if in_lake(xx, yy):
+                d = ((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2
+                cv.set(xx, yy, shade(R['water'][:4], 0.25 + d * 0.6 + 0.12 * noise(xx, yy, 4, 73)))
+                if not in_lake(xx, yy - 1):
+                    cv.set(xx, yy, R['water'][4])
+            elif in_lake(xx, yy, 2.5):
+                cv.set(xx, yy, R['sand'][3])
+    for lx, ly in [(cx - 18, cy - 6), (cx + 10, cy + 8), (cx - 4, cy + 12)]:   # lily pads
+        cv.sprite(lx, ly, ['.gg', 'ggg', 'gg.'], {'g': R['grass'][3]})
+    cv.set(cx + 11, cy + 8, (240, 160, 200))
+    return river
+
+
+def paint_canyon(cv: Canvas) -> list[tuple[float, float]]:
+    """A trench through the red rock: sunlit north wall, shadowed south wall,
+    a floor wide enough for the road and a table."""
+    line = spline(CANYON, 2.0)
+    x0 = int(min(p[0] for p in line)) - 30
+    x1 = int(max(p[0] for p in line)) + 30
+    y0 = int(min(p[1] for p in line)) - 30
+    y1 = int(max(p[1] for p in line)) + 30
+    for yy in range(y0, y1):
+        for xx in range(x0, x1):
+            d, near = min((math.hypot(xx - px_, yy - py_), py_) for px_, py_ in line)
+            d += (noise(xx, yy, 6, 81) - 0.5) * 3
+            if d > 26:
+                continue
+            north = yy < near
+            if d <= 18:
+                floor = mix(shade(R['cliff'][:3], 0.3 + 0.5 * noise(xx, yy, 4, 82)), R['ash'][1], 0.25)
+                if north and d > 12:
+                    floor = mix(floor, INK, 0.35)          # the north wall's shadow
+                cv.set(xx, yy, floor)
+            else:
+                strata = (yy // 2 + xx // 7) % 3
+                if north:
+                    col = R['cliff'][1] if strata == 0 else R['cliff'][0]
+                else:
+                    col = R['cliff'][3] if strata == 0 else R['cliff'][4] if d > 24 else R['cliff'][2]
+                if d > 25:
+                    col = INK if north else R['sand'][4]
+                cv.set(xx, yy, col)
+    return line
+
+
+def on_plateau(x: float, y: float) -> bool:
+    cx, cy, rx, ry, _ = PLATEAU
+    return ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1 + 0.1 * (noise(x, y, 12, 91) - 0.5)
+
+
+def paint_plateau(cv: Canvas) -> None:
+    """The Council's high ground: a grassy stone table with a sheer south face."""
+    cx, cy, rx, ry, face = PLATEAU
+    for yy in range(cy - ry - 4, cy + ry + face + 6):
+        for xx in range(cx - rx - 6, cx + rx + 7):
+            if on_plateau(xx, yy):
+                v = 0.5 + 0.3 * noise(xx, yy, 5, 92)
+                col = mix(shade(R['grass'][2:5], v), R['rock'][3], 0.3)
+                if not on_plateau(xx, yy - 1) or not on_plateau(xx - 1, yy):
+                    col = R['grass'][4]
+                cv.set(xx, yy, col)
+            else:
+                k = next((k for k in range(1, face + 1) if on_plateau(xx, yy - k)), None)
+                if k is None:
+                    if on_plateau(xx, yy - face - 3):
+                        cv.darken(xx, yy, 0.7)             # shadow at the foot
+                    continue
+                band = (yy + xx // 5) % 4 == 0
+                col = R['rock'][1] if band else R['rock'][3] if xx < cx - rx * 0.4 else R['rock'][2]
+                cv.set(xx, yy, INK if k == 1 else mix(col, R['rock'][0], k / face * 0.5))
+
+
+def paint_waterfall(cv: Canvas, x: int) -> tuple[int, int]:
+    """Off the plateau's south face into a pool; returns the pool's centre."""
+    cx, cy, rx, ry, face = PLATEAU
+    top = next(yy for yy in range(cy, cy + ry + 8) if not on_plateau(x, yy))
+    for yy in range(top - 6, top + face + 4):
+        for xx in range(x - 3, x + 4):
+            v = (xx * 3 + yy) % 4
+            cv.set(xx, yy, WHITE if v == 0 else R['water'][4] if v < 3 else R['water'][3])
+    py_ = top + face + 8
+    for yy in range(py_ - 7, py_ + 8):
+        for xx in range(x - 15, x + 16):
+            d = ((xx - x) / 15) ** 2 + ((yy - py_) / 7) ** 2
+            if d <= 1:
+                cv.set(xx, yy, R['water'][4] if d > 0.8 else shade(R['water'][1:4], 0.3 + 0.5 * noise(xx, yy, 3, 93)))
+    for mx, my, r in [(x - 6, py_ - 5, 4), (x + 5, py_ - 4, 3.5), (x, py_ - 8, 4.5)]:
+        cv.blob([(mx, my, r)], R['fog'], outline=None)       # mist
+    return x, py_
+
+
+VOLCANO = (530, 494, 118, 50)           # centre of its foot, height, half-width
+
+
+def paint_volcano(cv: Canvas, rng: random.Random) -> None:
+    cx, base, h, w = VOLCANO
+    top = base - h
+    cv.glow(cx, top + 6, 46, R['lava'][2], 0.5)
+    for yy in range(top + 8, base + 1):
+        t = (yy - top) / h
+        half = w * (t ** 1.25) + 5 + 2 * noise(cx, yy, 5, 101)
+        ridge = cx + (noise(3, yy, 8, 102) - 0.5) * 12
+        for xx in range(int(cx - half), int(cx + half) + 1):
+            jag = noise(xx, yy, 4, 103)
+            lit = xx < ridge
+            col = (R['ash'][3] if jag > 0.6 else R['ash'][2]) if lit else (R['ash'][1] if jag > 0.6 else R['ash'][0])
+            if (xx + yy * 2) % 11 == 0:
+                col = R['ash'][0]
+            if yy > base - 6 and _hash(xx, yy, 104) < (yy - (base - 6)) / 7:
+                continue
+            cv.set(xx, yy, INK if xx in (int(cx - half), int(cx + half)) else col)
+    for xx in range(cx - 7, cx + 8):                         # the crater's rim
+        for yy in range(top + 5, top + 12):
+            d = ((xx - cx) / 7) ** 2 + ((yy - top - 8) / 3.5) ** 2
+            if d <= 1:
+                cv.set(xx, yy, shade(R['lava'], 1 - d * 0.7))
+    for sx, drift, length in [(cx - 2, -0.28, 78), (cx + 3, 0.34, 60), (cx, 0.05, 40)]:   # lava runs
+        x = float(sx)
+        for i in range(length):
+            yy = top + 11 + i
+            x += drift + (noise(sx, yy, 6, 105) - 0.5) * 1.6
+            wide = 2 if i < length * 0.6 else 1
+            for k in range(-wide, wide + 1):
+                cv.set(int(x) + k, yy, shade(R['lava'], 0.85 - abs(k) * 0.25 - i / length * 0.3))
+            if i % 9 == 0:
+                cv.glow(x, yy, 7, R['lava'][2], 0.35)
+    for ox, oy, r in [(0, -4, 5), (5, -11, 6.5), (1, -20, 8), (9, -30, 9.5), (4, -42, 11)]:   # smoke
+        cv.blob([(cx + ox, top + oy, r)], R['ash'], outline=None)
+
+
+# ─── Greg's machinery: the keep draws its power from the volcano ─────────────
+
+def pylon(cv: Canvas, x: int, y: int, h: int = 22) -> None:
+    cv.shadow(x + 3, y + 1, 4, 1.5, 0.65)
+    for j in range(h):
+        cv.set(x - 1 - (h - j) // 6, y - j, R['rock'][1])
+        cv.set(x + 1 + (h - j) // 6, y - j, R['rock'][3])
+        if j % 4 == 0:
+            cv.rect(x - 2, y - j, 5, 1, R['rock'][2])
+    cv.rect(x - 4, y - h, 9, 1, R['rock'][3])
+    cv.set(x - 4, y - h + 1, R['screen'][3])
+    cv.set(x + 4, y - h + 1, R['screen'][3])
+
+
+def wire(cv: Canvas, a: tuple[int, int], b: tuple[int, int], sag: int = 4) -> None:
+    n = max(abs(b[0] - a[0]), abs(b[1] - a[1]))
+    for i in range(n + 1):
+        t = i / n
+        cv.set(int(a[0] + (b[0] - a[0]) * t), int(a[1] + (b[1] - a[1]) * t + math.sin(t * math.pi) * sag),
+               R['rock'][4])
+
+
+def dish(cv: Canvas, x: int, y: int) -> None:
+    cv.shadow(x + 3, y + 1, 6, 2, 0.65)
+    cv.rect(x, y - 7, 2, 8, R['rock'][1])
+    cv.sprite(x - 6, y - 15, ['....oooo.', '..oobbbbo', '.obbbbbao', 'obbbbbao.', 'obbbbao..', '.obbao...', '..ooo....'],
+              {'o': INK, 'b': R['rock'][4], 'a': R['rock'][2]})
+    cv.set(x + 3, y - 16, R['lava'][1])
+    cv.glow(x + 3, y - 16, 4, R['lava'][2], 0.5)
+
+
+def terminal(cv: Canvas, x: int, y: int) -> None:
+    cv.shadow(x + 3, y + 1, 5, 1.5, 0.65)
+    cv.rect(x, y - 3, 7, 4, R['rock'][2])
+    cv.outline_rect(x - 1, y - 11, 9, 8)
+    cv.rect(x, y - 10, 7, 6, R['screen'][0])
+    for i, ln in enumerate((4, 5, 2)):
+        cv.rect(x + 1, y - 9 + i * 2, ln, 1, R['screen'][3])
+    cv.glow(x + 3, y - 7, 8, R['screen'][2], 0.3)
+
+
+def antenna(cv: Canvas, x: int, y: int, h: int = 26) -> None:
+    cv.shadow(x + 3, y + 1, 3, 1.2, 0.65)
+    cv.rect(x, y - h, 1, h + 1, R['rock'][3])
+    for j in range(4, h, 6):
+        cv.rect(x - 2, y - j, 5, 1, R['rock'][1])
+    cv.set(x, y - h - 1, R['lava'][1])
+    cv.glow(x, y - h - 1, 6, R['lava'][1], 0.55)
+
+
+def gear(cv: Canvas, x: int, y: int, r: int = 5) -> None:
+    """A cog half-sunk in the ash."""
+    for a in range(0, 360, 45):
+        cv.rect(int(x + (r + 1) * math.cos(math.radians(a))) - 1, int(y + (r + 1) * math.sin(math.radians(a)) * 0.7) - 1,
+                2, 2, R['rock'][1])
+    for yy in range(y - r, y + r + 1):
+        for xx in range(x - r, x + r + 1):
+            d = math.hypot(xx - x, (yy - y) / 0.7)
+            if d <= r:
+                cv.set(xx, yy, INK if d > r - 1 else R['rock'][0] if d < 1.5 else R['rock'][2 + (xx < x)])
+
+
+def trace(cv: Canvas, pts: list[tuple[int, int]]) -> None:
+    """A circuit trace laid across the ash: right-angled, with a pad at each bend."""
+    for (ax, ay), (bx, by) in zip(pts, pts[1:]):
+        for i in range(max(abs(bx - ax), abs(by - ay)) + 1):
+            t = i / max(1, max(abs(bx - ax), abs(by - ay)))
+            cv.set(int(ax + (bx - ax) * t), int(ay + (by - ay) * t), R['screen'][2])
+    for x, y in pts:
+        cv.rect(x - 1, y - 1, 3, 3, R['screen'][3])
+        cv.glow(x, y, 5, R['screen'][2], 0.3)
+
+
+def paint_machinery(cv: Canvas, clear: Clear) -> None:
+    """Small signs of technology in the ash around Super Tens: a power line
+    from the volcano over the road to the keep, a dish, an aerial, terminals,
+    a pipe and a few cogs."""
+    for run in ([(466, 556), (476, 556), (476, 574)],
+                [(416, 580), (416, 592), (402, 592)],
+                [(546, 566), (546, 540), (566, 540)],
+                [(520, 560), (534, 560), (534, 578)]):
+        trace(cv, run)
+    posts = [(516, 504), (462, 518)]
+    for x, y in posts:
+        pylon(cv, x, y)
+    for s in (-4, 4):
+        wire(cv, (posts[0][0] + s, posts[0][1] - 21), (posts[1][0] + s, posts[1][1] - 21), 5)
+    wire(cv, (458, 497), (452, 528), 1)                      # down to the keep
+    dish(cv, 550, 566)
+    antenna(cv, 564, 544)
+    for x, y in [(516, 528), (544, 590), (482, 592)]:
+        terminal(cv, x, y)
+    for xx in range(520, 546):                               # a pipe from the volcano's foot
+        cv.set(xx, 508, R['rock'][3])
+        cv.set(xx, 509, R['rock'][1])
+        if xx % 6 == 0:
+            cv.rect(xx, 507, 1, 4, R['rock'][0])
+    for x, y in [(556, 604), (504, 606), (536, 546), (446, 492)]:
+        if not clear(x, y):
+            gear(cv, x, y, 4 + (x % 2))
+
+
+# ─── Road, bridges, spurs ────────────────────────────────────────────────────
+
+def n(pid: str) -> tuple[int, int]:
+    return NODES[pid]
+
+
+# The road, table to table. It doubles back through the canyon, crosses the
+# river twice, splits to pass the lake on both sides and climbs to the tower.
+ROAD = [
+    [(40, 692), n('jake-classic'), (168, 654), n('the-spreading'), (292, 642), (322, 634)],
+    [(322, 634), (360, 652), n('justins-schism'), (468, 690), (524, 670), (538, 618), (520, 566),
+     n('super-tens'), (474, 494), (456, 466)],
+    [(456, 466), (418, 478), (382, 468), n('the-pass'), (310, 480), (288, 474), (262, 466), (244, 462)],
+    [(244, 462), (214, 452), n('chaos-shed'), (160, 412), (136, 392)],
+    [(136, 392), (110, 362), (112, 326), (136, 304), (160, 298)],           # west of the lake
+    [(136, 392), (160, 387), (180, 386), (202, 378), (214, 356), (210, 326), (186, 304), (160, 298)],  # east
+    [(160, 298), (120, 292), n('second-schism')],
+    [n('second-schism'), (60, 264), (40, 238), (46, 200), (62, 174)],       # round the cathedral
+    [(62, 174), (120, 152), (196, 196), (242, 250), n('the-council')],
+    [n('the-council'), (326, 290), (366, 292), (402, 274), (432, 240), (456, 222), (440, 200), (468, 190), (488, 182)],
+]
+SPURS = [
+    [n('the-spreading'), (262, 664), (270, 698)],             # to the windmill
+    [n('super-tens'), (524, 536), (552, 522), (560, 508)],    # to the mine
+    [(402, 274), (420, 302), (400, 332)],                     # to the foot of the waterfall
+    [(40, 238), (26, 226), (22, 208)],                        # to the ruin in the marsh
+]
+BRIDGES = [((306, 637), (346, 645)), ((254, 465), (210, 451)), ((176, 387), (206, 376))]
 
 
 def paint_road(cv: Canvas, pts: list[tuple[float, float]]) -> None:
@@ -1148,18 +1577,205 @@ def node_pad(cv: Canvas, x: int, y: int) -> None:
                 cv.set(xx, yy, INK)
 
 
-def near_road(pts, nodes) -> Clear:
-    road = set()
+def paint_spur(cv: Canvas, pts: list[tuple[float, float]]) -> None:
     for x, y in pts:
-        for dx in range(-11, 12):
-            for dy in range(-11, 12):
-                road.add((int(x) + dx, int(y) + dy))
+        cv.disc(x + 1, y + 1, 3.6, R['sand'][0])
+    for x, y in pts:
+        cv.disc(x, y, 2.8, R['sand'][2])
 
-    def clear(x: int, y: int) -> bool:
-        if (x, y) in road:
-            return True
-        return any((x - nx) ** 2 + (y - ny) ** 2 < 22 ** 2 for nx, ny in nodes)
-    return clear
+
+def paint_bridge(cv: Canvas, a: tuple[int, int], b: tuple[int, int]) -> None:
+    length = math.hypot(b[0] - a[0], b[1] - a[1])
+    ux, uy = (b[0] - a[0]) / length, (b[1] - a[1]) / length
+    for i in range(int(length * 2) + 1):
+        t = i / 2
+        x, y = a[0] + ux * t, a[1] + uy * t
+        plank = int(t) % 4
+        for k in range(-8, 9):
+            col = R['wood'][0] if plank == 3 else R['wood'][3] if k < -2 else R['wood'][2]
+            if abs(k) == 8:
+                col = INK
+            elif abs(k) == 7:
+                col = R['wood'][1]
+            cv.set(int(x - uy * k), int(y + ux * k), col)
+    for t in (0, length):                                   # posts at each end
+        for k in (-8, 8):
+            x, y = int(a[0] + ux * t - uy * k), int(a[1] + uy * t + ux * k)
+            cv.rect(x - 1, y - 4, 3, 5, R['wood'][1])
+            cv.outline_rect(x - 2, y - 5, 5, 7)
+
+
+# ─── Filler ──────────────────────────────────────────────────────────────────
+
+def dead_tree(cv: Canvas, x: int, y: int) -> None:
+    cv.shadow(x + 2, y + 1, 4, 1.5, 0.7)
+    for j in range(11):
+        cv.set(x, y - j, R['wood'][0])
+        cv.set(x + 1, y - j, R['ash'][2])
+    for dx, dy, ln in [(-1, -6, 4), (1, -8, 4), (-1, -10, 3), (1, -4, 3)]:
+        for k in range(1, ln + 1):
+            cv.set(x + dx * k + (dx > 0), y + dy - k // 2, R['wood'][0])
+
+
+def reeds(cv: Canvas, x: int, y: int) -> None:
+    for k, hgt in enumerate((5, 7, 4)):
+        for j in range(hgt):
+            cv.set(x + k * 2, y - j, R['leaf'][2])
+        cv.set(x + k * 2, y - hgt, R['wood'][2])
+
+
+def bog(cv: Canvas, x: int, y: int, rx: int = 9, ry: int = 4) -> None:
+    for yy in range(y - ry, y + ry + 1):
+        for xx in range(x - rx, x + rx + 1):
+            d = ((xx - x) / rx) ** 2 + ((yy - y) / ry) ** 2
+            if d <= 1:
+                cv.set(xx, yy, (22, 40, 58) if d < 0.6 else (40, 64, 76))
+    cv.set(x - 2, y - 1, (90, 130, 140))
+    reeds(cv, x + rx - 2, y - ry + 2)
+
+
+def lava_pool(cv: Canvas, x: int, y: int, r: float) -> None:
+    cv.glow(x, y, r * 2.2, R['lava'][2], 0.5)
+    for yy in range(int(y - r), int(y + r) + 1):
+        for xx in range(int(x - r * 1.4), int(x + r * 1.4) + 1):
+            d = ((xx - x) / (r * 1.4)) ** 2 + ((yy - y) / r) ** 2
+            if d <= 1:
+                cv.set(xx, yy, shade(R['lava'], 1 - d + 0.25 * noise(xx, yy, 2, 5)))
+            elif d <= 1.25:
+                cv.set(xx, yy, R['ash'][0])
+
+
+def crystal(cv: Canvas, x: int, y: int, s: int = 1) -> None:
+    """A cluster of glowing shards: the mountains' own light."""
+    cv.glow(x, y - 6 * s, 12 * s, R['purple'][3], 0.4)
+    for dx, hgt in ((-3, 6), (0, 10), (3, 7)):
+        for j in range(hgt * s):
+            wide = max(0, min(2, (hgt * s - j) // 3))
+            for k in range(-wide, wide + 1):
+                cv.set(x + dx * s + k, y - j, R['purple'][4] if k < 0 else R['purple'][3] if k == 0 else R['purple'][2])
+        cv.set(x + dx * s, y - hgt * s, WHITE)
+
+
+def wisp(cv: Canvas, x: int, y: int) -> None:
+    cv.glow(x, y, 6, (150, 240, 220), 0.55)
+    cv.set(x, y, WHITE)
+
+
+def great_tree(cv: Canvas, x: int, y: int) -> None:
+    """The elder tree of Jake's wood, many times the size of the rest."""
+    cv.shadow(x + 10, y + 3, 34, 9, 0.6)
+    for j in range(40):
+        half = 6 + (j < 8) * (8 - j) * 0.9 + (j > 30) * (j - 30) * 0.5
+        for xx in range(int(x - half), int(x + half) + 1):
+            t = (xx - (x - half)) / (2 * half)
+            col = R['wood'][3] if t < 0.25 else R['wood'][2] if t < 0.6 else R['wood'][1]
+            if (xx + j // 2) % 5 == 0:
+                col = R['wood'][0]
+            cv.set(xx, y - j, INK if xx in (int(x - half), int(x + half)) else col)
+    for rx_, ry_ in ((-9, 3), (10, 2), (-14, 5)):          # roots
+        cv.rect(x + rx_, y + ry_ - 3, 6, 3, R['wood'][1])
+    cv.blob([(x - 24, y - 50, 18), (x + 22, y - 52, 19), (x - 6, y - 70, 22), (x + 14, y - 78, 17),
+             (x - 28, y - 68, 14), (x + 34, y - 66, 13), (x, y - 46, 16)], R['leaf'], outline=R['leaf'][0])
+    for lx, ly in [(-20, -44), (16, -40), (-2, -30), (28, -50)]:     # lanterns in the boughs
+        cv.set(x + lx, y + ly, R['gold'][3])
+        cv.glow(x + lx, y + ly, 7, R['gold'][2], 0.5)
+
+
+def windmill(cv: Canvas, x: int, y: int) -> None:
+    cv.shadow(x + 6, y + 1, 10, 3, 0.65)
+    for j in range(22):
+        half = 4 + j * 0.16
+        for xx in range(int(x - half), int(x + half) + 1):
+            cv.set(xx, y - 21 + j, R['wall'][3] if xx < x - 1 else R['wall'][1])
+    cv.rect(x - 1, y - 5, 3, 6, R['wood'][1])
+    for j in range(6):
+        for xx in range(x - 5 + j // 2, x + 6 - j // 2):
+            cv.set(xx, y - 27 + j, R['roof'][3] if xx < x else R['roof'][1])
+    for dx, dy in ((1, -1), (-1, 1), (1, 1), (-1, -1)):
+        for k in range(2, 15):
+            cv.set(x + dx * k, y - 20 + dy * k, R['wood'][0])
+            if k > 4:
+                cv.set(x + dx * k + (1 if dx * dy < 0 else 0), y - 20 + dy * k + (0 if dx * dy < 0 else 1), R['wall'][3])
+    cv.set(x, y - 20, INK)
+
+
+def standing_stones(cv: Canvas, x: int, y: int) -> None:
+    for a in range(0, 360, 51):
+        sx = int(x + 15 * math.cos(math.radians(a)))
+        sy = int(y + 7 * math.sin(math.radians(a)))
+        cv.shadow(sx + 2, sy + 1, 3, 1.2, 0.65)
+        cv.box(sx - 1, sy - 8, 4, 9, R['rock'])
+    cv.glow(x, y - 2, 10, R['purple'][3], 0.3)
+
+
+def ruin(cv: Canvas, x: int, y: int) -> None:
+    for i, hgt in enumerate((12, 7, 10, 4)):
+        cv.box(x + i * 7, y - hgt, 4, hgt + 1, R['rock'])
+    cv.rect(x - 2, y - 13, 12, 2, R['rock'][3])
+    cv.outline_rect(x - 3, y - 14, 14, 4)
+    for bx, by in ((x + 30, y - 1), (x + 12, y + 4)):
+        boulder(cv, bx, by, 2.5)
+
+
+def mine(cv: Canvas, x: int, y: int) -> None:
+    cv.sprite(x - 6, y - 10, ['..oooooooo..', '.owwwwwwwwo.', 'owwoooooowwo'] + ['owwonnnnowwo'] * 7,
+              {'o': INK, 'w': R['wood'][2], 'n': R['night'][0]})
+    for k in range(7):                                       # rails out of the dark
+        cv.set(x - 3 - k, y + k // 2, R['rock'][3])
+        cv.set(x + 2 - k, y + 1 + k // 2, R['rock'][3])
+    cv.box(x - 14, y + 1, 7, 5, R['wood'])                   # an ore cart
+    cv.set(x - 12, y + 1, R['purple'][3])
+    cv.set(x - 10, y + 1, R['gold'][3])
+
+
+def pier(cv: Canvas, x: int, y: int) -> None:
+    for k in range(16):
+        cv.rect(x + k, y, 1, 4, R['wood'][3] if k % 3 else R['wood'][1])
+    cv.outline_rect(x - 1, y - 1, 18, 6)
+    bx, by = x + 22, y + 6                                   # a rowing boat
+    cv.sprite(bx, by, ['o.......o', 'obbbbbbbo', '.obbbbbo.', '..ooooo..'], {'o': INK, 'b': R['wood'][2]})
+
+
+def signpost(cv: Canvas, x: int, y: int) -> None:
+    cv.rect(x, y - 8, 1, 9, R['wood'][0])
+    cv.rect(x - 4, y - 9, 9, 3, R['wood'][3])
+    cv.outline_rect(x - 5, y - 10, 11, 5)
+
+
+def sheep(cv: Canvas, x: int, y: int) -> None:
+    cv.blob([(x, y - 2, 2.4), (x + 2, y - 2, 2.2)], R['wall'], outline=None)
+    cv.set(x + 4, y - 3, INK)
+    cv.set(x - 1, y, INK)
+    cv.set(x + 2, y, INK)
+
+
+def hay(cv: Canvas, x: int, y: int) -> None:
+    cv.blob([(x, y - 2, 3)], [R['gold'][0], R['gold'][1], R['gold'][2], R['gold'][3]])
+
+
+def field(cv: Canvas, x: int, y: int, w: int, h: int, ramp, clear: Clear) -> None:
+    for yy in range(y, y + h):
+        for xx in range(x, x + w):
+            if not clear(xx, yy):
+                cv.set(xx, yy, ramp[2] if (xx + yy // 2) % 3 else ramp[1] if yy % 2 else ramp[3])
+
+
+def scatter_land(cv: Canvas, rng: random.Random, biome, names: tuple[str, ...], count: int, stamp,
+                 clear: Clear, box=(8, 150, MW - 8, MH - 4), gap: tuple[int, int] = (7, 6)) -> list:
+    """Scatter `count` stamps over the ground of the named biomes, away from
+    everything `clear` protects. Returns (y, x, stamp) for y-sorted painting."""
+    pts: list[tuple[int, int]] = []
+    tries = 0
+    while len(pts) < count and tries < count * 80:
+        tries += 1
+        x, y = rng.randrange(box[0], box[2]), rng.randrange(box[1], box[3])
+        if biome[y][x] not in names or clear(x, y):
+            continue
+        if any(abs(x - px_) < gap[0] and abs(y - py_) < gap[1] for px_, py_ in pts):
+            continue
+        pts.append((x, y))
+    return [(y, x, stamp) for x, y in pts]
+
 
 
 # ─── Heroes sprite ───────────────────────────────────────────────────────────
@@ -1220,46 +1836,182 @@ def build_heroes() -> tuple[Image.Image, int, int]:
 
 # ─── Build ───────────────────────────────────────────────────────────────────
 
+# Ground each region painter may scatter its own props over (outside its
+# landmark): cacti stay in the desert, dead trees in the marsh.
+SCATTER_ON = {
+    'jake-classic': ('forest', 'farm', 'meadow'),
+    'the-spreading': ('farm', 'meadow', 'forest'),
+    'justins-schism': ('meadow', 'farm'),
+    'super-tens': ('ash',),
+    'the-pass': ('desert', 'red'),
+    'chaos-shed': ('desert',),
+    'second-schism': ('marsh',),
+    'the-council': ('high',),
+}
+
+
+def inside(box, x: int, y: int) -> bool:
+    return box[0] <= x <= box[2] and box[1] <= y <= box[3]
+
+
 def build() -> None:
     rng = random.Random(1987)  # fixed seed: same map every run
-    h = TOP + BAND * len(REGIONS) + BOTTOM
-    cv = Canvas(W, h)
-    paint_land(cv, rng)
+    cv = Canvas(MW, MH)
+    biome = paint_ground(cv)
+    horizon = 118
+    paint_sky(cv, rng, horizon)
 
-    nodes: list[tuple[int, int]] = []
-    sides: list[str] = []
-    for i, _ in enumerate(REGIONS):
-        y0 = h - BOTTOM - BAND * (i + 1)
-        side = 'left' if i % 2 == 0 else 'right'
-        sides.append(side)
-        nodes.append((NODE_X[side], y0 + BAND // 2))
-    pts = road_points(nodes)
-    clear = near_road(pts, nodes)
+    taken = Mask()             # where filler may not go
+    taken.box(0, 0, MW, horizon + 6)
 
-    paint_road(cv, pts)          # under everything placed beside it
+    river = paint_water(cv)
+    taken.near(river, 9)
+    cx, cy, rx, ry = LAKE
+    taken.box(cx - rx - 6, cy - ry - 6, cx + rx + 6, cy + ry + 6)
+    canyon = paint_canyon(cv)
+    taken.near(canyon, 29)
+    paint_plateau(cv)
+    px_, py_, prx, pry, face = PLATEAU
+    taken.box(px_ - prx - 4, py_ - pry - 4, px_ + prx + 4, py_ + pry + face + 6)
+    pool_x, pool_y = paint_waterfall(cv, 372)
+    taken.box(pool_x - 19, pool_y - 34, pool_x + 19, pool_y + 10)
+
+    # mountains, back to front: the wall across the north with cloud between
+    # its rows, the great peak and its shoulders, then the lower ranges
+    peaks: list[tuple[int, int, int, int, int]] = []        # base, cx, h, w, seed
+    for i, x in enumerate(range(-6, MW + 20, 20)):
+        peaks.append((120 + rng.randrange(0, 10), x + rng.randrange(-5, 6), rng.randrange(58, 92),
+                      rng.randrange(34, 48), i))
+    front: list[tuple[int, int, int, int, int]] = []
+    for i, x in enumerate(range(4, 410, 26)):
+        low = 134 if 70 < x < 240 else 146                   # the road runs under these
+        front.append((low - rng.randrange(0, 8), x + rng.randrange(-6, 7), rng.randrange(44, 70),
+                      rng.randrange(28, 40), 40 + i))
+    for base, x, h, w_, seed in sorted(peaks):
+        if abs(x - TOWER[0]) < 30:
+            continue                 # a gap in the wall: the tower's top stands against the night
+        peak(cv, x, base, h, w_, seed=seed)
+    clouds(cv, rng, 70, -10, MW + 10, 108, 5)
+    for base, x, h, w_, seed in sorted(front):
+        peak(cv, x, base, h, w_, seed=seed)
+        taken.box(x - w_, base - h // 2, x + w_, base + 3)
+    for x, base, h, w_, seed in [(418, 222, 64, 42, 71), (566, 256, 92, 52, 72)]:
+        peak(cv, x, base, h, w_, seed=seed)
+        taken.box(x - w_, base - h, x + w_, base + 3)
+    peak(cv, TOWER[0], 300, 150, 118, snow=0.46, seed=73)
+    taken.box(TOWER[0] - 118, 150, MW, 304)
+    paint_tower(cv, *TOWER)
+    hills = [(432, 366, 36, 24, 74), (560, 344, 44, 30, 75), (478, 348, 30, 22, 76), (30, 336, 32, 22, 77),
+             (62, 346, 24, 18, 78), (12, 356, 22, 16, 79), (236, 330, 26, 20, 80)]
+    for x, base, h, w_, seed in sorted(hills, key=lambda p: p[1]):
+        peak(cv, x, base, h, w_, snow=0.0 if h < 34 else 0.3, seed=seed)
+        taken.box(x - w_, base - h, x + w_, base + 3)
+    paint_volcano(cv, rng)
+    vx, vbase, vh, vw = VOLCANO
+    taken.box(vx - vw - 4, vbase - vh, vx + vw + 4, vbase + 4)
+
+    # the road and its spurs, under everything that stands beside them
+    road = [spline(seg) for seg in ROAD]
+    spurs = [spline(seg) for seg in SPURS]
+    for pts in spurs:
+        paint_spur(cv, pts)
+        taken.near(pts, 6)
+    paint_road(cv, [p for pts in road for p in pts])     # one pass, so joins don't show
+    for pts in road:
+        taken.near(pts, 11)
+    for x, y in NODES.values():
+        taken.box(x - 20, y - 20, x + 20, y + 22)
+    for a, b in BRIDGES:
+        paint_bridge(cv, a, b)
+    great = (0, 508, 96, 612)                               # the elder tree's ground
+
+    def clear_for(owner: str | None) -> Clear:
+        def clear(x: int, y: int) -> bool:
+            if taken(x, y) or inside(great, x, y):
+                return True
+            return any(pid != owner and inside(box, x, y) for pid, box in RESERVED.items())
+        return clear
+
+    # each table's landmark, painted by its region painter through a View
     placed: dict[str, dict] = {}
-    for i, (pid, painter) in enumerate(REGIONS):
-        y0 = h - BOTTOM - BAND * (i + 1)
-        x, y = painter(cv, y0, sides[i], rng, clear)
-        placed[pid] = {'x': x * SCALE, 'y': y * SCALE, 'side': sides[i]}
-    paint_road(cv, pts)          # repaint so props never sit on the road
-    paint_sky(cv, rng)
-    for x, y in nodes:
+    for pid, painter in REGIONS:
+        side, ox, oy = TILES[pid]
+        world_clear = clear_for(pid)
+        own, on = RESERVED[pid], SCATTER_ON[pid]
+
+        def clear(x: int, y: int, ox=ox, oy=oy, world_clear=world_clear, own=own, on=on) -> bool:
+            wx, wy = x + ox, y + oy
+            if world_clear(wx, wy):
+                return True
+            return not inside(own, wx, wy) and biome[wy][wx] not in on
+
+        painter(View(cv, ox, oy), 0, side, rng, clear)
+        x, y = NODES[pid]
+        placed[pid] = {'x': x * SCALE, 'y': y * SCALE}
+
+    # filler, painted back to front so nearer things overlap farther ones
+    clear = clear_for(None)
+    stamps: list = []
+    add = lambda names, count, stamp, **kw: stamps.extend(
+        scatter_land(cv, rng, biome, names, count, stamp, clear, **kw))
+    add(('forest',), 300, lambda x, y: (pine if (x * 7 + y) % 3 == 0 else tree)(cv, x, y, 0.9 + (x % 4) * 0.1))
+    add(('farm',), 26, lambda x, y: tree(cv, x, y))
+    add(('farm', 'meadow'), 44, lambda x, y: bush(cv, x, y))
+    add(('meadow',), 60, lambda x, y: tree(cv, x, y, 0.9 + (x % 3) * 0.1))
+    add(('farm', 'meadow'), 150,
+        lambda x, y: flower(cv, x, y, [WHITE, (250, 220, 80), (240, 120, 160), (150, 190, 250)][x % 4]), gap=(3, 3))
+    add(('high',), 120, lambda x, y: pine(cv, x, y, 0.8 + (x % 3) * 0.12))
+    add(('high',), 30, lambda x, y: boulder(cv, x, y, 2.5 + (x % 3)))
+    add(('snow',), 46, lambda x, y: pine(cv, x, y, 0.75 + (x % 3) * 0.1))
+    add(('snow',), 16, lambda x, y: boulder(cv, x, y, 3))
+    add(('marsh',), 90, lambda x, y: dead_tree(cv, x, y))
+    add(('marsh',), 16, lambda x, y: bog(cv, x, y, 7 + x % 5, 3 + x % 2), gap=(22, 10))
+    add(('marsh',), 30, lambda x, y: reeds(cv, x, y))
+    add(('desert',), 18, lambda x, y: cactus(cv, x, y, 0.8 + (x % 3) * 0.15), gap=(18, 12))
+    add(('desert', 'red'), 26, lambda x, y: boulder(cv, x, y, 2.5 + (x % 2)))
+    add(('red',), 9, lambda x, y: mesa(cv, x, y, 20 + x % 10, 14 + y % 10), gap=(30, 22))
+    add(('red',), 6, lambda x, y: cactus(cv, x, y, 0.8), gap=(18, 12))
+    add(('ash',), 40, lambda x, y: boulder(cv, x, y, 2.5 + (x % 3)))
+    add(('ash',), 6, lambda x, y: lava_pool(cv, x, y, 4 + x % 3), gap=(26, 16))
+    for x, y, stamp in [
+        (44, 604, great_tree), (286, 702, windmill), (540, 716, standing_stones), (6, 204, ruin),
+        (566, 502, mine), (116, 346, pier),
+        (58, 678, signpost), (150, 404, signpost), (470, 452, signpost), (414, 252, signpost),
+        (470, 208, crystal), (420, 232, crystal), (530, 262, crystal), (384, 178, crystal),
+        (250, 160, crystal), (152, 134, crystal), (546, 196, crystal),
+        (250, 690, sheep), (232, 706, sheep), (262, 716, sheep), (306, 716, sheep), (220, 684, sheep),
+        (244, 566, hay), (252, 592, hay), (278, 584, hay),
+        (24, 626, wisp), (70, 596, wisp), (132, 600, wisp), (30, 680, wisp), (150, 690, wisp),
+        (110, 560, wisp), (64, 720, wisp), (16, 560, wisp),
+    ]:
+        stamps.append((y, x, lambda x, y, stamp=stamp: stamp(cv, x, y)))
+    field(cv, 236, 548, 36, 18, R['gold'], clear)
+    field(cv, 240, 574, 30, 14, R['grass'][1:] , clear)
+    for y, x, stamp in sorted(stamps, key=lambda s: s[0]):
+        stamp(x, y)
+    paint_machinery(cv, clear)
+
+    # cloud round the great peak, below the tower and clear of the path up
+    on_path = Mask()
+    for pts in road:
+        on_path.near(pts, 14)
+    clouds(cv, rng, 46, 404, MW + 6, 226, 9, keep=lambda x, y: on_path(int(x), int(y)))
+    for x, y in NODES.values():
         node_pad(cv, x, y)
 
     out_dir = ROOT / 'assets' / 'map'
     out_dir.mkdir(parents=True, exist_ok=True)
-    cv.img.resize((W * SCALE, h * SCALE), Image.NEAREST).save(out_dir / 'overworld.png', optimize=True)
+    cv.img.resize((MW * SCALE, MH * SCALE), Image.NEAREST).save(out_dir / 'overworld.png', optimize=True)
     heroes, hw, hh = build_heroes()
     heroes.save(out_dir / 'heroes.png', optimize=True)
 
-    # Ending cutscene art (src/campaign/story.ts, ENDING_ID): the fog line
-    # seen from the last node, and the tower up close. Both crops sit above
-    # the top node, so no node pad shows in them.
+    # Ending cutscene art (src/campaign/story.ts, ENDING_ID): the tower on
+    # its peak above the cloud, and the tower up close.
     story_dir = ROOT / 'assets' / 'story'
+    tx, ty = TOWER
     crops = {
-        'ending-north.png': (0, 6, W, 6 + 140),               # moon, tower, fog bank
-        'ending-tower.png': (W // 2 - 48, 8, W // 2 + 48, 8 + 54),  # tower, window, quill
+        'ending-north.png': (MW - W, ty - 144, MW, ty - 4),            # the tower among the peaks
+        'ending-tower.png': (tx - 48, ty - 116, tx + 48, ty - 62),      # tower, window, quill
     }
     for name, box in crops.items():
         part = cv.img.crop(box)
@@ -1268,17 +2020,20 @@ def build() -> None:
 
     meta = {
         '//': 'Generated by scripts/map/build_overworld.py. Do not edit by hand.',
-        'width': W * SCALE,
-        'height': h * SCALE,
+        'width': MW * SCALE,
+        'height': MH * SCALE,
+        # How many map pixels span a phone's width: the map is wider than
+        # the screen and pans, at the scale the landmarks were painted for.
+        'viewWidth': W * SCALE,
         'heroes': {'width': hw, 'height': hh},
         # Chris's tower (scenery): the map makes it tappable once every
         # node is beaten, to rewatch the ending.
-        'tower': {'x': (W // 2) * SCALE, 'y': 72 * SCALE, 'width': 30 * SCALE, 'height': 104 * SCALE},
+        'tower': {'x': tx * SCALE, 'y': (ty - 54) * SCALE, 'width': 34 * SCALE, 'height': 112 * SCALE},
         'order': [pid for pid, _ in REGIONS],
         'nodes': placed,
     }
     (ROOT / 'src' / 'campaign' / 'overworld.json').write_text(json.dumps(meta, indent=2) + '\n')
-    print(f'overworld {W * SCALE}x{h * SCALE}, {len(REGIONS)} nodes')
+    print(f'overworld {MW * SCALE}x{MH * SCALE}, {len(REGIONS)} nodes')
 
 
 if __name__ == '__main__':
